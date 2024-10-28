@@ -3,27 +3,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const navLinks = document.querySelectorAll('nav a');
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
-            e.preventDefault();
             const targetId = link.getAttribute('href');
-            const targetSection = document.querySelector(targetId);
-            targetSection.scrollIntoView({ behavior: 'smooth' });
+            if (targetId.startsWith('#')) {
+                e.preventDefault();
+                const targetSection = document.querySelector(targetId);
+                targetSection.scrollIntoView({ behavior: 'smooth' });
+            }
         });
     });
 
     // Form submission
     const contactForm = document.getElementById('contact-form');
-    contactForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        alert('Thank you for your message! We will get back to you soon.');
-        contactForm.reset();
-    });
+    if (contactForm) {
+        contactForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert('Thank you for your message! We will get back to you soon.');
+            contactForm.reset();
+        });
+    }
 
     // Parallax effect for the home section
     const homeSection = document.getElementById('home');
-    window.addEventListener('scroll', () => {
-        const scrollPosition = window.pageYOffset;
-        homeSection.style.backgroundPositionY = `${scrollPosition * 0.5}px`;
-    });
+    if (homeSection) {
+        window.addEventListener('scroll', () => {
+            const scrollPosition = window.pageYOffset;
+            homeSection.style.backgroundPositionY = `${scrollPosition * 0.5}px`;
+        });
+    }
 
     // Image hover effect
     const galleryImages = document.querySelectorAll('.gallery-image');

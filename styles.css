@@ -58,7 +58,7 @@ h1, h2 {
 }
 
 #home {
-    background-image: url('/Designer.jpeg');
+    background-image: url('/placeholder.svg?height=600&width=1200');
     background-size: cover;
     background-position: center;
     height: 100vh;
@@ -125,4 +125,35 @@ footer {
     color: #ecf0f1;
     text-align: center;
     padding: 1rem 0;
+}
+
+#portal {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #1a1a2e;
+    color: #fff;
+}
+
+.portal-links {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.portal-button {
+    display: inline-block;
+    padding: 1rem 2rem;
+    background-color: #3498db;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.portal-button:hover {
+    background-color: #2980b9;
 }
