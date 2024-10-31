@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Apontamentos</title>
+    <style>
+        /* Paleta de cores */
+        :root {
+            --primary-color: #2E3631;
+            --secondary-color: #8AAF92;
+            --accent-color: #A6D2A3;
+            --background-color: #F9FAFB;
+            --text-color: #111827;
+            --navbar-color: white;
+            --navbar-text-color: #2E3631;
+            --filter-bg: #F3F4F6;
+            --card-bg: white;
+            --card-border: #E5E7EB;
+        }
+
+        /* Reset básico */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Navbar */
+        header {
+            background-color: var(--navbar-color);
+            padding: 1rem 2%;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .navbar img {
+            width: 250px;
+            height: auto;
+        }
+
+        .navbar nav {
+            display: flex;
+            gap: 80px;
+        }
+
+        .navbar nav a {
+            color: var(--navbar-text-color);
+            text-decoration: none;
+            font-size: 20px;
+            transition: color 0.3s;
+            font-weight: bold;
+        }
+
+        .navbar nav a:hover {
+            color: var(--secondary-color);
+        }
+
+        /* H1 */
+        .main-title {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 50px;
+            color: var(--primary-color);
+        }
+
+        /* Filtro e Pesquisa */
+        #filtro-pesquisa {
+            background-color: var(--filter-bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #filtro-pesquisa label {
+            font-size: 1.1rem;
+            color: var(--text-color);
+        }
+
+        #responsavel, #pesquisa, #ordenacao {
+            padding: 10px;
+            border: 1px solid var(--card-border);
+            border-radius: 5px;
+            font-size: 1rem;
+            background-color: white;
+        }
+
+        #responsavel {
+            width: 30%;
+        }
+
+        #pesquisa {
+            width: 40%;
+        }
+
+        #ordenacao {
+            width: 30%;
+        }
+
+        /* Lista de Apontamentos (layout horizontal) */
+        #lista-apontamentos {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .apontamento {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+        }
+
+        .apontamento:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .apontamento-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .apontamento-header h3 {
+            font-size: 1.2rem;
+            color: var(--secondary-color);
+        }
+
+        .apontamento p {
+            margin: 5px 0;
+            color: var(--text-color);
+        }
+
+        .apontamento strong {
+            color: var(--text-color);
+        }
+
+        /* Botão (opcional para funcionalidade futura) */
+        .btn {
+            padding: 10px 15px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #059669;
+        }
+
+        @media (max-width: 768px) {
+            .navbar img {
+                width: 80px;
+            }
+
+            .navbar nav {
+                gap: 20px;
+            }
+
+            #filtro-pesquisa {
+                flex-direction: column;
+            }
+
+            #responsavel, #pesquisa, #ordenacao {
+                width: 100%;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <!-- Espaço para a logo -->
+            <img src="/img/logo-sem-fundo.png" alt="Logo da Empresa">
+            <nav>
+                <a href="/login/home.html">Home</a>
+                <a href="#">Sobre</a>
+                <a href="#">Contato</a>
+            </nav>
+        </div>
+    </header>
+
+    <h1 class="main-title">Apontamentos</h1>
+
+    <div class="container">
+        <div id="filtro-pesquisa">
+            <select id="responsavel">
+                <option value="">Todos</option>
+            </select>
+            <input type="text" id="pesquisa" placeholder="Pesquisar em apontamentos...">
+            <select id="ordenacao">
+                <option value="recente">Ordenar por mais recente</option>
+                <option value="antigo">Ordenar por mais antigo</option>
+            </select>
+        </div>
+
+        <div id="lista-apontamentos"></div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyC8C_yucprravGbaJSrRjKJDz2Vv80fMc4",
+            authDomain: "app-hora-maquina.firebaseapp.com",
+            databaseURL: "https://app-hora-maquina-default-rtdb.firebaseio.com",
+            projectId: "app-hora-maquina",
+            storageBucket: "app-hora-maquina.appspot.com",
+            messagingSenderId: "51002260602",
+            appId: "1:51002260602:web:0dd4cd491dbefe432acfc3"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        const listaApontamentos = document.getElementById('lista-apontamentos');
+        const filtroResponsavel = document.getElementById('responsavel');
+        const campoPesquisa = document.getElementById('pesquisa');
+        const ordenacao = document.getElementById('ordenacao');
+
+        let apontamentosGlobal = [];
+
+        function carregarApontamentos() {
+            database.ref('apontamentos').once('value', (snapshot) => {
+                apontamentosGlobal = [];
+                const responsaveis = new Set();
+
+                snapshot.forEach((childSnapshot) => {
+                    const apontamento = childSnapshot.val();
+                    apontamentosGlobal.push(apontamento);
+                    responsaveis.add(apontamento.responsavel);
+                });
+
+                // Limpar opções existentes, exceto a opção "Todos"
+                while (filtroResponsavel.options.length > 1) {
+                    filtroResponsavel.remove(1);
+                }
+
+                responsaveis.forEach((responsavel) => {
+                    const option = document.createElement('option');
+                    option.value = responsavel;
+                    option.textContent = responsavel;
+                    filtroResponsavel.appendChild(option);
+                });
+
+                exibirApontamentos();
+            });
+        }
+
+        function exibirApontamentos() {
+            listaApontamentos.innerHTML = '';
+            const responsavelSelecionado = filtroResponsavel.value;
+            const termoPesquisa = campoPesquisa.value.toLowerCase();
+            const ordemSelecionada = ordenacao.value;
+
+            let apontamentosFiltrados = apontamentosGlobal.filter((apontamento) => {
+                return (!responsavelSelecionado || apontamento.responsavel === responsavelSelecionado) &&
+                    (termoPesquisa === '' || 
+                     apontamento.ordemServico.toLowerCase().includes(termoPesquisa) ||
+                     apontamento.responsavel.toLowerCase().includes(termoPesquisa) ||
+                     apontamento.direcionador.toLowerCase().includes(termoPesquisa) ||
+                     apontamento.data.toLowerCase().includes(termoPesquisa));
+            });
+
+            apontamentosFiltrados.sort((a, b) => {
+                const dateA = new Date(a.data.split('/').reverse().join('-'));
+                const dateB = new Date(b.data.split('/').reverse().join('-'));
+                return ordemSelecionada === 'recente' ? dateB - dateA : dateA - dateB;
+            });
+
+            apontamentosFiltrados.forEach((apontamento) => {
+                const div = document.createElement('div');
+                div.className = 'apontamento';
+                div.innerHTML = `
+                    <div class="apontamento-header">
+                        <h3>Ordem de Serviço: ${apontamento.ordemServico}</h3>
+                        <p><strong>${apontamento.data}</strong></p>
+                    </div>
+                    <p><strong>Responsável:</strong> ${apontamento.responsavel}</p>
+                    <p><strong>Direcionador:</strong> ${apontamento.direcionador}</p>
+                `;
+                listaApontamentos.appendChild(div);
+            });
+        }
+
+        filtroResponsavel.addEventListener('change', exibirApontamentos);
+        campoPesquisa.addEventListener('input', exibirApontamentos);
+        ordenacao.addEventListener('change', exibirApontamentos);
+
+        carregarApontamentos();
+    </script>
+</body>
+</html>
