@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>J. R. AGSOLUTIONS</title>
-    <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root {
             --sage-50: #f6f7f6;
@@ -40,7 +38,6 @@
             padding: 0 20px;
         }
 
-        /* Navigation */
         nav {
             position: fixed;
             width: 100%;
@@ -56,11 +53,8 @@
         .nav-container {
             display: flex;
             justify-content: space-between;
-            padding: 20px 0;
-            width: 100%;
-            max-width: none;
-            padding-left: 60px;
-            padding-right: 60px;
+            align-items: center;
+            padding: 20px 60px;
         }
 
         .logo-image {
@@ -70,18 +64,15 @@
 
         .nav-links {
             display: flex;
-            margin-top: 10px;
             gap: 40px;
-            flex-grow: 1;
-            justify-content: flex-end;
-            font-size: 20px;
+            font-size: 18px;
         }
 
         .nav-links a {
-            color: #2E3631;
+            color: var(--sage-800);
             text-decoration: none;
             transition: color 0.3s ease;
-            font-weight: bold;
+            font-weight: 500;
         }
 
         .nav-links a:hover {
@@ -102,44 +93,43 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            background: url('/img/Designer.jpeg') center/cover no-repeat;
+            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/img/Designer.jpeg') center/cover no-repeat;
             color: white;
+            padding: 0 20px;
         }
 
         .hero h1 {
             font-family: 'Montserrat', sans-serif;
-            font-size: 5rem;
-            margin-bottom: 0;
+            font-size: 4rem;
+            margin-bottom: 20px;
             animation: fadeInUp 1s ease-out;
         }
 
         .hero p {
             font-size: 1.5rem;
-            margin-top: 0;
             margin-bottom: 40px;
             animation: fadeInUp 1s ease-out 0.3s;
         }
 
         .cta-button {
-            padding: 20px 50px;
-            background-color: #2E3631;
+            padding: 15px 40px;
+            background-color: var(--sage-700);
             color: white;
             text-decoration: none;
             border-radius: 30px;
             font-weight: bold;
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             transition: all 0.3s ease;
             animation: fadeInUp 1s ease-out 0.6s;
             animation-fill-mode: both;
         }
 
         .cta-button:hover {
-            background-color: var(--sage-700);
-            transform: scale(1.05);
-            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+            background-color: var(--sage-600);
+            transform: translateY(-3px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
-        /* Main Content */
         main {
             padding: 80px 0;
         }
@@ -151,7 +141,115 @@
             color: var(--sage-700);
         }
 
-        /* Footer */
+        .about-section, .creator-section {
+            padding: 100px 0;
+            background-color: #ffffff;
+        }
+
+        .about-container, .creator-container {
+            display: flex;
+            gap: 60px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .about-content, .creator-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .about-subtitle, .creator-subtitle {
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--sage-600);
+            margin-bottom: 1rem;
+        }
+
+        .about-title, .creator-title {
+            font-size: 2.5rem;
+            color: var(--sage-800);
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        .about-description, .creator-description {
+            font-size: 1.1rem;
+            color: var(--sage-700);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .about-list, .creator-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .about-list li, .creator-list li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            color: var(--sage-700);
+        }
+
+        .about-list li::before, .creator-list li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--sage-500);
+        }
+
+        .image-collage {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
+            aspect-ratio: 1;
+        }
+
+        .collage-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+            transition: transform 0.3s ease;
+        }
+
+        .collage-img:hover {
+            transform: scale(1.05);
+        }
+
+        .collage-img:nth-child(1) { grid-area: 1 / 1 / 3 / 3; }
+        .collage-img:nth-child(2) { grid-area: 1 / 3 / 2 / 4; }
+        .collage-img:nth-child(3) { grid-area: 2 / 3 / 3 / 4; }
+        .collage-img:nth-child(4) { grid-area: 3 / 1 / 4 / 2; }
+        .collage-img:nth-child(5) { grid-area: 3 / 2 / 4 / 4; }
+
+        .creator-image {
+            flex: 0 0 40%;
+            max-width: 400px;
+            height: auto;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .creator-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .creator-image img:hover {
+            transform: scale(1.05);
+        }
+
         footer {
             background-color: var(--sage-900);
             color: var(--sage-50);
@@ -159,7 +257,6 @@
             text-align: center;
         }
 
-        /* Animations */
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -171,149 +268,14 @@
             }
         }
 
-        /* Redesigned About Us Section */
-        .about-section {
-            padding: 100px 0;
-            background-color: var(--sage-50);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .about-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('/placeholder.svg?height=600&width=800') no-repeat center center;
-            background-size: cover;
-            opacity: 0.1;
-            z-index: 0;
-        }
-
-        .about-container {
-            position: relative;
-            z-index: 1;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 60px;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        .about-content {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        .about-title {
-            font-size: 3rem;
-            color: var(--sage-800);
-            margin-bottom: 30px;
-            position: relative;
-            padding-bottom: 15px;
-        }
-
-        .about-title::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 80px;
-            height: 4px;
-            background-color: var(--sage-500);
-        }
-
-        .about-description {
-            font-size: 1.1rem;
-            color: var(--sage-600);
-            margin-bottom: 30px;
-            line-height: 1.8;
-        }
-
-        .about-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-top: 40px;
-        }
-
-        .stat-item {
-            background-color: var(--sage-100);
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .stat-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--sage-700);
-            margin-bottom: 10px;
-        }
-
-        .stat-label {
-            font-size: 1rem;
-            color: var(--sage-600);
-        }
-
-        .about-image-container {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-        }
-
-        .about-image {
-            position: relative;
-            overflow: hidden;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .about-image:hover {
-            transform: scale(1.05);
-        }
-
-        .about-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.3s ease;
-        }
-
-        .about-image:hover img {
-            transform: scale(1.1);
-        }
-
-        .about-image:nth-child(1) {
-            grid-column: 1 / 3;
-        }
-
-        .about-image:nth-child(2) {
-            grid-column: 1 / 2;
-        }
-
-        .about-image:nth-child(3) {
-            grid-column: 2 / 3;
-        }
-
         @media (max-width: 1024px) {
-            .about-container {
-                grid-template-columns: 1fr;
+            .about-container, .creator-container {
+                flex-direction: column;
             }
 
-            .about-image-container {
-                order: -1;
+            .image-collage, .creator-image {
+                max-width: 100%;
+                margin-bottom: 40px;
             }
         }
 
@@ -338,8 +300,25 @@
                 box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             }
 
-            .about-stats {
-                grid-template-columns: 1fr;
+            .hero h1 {
+                font-size: 3rem;
+            }
+
+            .hero p {
+                font-size: 1.2rem;
+            }
+
+            .cta-button {
+                padding: 12px 30px;
+                font-size: 1rem;
+            }
+
+            .about-title, .creator-title {
+                font-size: 2rem;
+            }
+
+            .about-description, .creator-description {
+                font-size: 1rem;
             }
         }
     </style>
@@ -354,6 +333,7 @@
             <div class="nav-links" id="nav-links">
                 <a href="#">Home</a>
                 <a href="#about">Sobre Nós</a>
+                <a href="#creator">Criador</a>
                 <a href="/portalLançamentos/index.html">Apontamentos</a>
                 <a href="#">Contato</a>
             </div>
@@ -369,34 +349,53 @@
     <main>
         <section id="about" class="about-section">
             <div class="about-container">
+                <div class="image-collage">
+                    <img src="/img/noimg.png" alt="Plantação de laranjas" class="collage-img">
+                    <img src="/img/noimg.png" alt="Agricultor usando tecnologia" class="collage-img">
+                    <img src="/img/noimg.png" alt="Campo ao pôr do sol" class="collage-img">
+                    <img src="/img/noimg.png" alt="Plantação de milho" class="collage-img">
+                    <img src="/img/noimg.png" alt="Vista aérea da fazenda" class="collage-img">
+                </div>
                 <div class="about-content">
-                    <h2 class="about-title">Sobre Nós</h2>
+                    <p class="about-subtitle">Quem Somos</p>
+                    <h2 class="about-title">Os desafios nos impulsionam</h2>
                     <p class="about-description">
-                        A J. R. AGSOLUTIONS é uma empresa líder em inovação tecnológica para o agronegócio. Fundada em 2020, nossa missão é revolucionar o setor agrícola através de soluções digitais avançadas e sustentáveis.
+                        Como líder global em inteligência digital para o agro, sabemos que o planeta passa por um momento decisivo:
                     </p>
-                    <p class="about-description">
-                        Combinamos expertise em agricultura com tecnologia de ponta para criar ferramentas que otimizam processos, aumentam a produtividade e promovem práticas agrícolas mais eficientes e ecologicamente responsáveis.
+                    <ul class="about-list">
+                        <li>A produção agrícola global precisa crescer em 60% para atender à demanda por alimentos estimada para 2050.</li>
+                        <li>Precisaremos nos adaptar com extrema agilidade para conseguir produzir mais em um mesmo espaço de terra.</li>
+                        <li>Em 30 anos, as mudanças climáticas podem limitar ainda mais a produtividade na agricultura.</li>
+                        <li>Na medida em que aumentamos a produção, devemos simultaneamente diminuir o impacto ambiental para assegurar a qualidade de vida das próximas gerações.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="creator" class="creator-section">
+            <div class="creator-container">
+                <div class="creator-content">
+                    <p class="creator-subtitle">Nosso Fundador</p>
+                    <h2 class="creator-title">Jeovane: Inovação e Experiência</h2>
+                    <p class="creator-description">
+                        Com mais de 20 anos de experiência no setor de Tecnologia da Informação, Jeovane lidera a J. R. AGSOLUTIONS com uma visão inovadora e um profundo conhecimento do agronegócio e tecnologia.
                     </p>
-                    <div class="about-stats">
-                        <div class="stat-item">
-                            <div class="stat-number">500+</div>
-                            <div class="stat-label">Fazendas Atendidas</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number">30%</div>
-                            <div class="stat-label">Aumento Médio em Produtividade</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number">25%</div>
-                            <div class="stat-label">Redução no Uso de Recursos</div>
-                        </div>
-                    </div>
+                    <h4>Destaques:</h4>
+                    <ul class="creator-list">
+                        <li>Mestrando em Ciência de Dados pela UFU</li>
+                        <li>MBA em Gestão de Negócios pela FGV</li>
+                        <li>Especialista em Contabilidade, Direito Tributário e Desenvolvimento Java</li>
+                        <li>Experiência em Gestão de Projetos, Planejamento Estratégico e Automação de Processos</li>
+                        <li>Pioneiro em soluções tecnológicas para o agronegócio</li>
+                    </ul>
+                    <p class="creator-description">
+                        Sob a liderança de Jeovane, a J. R. AGSOLUTIONS está na vanguarda da transformação digital no agronegócio, desenvolvendo soluções inovadoras que impulsionam a produtividade e sustentabilidade do setor.
+                    </p>
                 </div>
-                <div class="about-image-container">
-                    <div class="about-image">
-                        <img src="/img/qmsomos3.jpeg" alt="Tecnologia no Agronegócio">
-                    </div>
-                </div>
+                <div class="creator-image">
+                    <img src="/img/noimg.png" alt="Jeovane, fundador da J. R. AGSOLUTIONS">
+                
+</div>
             </div>
         </section>
     </main>
@@ -421,3 +420,4 @@
     </script>
 </body>
 </html>
+
