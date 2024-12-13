@@ -198,8 +198,8 @@
                     // Signed in 
                     const user = userCredential.user;
                     console.log("Usuário logado:", user);
-                    // Redirect to dashboard or home page
-                    window.location.href = "../index.html";
+                    // Redirect to apontamentos page
+                    window.location.href = "/portalLançamentos/index.html";
                 })
                 .catch((error) => {
                     const errorCode = error.code;
@@ -215,3 +215,4 @@
     </script>
 </body>
 </html>
+
