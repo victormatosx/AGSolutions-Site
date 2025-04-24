@@ -288,34 +288,161 @@ button:hover {
   background-color: #3a4540;
 }
 
+/* Melhorias no design dos apontamentos */
 .apontamento {
   background-color: #ffffff;
-  padding: 15px;
-  margin-bottom: 15px;
-  border-radius: 6px;
-  box-shadow: 0 2px 4px rgba(46, 54, 49, 0.05);
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  box-shadow: 0 3px 6px rgba(46, 54, 49, 0.1);
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
   border-left: 4px solid #4caf50;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.apontamento:hover {
+  box-shadow: 0 5px 10px rgba(46, 54, 49, 0.15);
+  transform: translateY(-3px);
+}
+
+.apontamento-info-left,
+.apontamento-info-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.apontamento-info-left {
+  flex: 1;
+}
+
+.apontamento-info-right {
+  flex: 1;
+  align-items: flex-start;
 }
 
 .apontamento p {
-  margin: 8px 0;
+  margin: 0;
   color: #4a5a52;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  font-size: 15px;
 }
 
 .apontamento p i {
   color: #4caf50;
   width: 20px;
   text-align: center;
+  font-size: 16px;
 }
 
 .apontamento p strong {
   color: #2e3631;
+  margin-right: 5px;
+}
+
+/* Melhorias nos detalhes do apontamento */
+.apontamento-detalhes {
+  background-color: #ffffff;
+  border-radius: 10px;
+  padding: 25px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+  max-width: 800px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.apontamento-detalhes h3 {
+  margin-top: 0;
+  color: #2e3631;
+  border-bottom: 2px solid #4caf50;
+  padding-bottom: 12px;
+  margin-bottom: 25px;
+  font-size: 20px;
+}
+
+.apontamento-detalhes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.apontamento-detalhes-grid p {
+  margin: 0;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f2f1;
+}
+
+.apontamento-detalhes-section {
+  margin-top: 25px;
+  border-top: 1px solid #e0e2e1;
+  padding-top: 25px;
+}
+
+.apontamento-detalhes-section h4 {
+  color: #2e3631;
+  margin-bottom: 20px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Melhorias nas operações mecanizadas */
+.operacao-mecanizada {
+  background-color: #f8f9fa;
+  padding: 18px;
+  border-radius: 8px;
+  border-left: 3px solid #4caf50;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.operacao-mecanizada:hover {
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.operacao-mecanizada p {
+  margin: 10px 0;
+  color: #4a5a52;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: none;
+  padding: 0;
+}
+
+.operacao-mecanizada p i {
+  color: #4caf50;
+  width: 20px;
+  text-align: center;
+}
+
+.operacao-mecanizada p strong {
+  color: #2e3631;
+  margin-right: 5px;
+}
+
+.apontamento-detalhes-observacao {
+  grid-column: 1 / -1;
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 3px solid #4caf50;
+  margin-top: 20px;
+}
+
+.apontamento.active {
+  background-color: #f0f7f0;
+  border-left-width: 6px;
 }
 
 #login-button {
@@ -473,6 +600,175 @@ button:hover {
   box-sizing: border-box;
 }
 
+.validar-button {
+  background-color: #4caf50;
+  margin-top: 10px;
+  padding: 10px 20px;
+  font-weight: 500;
+}
+
+.validar-button:hover {
+  background-color: #3d8b40;
+}
+
+/* Estilos para o formulário de cadastro */
+.cadastro-form {
+  background-color: #ffffff;
+  padding: 25px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  box-shadow: 0 5px 15px rgba(46, 54, 49, 0.1);
+  border-left: 5px solid #4caf50;
+}
+
+.cadastro-form h3 {
+  margin-top: 0;
+  color: #2e3631;
+  border-bottom: 2px solid #4caf50;
+  padding-bottom: 15px;
+  margin-bottom: 25px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  text-align: center;
+  justify-content: center;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #2e3631;
+  font-size: 16px;
+}
+
+.form-group label i {
+  color: #4caf50;
+  font-size: 18px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  background-color: #f9f9f9;
+}
+
+.form-input:focus {
+  border-color: #4caf50;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+  background-color: #fff;
+}
+
+.form-input::placeholder {
+  color: #aaa;
+}
+
+.cadastrar-button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(76, 175, 80, 0.2);
+  font-weight: 500;
+  width: 100%;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.cadastrar-button:hover {
+  background-color: #3d8b40;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(76, 175, 80, 0.3);
+}
+
+.cadastrar-button i {
+  font-size: 18px;
+}
+
+.cadastro-message {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 6px;
+  animation: messageFadeIn 0.3s ease-out;
+}
+
+@keyframes messageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.success-message {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  padding: 15px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-left: 4px solid #2e7d32;
+}
+
+.success-message i {
+  font-size: 20px;
+  color: #2e7d32;
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 15px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-left: 4px solid #c62828;
+}
+
+.error-message i {
+  font-size: 20px;
+  color: #c62828;
+}
+
+.users-list {
+  margin-top: 30px;
+}
+
+.users-list h3 {
+  margin-top: 0;
+  color: #2e3631;
+  border-bottom: 2px solid #2e3631;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 @media (min-width: 768px) {
   .users-container .apontamento {
     flex-direction: row;
@@ -526,12 +822,189 @@ button:hover {
   }
 
   .apontamento {
-    grid-template-columns: 1fr;
+    flex-direction: column;
   }
 
   .tab-button {
     flex: 1;
     justify-content: center;
   }
+  .apontamento-detalhes {
+    width: 95%;
+  }
+  .apontamento-detalhes-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.confirmation-modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+}
+
+.confirmation-content {
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+}
+
+.confirmation-content h3 {
+  margin-top: 0;
+  color: #2e3631;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.confirmation-content p {
+  margin-bottom: 20px;
+}
+
+.confirmation-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.confirm-button,
+.cancel-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.confirm-button {
+  background-color: #4caf50;
+  color: white;
+}
+
+.confirm-button:hover {
+  background-color: #45a049;
+}
+
+.cancel-button {
+  background-color: #f44336;
+  color: white;
+}
+
+.cancel-button:hover {
+  background-color: #da190b;
+}
+
+/* Estilos para o modal */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 20px 0;
+}
+
+.modal-content {
+  background-color: #ffffff;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  max-width: 550px;
+  width: 90%;
+  position: relative;
+  animation: modalFadeIn 0.3s ease-out;
+  margin: auto;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.close-button {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 28px;
+  font-weight: bold;
+  color: #2e3631;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  width: auto;
+  height: auto;
+  transition: color 0.2s ease;
+  line-height: 1;
+}
+
+.close-button:hover {
+  color: #4caf50;
+}
+
+.action-buttons {
+  margin-bottom: 25px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.action-button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(76, 175, 80, 0.2);
+  font-weight: 500;
+}
+
+.action-button:hover {
+  background-color: #3d8b40;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(76, 175, 80, 0.3);
+}
