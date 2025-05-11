@@ -1008,3 +1008,71 @@ button:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 8px rgba(76, 175, 80, 0.3);
 }
+
+/* Estilos específicos para o calendário semanal */
+.calendar-container {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+.weekly-calendar {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #ddd;
+  background-color: #fff;
+}
+
+.weekly-calendar th,
+.weekly-calendar td {
+  border: 1px solid #ddd;
+  padding: 12px;
+  text-align: center;
+}
+
+.weekly-calendar th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}
+
+.date-display {
+  display: block;
+  font-size: 0.85em;
+  color: #666;
+  margin-top: 4px;
+  font-weight: normal;
+}
+
+.user-column {
+  text-align: left;
+  font-weight: bold;
+  min-width: 150px;
+}
+
+.user-name {
+  font-weight: bold;
+  text-align: left;
+}
+
+.status-icon {
+  display: inline-block;
+  font-size: 1.5em;
+}
+
+.status-icon.check {
+  color: #4caf50;
+}
+
+.status-icon.error {
+  color: #f44336;
+}
+
+@media (max-width: 768px) {
+  .weekly-calendar th,
+  .weekly-calendar td {
+    padding: 8px;
+  }
+
+  .status-icon {
+    font-size: 1.2em;
+  }
+}
