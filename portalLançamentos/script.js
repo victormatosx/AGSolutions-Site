@@ -12,6 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Variável global para armazenar a data de referência atual
 let currentReferenceDate = new Date()
+// Variável global para armazenar o nome da propriedade atual
+let currentPropriedadeNome = ""
 
 // Função para obter os dias da semana com base em uma data de referência
 function getWeekDays(referenceDate) {
@@ -78,7 +80,7 @@ async function fetchAllData(propriedadeNome) {
 
     if (!usersSnapshot.exists()) {
       console.log("Nenhum usuário encontrado")
-      return { users: [], activities: {} }
+      return { users: [], activities: {}, justificativas: {} }
     }
 
     // Filtrar apenas usuários com role "user"
@@ -99,10 +101,13 @@ async function fetchAllData(propriedadeNome) {
 
     // Mapa para armazenar as atividades por usuário e data
     const activities = {}
+    // Mapa para armazenar as justificativas por usuário e data
+    const justificativas = {}
 
-    // Inicializar o mapa de atividades para todos os usuários
+    // Inicializar os mapas para todos os usuários
     users.forEach((user) => {
       activities[user.id] = {}
+      justificativas[user.id] = {}
     })
 
     // 1. Processar apontamentos
@@ -317,22 +322,71 @@ async function fetchAllData(propriedadeNome) {
       console.log("Nenhum abastecimento de veículo encontrado")
     }
 
-    return { users, activities }
+    // 5. Processar justificativas
+    console.log("Buscando justificativas...")
+    const justificativasRef = ref(database, `propriedades/${propriedadeNome}/justificativas`)
+    const justificativasSnapshot = await get(justificativasRef)
+
+    if (justificativasSnapshot.exists()) {
+      const justificativasData = justificativasSnapshot.val()
+      console.log(`Encontradas ${Object.keys(justificativasData).length} justificativas`)
+
+      for (const justificativaId in justificativasData) {
+        const justificativa = justificativasData[justificativaId]
+
+        // Extrair userId
+        const userId = justificativa.userId
+
+        if (!userId) {
+          console.log(`Justificativa ${justificativaId} não tem userId`)
+          continue
+        }
+
+        // Verificar se o usuário existe no nosso mapa
+        if (!justificativas[userId]) {
+          console.log(`Usuário ${userId} não está na lista de usuários operacionais`)
+          continue
+        }
+
+        // Extrair data do campo data (formato DD/MM/YYYY)
+        const itemDate = parseBrazilianDate(justificativa.data)
+
+        if (!itemDate) {
+          console.log(`Justificativa ${justificativaId} não tem data válida: ${justificativa.data}`)
+          continue
+        }
+
+        // Formatar a data como YYYY-MM-DD para usar como chave
+        const dateKey = formatDateKey(itemDate)
+
+        // Marcar que há justificativa nesta data e armazenar o texto
+        justificativas[userId][dateKey] = justificativa.justificativa
+
+        console.log(`Justificativa registrada: Usuário ${userId}, Data ${dateKey}`)
+      }
+    } else {
+      console.log("Nenhuma justificativa encontrada")
+    }
+
+    return { users, activities, justificativas }
   } catch (error) {
     console.error("Erro ao buscar dados:", error)
-    return { users: [], activities: {} }
+    return { users: [], activities: {}, justificativas: {} }
   }
 }
 
 // Função para renderizar o calendário com base na data de referência
 async function renderCalendar(propriedadeNome, referenceDate) {
   try {
+    // Armazenar o nome da propriedade atual na variável global
+    currentPropriedadeNome = propriedadeNome
+
     // Obter os dias da semana com base na data de referência
     const weekDays = getWeekDays(referenceDate)
     console.log("Dias da semana:", weekDays)
 
     // Buscar todos os dados
-    const { users, activities } = await fetchAllData(propriedadeNome)
+    const { users, activities, justificativas } = await fetchAllData(propriedadeNome)
 
     if (users.length === 0) {
       document.getElementById("data-container").innerHTML = `
@@ -365,11 +419,19 @@ async function renderCalendar(propriedadeNome, referenceDate) {
             <div class="calendar-legend">
               <div class="legend-item">
                 <span class="legend-dot active"></span>
-                <span>Atividade registrada</span>
+                <span>Apontamento Realizado</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot justified"></span>
+                <span>Justificado</span>
               </div>
               <div class="legend-item">
                 <span class="legend-dot inactive"></span>
-                <span>Sem atividade</span>
+                <span>Sem Apontamento</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot future"></span>
+                <span>Data Futura</span>
               </div>
             </div>
           </div>
@@ -441,13 +503,36 @@ async function renderCalendar(propriedadeNome, referenceDate) {
         const dateKey = formatDateKey(day.date)
         const isToday = dateKey === todayFormatted
 
+        // Verificar se a data é futura
+        const isFutureDate = day.date > today
+
         // Verificar se há atividade para este usuário nesta data
         const hasActivity = activities[user.id] && activities[user.id][dateKey]
 
-        if (hasActivity) {
+        // Verificar se há justificativa para este usuário nesta data
+        const hasJustificativa = justificativas[user.id] && justificativas[user.id][dateKey]
+        const justificativaText = hasJustificativa ? justificativas[user.id][dateKey] : ""
+
+        if (isFutureDate) {
           tableHTML += `
             <td class="${isToday ? "today-cell" : ""}">
-              <div class="activity-indicator active">
+              <div class="activity-indicator future" title="Data Futura">
+                <span>-</span>
+              </div>
+            </td>
+          `
+        } else if (hasActivity) {
+          tableHTML += `
+            <td class="${isToday ? "today-cell" : ""}">
+              <div class="activity-indicator active" title="Apontamento Realizado">
+                <i class="fas fa-check"></i>
+              </div>
+            </td>
+          `
+        } else if (hasJustificativa) {
+          tableHTML += `
+            <td class="${isToday ? "today-cell" : ""}">
+              <div class="activity-indicator justified" title="Justificado: ${justificativaText}">
                 <i class="fas fa-check"></i>
               </div>
             </td>
@@ -455,7 +540,7 @@ async function renderCalendar(propriedadeNome, referenceDate) {
         } else {
           tableHTML += `
             <td class="${isToday ? "today-cell" : ""}">
-              <div class="activity-indicator inactive">
+              <div class="activity-indicator inactive" data-user-id="${user.id}" data-date="${dateKey}" onclick="showJustificativaModal(this)" title="Sem Apontamento - Clique para justificar">
                 <i class="fas fa-times"></i>
               </div>
             </td>
@@ -654,9 +739,19 @@ async function showWeeklyCalendar(propriedadeNome) {
         box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
       }
       
+      .legend-dot.justified {
+        background-color: #3b82f6;
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+      }
+      
       .legend-dot.inactive {
         background-color: #ef4444;
         box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+      }
+
+      .legend-dot.future {
+        background-color: #94a3b8;
+        box-shadow: 0 0 10px rgba(148, 163, 184, 0.3);
       }
       
       /* Navegação do calendário */
@@ -837,6 +932,7 @@ async function showWeeklyCalendar(propriedadeNome) {
         justify-content: center;
         margin: 10px auto;
         transition: all 0.3s ease;
+        cursor: default;
       }
       
       .activity-indicator.active {
@@ -845,13 +941,32 @@ async function showWeeklyCalendar(propriedadeNome) {
         box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
       }
       
-      .activity-indicator.active i {
+      .activity-indicator.justified {
+        background-color: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+      }
+      
+      .activity-indicator.active i,
+      .activity-indicator.justified i {
         font-size: 1.2rem;
       }
       
       .activity-indicator.inactive {
         background-color: rgba(239, 68, 68, 0.1);
         color: #ef4444;
+        cursor: pointer;
+      }
+
+      .activity-indicator.future {
+        background-color: rgba(148, 163, 184, 0.1);
+        color: #94a3b8;
+      }
+      
+      .activity-indicator.future span {
+        font-size: 1.5rem;
+        font-weight: 500;
+        line-height: 1;
       }
       
       .activity-indicator:hover {
@@ -1105,3 +1220,314 @@ async function showWeeklyCalendar(propriedadeNome) {
     document.head.appendChild(errorStyleElement)
   }
 }
+
+// Função para mostrar o modal de justificativa
+function showJustificativaModal(element) {
+  // Obter os dados do elemento clicado
+  const userId = element.getAttribute("data-user-id")
+  const dateKey = element.getAttribute("data-date")
+
+  // Criar o modal
+  const modalOverlay = document.createElement("div")
+  modalOverlay.className = "modal-overlay"
+
+  const modalContent = document.createElement("div")
+  modalContent.className = "modal-content"
+
+  modalContent.innerHTML = `
+    <div class="modal-header">
+      <h3>Adicionar Justificativa</h3>
+      <button class="close-modal" onclick="closeJustificativaModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p>Informe a justificativa para a ausência de atividade nesta data:</p>
+      <textarea id="justificativa-text" rows="4" placeholder="Digite a justificativa aqui..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="cancel-button" onclick="closeJustificativaModal()">Cancelar</button>
+      <button class="save-button" onclick="salvarJustificativa('${userId}', '${dateKey}')">Salvar</button>
+    </div>
+  `
+
+  modalOverlay.appendChild(modalContent)
+  document.body.appendChild(modalOverlay)
+
+  // Adicionar estilos para o modal se ainda não existirem
+  if (!document.getElementById("modal-styles")) {
+    const styleElement = document.createElement("style")
+    styleElement.id = "modal-styles"
+    styleElement.textContent = `
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+      
+      .modal-content {
+        background-color: white;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        border-bottom: 1px solid #eaedf2;
+      }
+      
+      .modal-header h3 {
+        margin: 0;
+        color: #1e293b;
+        font-size: 1.2rem;
+        font-weight: 600;
+      }
+      
+      .close-modal {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #64748b;
+        font-size: 1.2rem;
+      }
+      
+      .modal-body {
+        padding: 20px;
+      }
+      
+      .modal-body p {
+        margin-top: 0;
+        margin-bottom: 15px;
+        color: #334155;
+      }
+      
+      #justificativa-text {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 0.9rem;
+        resize: vertical;
+      }
+      
+      .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 15px 20px;
+        border-top: 1px solid #eaedf2;
+      }
+      
+      .cancel-button, .save-button {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      
+      .cancel-button {
+        background-color: #f1f5f9;
+        border: none;
+        color: #64748b;
+      }
+      
+      .cancel-button:hover {
+        background-color: #e2e8f0;
+        color: #334155;
+      }
+      
+      .save-button {
+        background-color: #2E3631;
+        border: none;
+        color: white;
+      }
+      
+      .save-button:hover {
+        background-color: #3a4540;
+      }
+      
+      .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 1s ease-in-out infinite;
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    `
+    document.head.appendChild(styleElement)
+  }
+
+  // Focar no textarea
+  document.getElementById("justificativa-text").focus()
+}
+
+// Função para fechar o modal
+function closeJustificativaModal() {
+  const modalOverlay = document.querySelector(".modal-overlay")
+  if (modalOverlay) {
+    document.body.removeChild(modalOverlay)
+  }
+}
+
+// Função para salvar a justificativa
+async function salvarJustificativa(userId, dateKey) {
+  try {
+    const justificativaText = document.getElementById("justificativa-text").value.trim()
+
+    if (!justificativaText) {
+      alert("Por favor, digite uma justificativa.")
+      return
+    }
+
+    // Mostrar indicador de carregamento no botão
+    const saveButton = document.querySelector(".save-button")
+    const originalButtonText = saveButton.innerHTML
+    saveButton.innerHTML = '<span class="loading-spinner"></span> Salvando...'
+    saveButton.disabled = true
+
+    // Usar a propriedade atual que está armazenada na variável global
+    if (!currentPropriedadeNome) {
+      throw new Error("Nome da propriedade não encontrado")
+    }
+
+    console.log(`Salvando justificativa para a propriedade: ${currentPropriedadeNome}`)
+
+    // Extrair a data do dateKey (formato YYYY-MM-DD)
+    const [year, month, day] = dateKey.split("-")
+    const dataFormatada = `${day}/${month}/${year}`
+
+    // Criar um novo nó para a justificativa
+    const justificativaData = {
+      userId: userId,
+      data: dataFormatada,
+      justificativa: justificativaText,
+      timestamp: Date.now(),
+      status: "justificado",
+    }
+
+    // Referência para o nó de justificativas
+    const justificativasRef = ref(database, `propriedades/${currentPropriedadeNome}/justificativas`)
+    const newJustificativaRef = push(justificativasRef)
+
+    // Salvar a justificativa
+    await set(newJustificativaRef, justificativaData)
+
+    // Atualizar o elemento visual para mostrar que foi justificado
+    const elementoClicado = document.querySelector(
+      `.activity-indicator[data-user-id="${userId}"][data-date="${dateKey}"]`,
+    )
+
+    if (elementoClicado) {
+      elementoClicado.classList.remove("inactive")
+      elementoClicado.classList.add("justified")
+      elementoClicado.innerHTML = '<i class="fas fa-check"></i>'
+      elementoClicado.removeAttribute("onclick")
+      elementoClicado.title = "Justificado: " + justificativaText
+    }
+
+    // Fechar o modal
+    closeJustificativaModal()
+
+    // Mostrar mensagem de sucesso
+    const toastElement = document.createElement("div")
+    toastElement.className = "toast-notification"
+    toastElement.innerHTML = `
+      <div class="toast-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="toast-message">Justificativa salva com sucesso!</div>
+    `
+
+    document.body.appendChild(toastElement)
+
+    // Adicionar estilos para o toast se ainda não existirem
+    if (!document.getElementById("toast-styles")) {
+      const toastStyleElement = document.createElement("style")
+      toastStyleElement.id = "toast-styles"
+      toastStyleElement.textContent = `
+        .toast-notification {
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          background-color: #10b981;
+          color: white;
+          padding: 15px 20px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+          z-index: 1000;
+          animation: slideIn 0.3s ease-out, fadeOut 0.5s ease-out 3s forwards;
+        }
+        
+        .toast-icon {
+          font-size: 1.2rem;
+        }
+        
+        .toast-message {
+          font-family: 'Poppins', sans-serif;
+          font-size: 0.9rem;
+          font-weight: 500;
+        }
+        
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; visibility: hidden; }
+        }
+      `
+      document.head.appendChild(toastStyleElement)
+    }
+
+    // Remover o toast após 3.5 segundos
+    setTimeout(() => {
+      if (document.body.contains(toastElement)) {
+        document.body.removeChild(toastElement)
+      }
+    }, 3500)
+  } catch (error) {
+    console.error("Erro ao salvar justificativa:", error)
+    alert(`Erro ao salvar justificativa: ${error.message}`)
+
+    // Restaurar o botão
+    const saveButton = document.querySelector(".save-button")
+    if (saveButton) {
+      saveButton.innerHTML = "Salvar"
+      saveButton.disabled = false
+    }
+  }
+}
+
+// Adicionar as funções ao escopo global para que possam ser chamadas pelo onclick
+window.showJustificativaModal = showJustificativaModal
+window.closeJustificativaModal = closeJustificativaModal
+window.salvarJustificativa = salvarJustificativa
+import { push, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"

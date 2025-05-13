@@ -54,9 +54,9 @@ async function fetchUsers(propriedadeNome) {
           </button>
         </div>
         
-        <!-- Botão para abrir o modal de cadastro -->
+        <!-- Botão para mostrar mensagem de contato -->
         <div class="action-buttons">
-          <button id="openCadastroModal" class="action-button">
+          <button id="showContactMessage" class="action-button">
             <i class="fas fa-user-plus"></i> Cadastrar Novo Usuário
           </button>
         </div>
@@ -65,6 +65,7 @@ async function fetchUsers(propriedadeNome) {
         <div class="users-list">
           <h3><i class="fas fa-users"></i> Usuários Cadastrados</h3>
           ${usersHtml.length > 0 ? usersHtml.join("") : '<p class="empty-state"><i class="fas fa-info-circle"></i> Nenhum usuário cadastrado.</p>'}
+        
         </div>
         
         <!-- Modal de cadastro de usuário -->
@@ -108,8 +109,85 @@ async function fetchUsers(propriedadeNome) {
     // Configurar as abas de cadastro
     setupCadastroTabs(propriedadeNome)
 
-    // Configurar o modal de cadastro
-    setupCadastroModal(propriedadeNome)
+    // Configurar o botão de mensagem de contato
+    const showContactMessageBtn = document.getElementById("showContactMessage")
+    if (showContactMessageBtn) {
+      showContactMessageBtn.addEventListener("click", () => {
+        const messageContainer = document.createElement("div")
+        messageContainer.className = "contact-message-container"
+        messageContainer.innerHTML = `
+          <div class="contact-message">
+            <i class="fas fa-info-circle"></i>
+            <p>Entre em contato para adicionar novos usuários.</p>
+            <button class="close-message-btn"><i class="fas fa-times"></i></button>
+          </div>
+        `
+        document.body.appendChild(messageContainer)
+
+        // Adicionar estilo para a mensagem
+        const style = document.createElement("style")
+        style.textContent = `
+          .contact-message-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+          }
+          .contact-message {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            position: relative;
+          }
+          .contact-message i {
+            font-size: 48px;
+            color: #4CAF50;
+            margin-bottom: 15px;
+          }
+          .contact-message p {
+            font-size: 18px;
+            margin-bottom: 15px;
+          }
+          .close-message-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            color: #666;
+          }
+          .close-message-btn:hover {
+            color: #333;
+          }
+        `
+        document.head.appendChild(style)
+
+        // Configurar o botão de fechar
+        const closeBtn = messageContainer.querySelector(".close-message-btn")
+        closeBtn.addEventListener("click", () => {
+          document.body.removeChild(messageContainer)
+        })
+
+        // Fechar ao clicar fora da mensagem
+        messageContainer.addEventListener("click", (event) => {
+          if (event.target === messageContainer) {
+            document.body.removeChild(messageContainer)
+          }
+        })
+      })
+    }
   } catch (error) {
     console.error("Erro ao buscar usuários:", error)
     dataContainer.innerHTML = `

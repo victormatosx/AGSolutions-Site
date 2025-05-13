@@ -15,46 +15,64 @@ async function fetchAllData(userPropriedade) {
   const dataContainer = document.getElementById("data-container")
 
   try {
-    // Inicializa a estrutura da página
+    // Inicializa a estrutura da página com um layout mais intuitivo
     dataContainer.innerHTML = `
       <div class="propriedade">
         <h2><i class="fas fa-clipboard-check"></i> Registros</h2>
         
-        <!-- Tabs principais para Máquinas e Veículos -->
-        <div class="main-tabs">
-          <button class="main-tab-button active" data-tab="maquinas">
-            <i class="fas fa-tractor"></i> Máquinas
-          </button>
-          <button class="main-tab-button" data-tab="veiculos">
-            <i class="fas fa-truck"></i> Veículos
-          </button>
+        <!-- Seletor de categoria principal -->
+        <div class="category-selector">
+          <div class="category-card" data-category="maquinas">
+            <div class="category-icon">
+              <i class="fas fa-tractor"></i>
+            </div>
+            <h3>Máquinas</h3>
+            <p>Apontamentos e abastecimentos de máquinas agrícolas</p>
+          </div>
+          
+          <div class="category-card" data-category="veiculos">
+            <div class="category-icon">
+              <i class="fas fa-truck"></i>
+            </div>
+            <h3>Veículos</h3>
+            <p>Percursos e abastecimentos de veículos</p>
+          </div>
         </div>
         
-        <!-- Conteúdo para Máquinas -->
-        <div class="main-tab-content" id="maquinas-content">
-          <div class="apontamentos-tabs">
-            <button class="tab-button active" data-tab="apontamentos">
-              <i class="fas fa-clock"></i> Apontamentos
-            </button>
-            <button class="tab-button" data-tab="abastecimentos">
-              <i class="fas fa-gas-pump"></i> Abastecimentos
-            </button>
+        <!-- Container para conteúdo de máquinas -->
+        <div class="category-content" id="maquinas-content" style="display: none;">
+          <div class="back-button" data-target="category-selector">
+            <i class="fas fa-arrow-left"></i> Voltar para categorias
+          </div>
+          
+          <div class="subcategory-selector">
+            <div class="subcategory-card active" data-subcategory="apontamentos" data-parent="maquinas">
+              <div class="subcategory-icon">
+                <i class="fas fa-clock"></i>
+              </div>
+              <h4>Apontamentos</h4>
+            </div>
+            
+            <div class="subcategory-card" data-subcategory="abastecimentos" data-parent="maquinas">
+              <div class="subcategory-icon">
+                <i class="fas fa-gas-pump"></i>
+              </div>
+              <h4>Abastecimentos</h4>
+            </div>
           </div>
           
           <!-- Container para apontamentos de máquinas -->
-          <div class="apontamentos-container" id="apontamentos-container">
-            <!-- Status tabs para apontamentos -->
-            <div class="status-tabs">
-              <button class="status-tab-button active" data-status="pendentes" data-container="apontamentos">
+          <div class="subcategory-content active" id="apontamentos-container">
+            <div class="status-filter">
+              <button class="status-filter-button active" data-status="pendentes" data-container="apontamentos">
                 <i class="fas fa-hourglass-half"></i> Para Validar
               </button>
-              <button class="status-tab-button" data-status="validados" data-container="apontamentos">
+              <button class="status-filter-button" data-status="validados" data-container="apontamentos">
                 <i class="fas fa-check-circle"></i> Validados
               </button>
             </div>
             
-            <!-- Conteúdo dos apontamentos pendentes -->
-            <div class="status-content active" id="apontamentos-pendentes-content">
+            <div class="records-container active" id="apontamentos-pendentes-content">
               <div id="apontamentos-pendentes">
                 <div class="empty-apontamentos-message empty-state">
                   <i class="fas fa-spinner fa-spin"></i> Carregando apontamentos...
@@ -62,8 +80,7 @@ async function fetchAllData(userPropriedade) {
               </div>
             </div>
             
-            <!-- Conteúdo dos apontamentos validados -->
-            <div class="status-content" id="apontamentos-validados-content">
+            <div class="records-container" id="apontamentos-validados-content">
               <div id="apontamentos-validados">
                 <div class="empty-apontamentos-message empty-state">
                   <i class="fas fa-spinner fa-spin"></i> Carregando apontamentos...
@@ -73,19 +90,17 @@ async function fetchAllData(userPropriedade) {
           </div>
           
           <!-- Container para abastecimentos de máquinas -->
-          <div class="apontamentos-container" id="abastecimentos-container" style="display: none;">
-            <!-- Status tabs para abastecimentos -->
-            <div class="status-tabs">
-              <button class="status-tab-button active" data-status="pendentes" data-container="abastecimentos">
+          <div class="subcategory-content" id="abastecimentos-container">
+            <div class="status-filter">
+              <button class="status-filter-button active" data-status="pendentes" data-container="abastecimentos">
                 <i class="fas fa-hourglass-half"></i> Para Validar
               </button>
-              <button class="status-tab-button" data-status="validados" data-container="abastecimentos">
+              <button class="status-filter-button" data-status="validados" data-container="abastecimentos">
                 <i class="fas fa-check-circle"></i> Validados
               </button>
             </div>
             
-            <!-- Conteúdo dos abastecimentos pendentes -->
-            <div class="status-content active" id="abastecimentos-pendentes-content">
+            <div class="records-container active" id="abastecimentos-pendentes-content">
               <div id="abastecimentos-pendentes">
                 <div class="empty-apontamentos-message empty-state">
                   <i class="fas fa-spinner fa-spin"></i> Carregando abastecimentos...
@@ -93,8 +108,7 @@ async function fetchAllData(userPropriedade) {
               </div>
             </div>
             
-            <!-- Conteúdo dos abastecimentos validados -->
-            <div class="status-content" id="abastecimentos-validados-content">
+            <div class="records-container" id="abastecimentos-validados-content">
               <div id="abastecimentos-validados">
                 <div class="empty-apontamentos-message empty-state">
                   <i class="fas fa-spinner fa-spin"></i> Carregando abastecimentos...
@@ -104,31 +118,40 @@ async function fetchAllData(userPropriedade) {
           </div>
         </div>
         
-        <!-- Conteúdo para Veículos -->
-        <div class="main-tab-content" id="veiculos-content" style="display: none;">
-          <div class="apontamentos-tabs">
-            <button class="tab-button active" data-tab="percursos">
-              <i class="fas fa-route"></i> Percursos
-            </button>
-            <button class="tab-button" data-tab="abastecimentosVeiculos">
-              <i class="fas fa-gas-pump"></i> Abastecimentos
-            </button>
+        <!-- Container para conteúdo de veículos -->
+        <div class="category-content" id="veiculos-content" style="display: none;">
+          <div class="back-button" data-target="category-selector">
+            <i class="fas fa-arrow-left"></i> Voltar para categorias
+          </div>
+          
+          <div class="subcategory-selector">
+            <div class="subcategory-card active" data-subcategory="percursos" data-parent="veiculos">
+              <div class="subcategory-icon">
+                <i class="fas fa-route"></i>
+              </div>
+              <h4>Percursos</h4>
+            </div>
+            
+            <div class="subcategory-card" data-subcategory="abastecimentosVeiculos" data-parent="veiculos">
+              <div class="subcategory-icon">
+                <i class="fas fa-gas-pump"></i>
+              </div>
+              <h4>Abastecimentos</h4>
+            </div>
           </div>
           
           <!-- Container para percursos de veículos -->
-          <div class="apontamentos-container" id="percursos-container">
-            <!-- Status tabs para percursos -->
-            <div class="status-tabs">
-              <button class="status-tab-button active" data-status="pendentes" data-container="percursos">
+          <div class="subcategory-content active" id="percursos-container">
+            <div class="status-filter">
+              <button class="status-filter-button active" data-status="pendentes" data-container="percursos">
                 <i class="fas fa-hourglass-half"></i> Para Validar
               </button>
-              <button class="status-tab-button" data-status="validados" data-container="percursos">
+              <button class="status-filter-button" data-status="validados" data-container="percursos">
                 <i class="fas fa-check-circle"></i> Validados
               </button>
             </div>
             
-            <!-- Conteúdo dos percursos pendentes -->
-            <div class="status-content active" id="percursos-pendentes-content">
+            <div class="records-container active" id="percursos-pendentes-content">
               <div id="percursos-pendentes">
                 <div class="empty-apontamentos-message empty-state">
                   <i class="fas fa-spinner fa-spin"></i> Carregando percursos...
@@ -136,8 +159,7 @@ async function fetchAllData(userPropriedade) {
               </div>
             </div>
             
-            <!-- Conteúdo dos percursos validados -->
-            <div class="status-content" id="percursos-validados-content">
+            <div class="records-container" id="percursos-validados-content">
               <div id="percursos-validados">
                 <div class="empty-apontamentos-message empty-state">
                   <i class="fas fa-spinner fa-spin"></i> Carregando percursos...
@@ -147,19 +169,17 @@ async function fetchAllData(userPropriedade) {
           </div>
           
           <!-- Container para abastecimentos de veículos -->
-          <div class="apontamentos-container" id="abastecimentosVeiculos-container" style="display: none;">
-            <!-- Status tabs para abastecimentos de veículos -->
-            <div class="status-tabs">
-              <button class="status-tab-button active" data-status="pendentes" data-container="abastecimentosVeiculos">
+          <div class="subcategory-content" id="abastecimentosVeiculos-container">
+            <div class="status-filter">
+              <button class="status-filter-button active" data-status="pendentes" data-container="abastecimentosVeiculos">
                 <i class="fas fa-hourglass-half"></i> Para Validar
               </button>
-              <button class="status-tab-button" data-status="validados" data-container="abastecimentosVeiculos">
+              <button class="status-filter-button" data-status="validados" data-container="abastecimentosVeiculos">
                 <i class="fas fa-check-circle"></i> Validados
               </button>
             </div>
             
-            <!-- Conteúdo dos abastecimentos de veículos pendentes -->
-            <div class="status-content active" id="abastecimentosVeiculos-pendentes-content">
+            <div class="records-container active" id="abastecimentosVeiculos-pendentes-content">
               <div id="abastecimentosVeiculos-pendentes">
                 <div class="empty-apontamentos-message empty-state">
                   <i class="fas fa-spinner fa-spin"></i> Carregando abastecimentos de veículos...
@@ -167,8 +187,7 @@ async function fetchAllData(userPropriedade) {
               </div>
             </div>
             
-            <!-- Conteúdo dos abastecimentos de veículos validados -->
-            <div class="status-content" id="abastecimentosVeiculos-validados-content">
+            <div class="records-container" id="abastecimentosVeiculos-validados-content">
               <div id="abastecimentosVeiculos-validados">
                 <div class="empty-apontamentos-message empty-state">
                   <i class="fas fa-spinner fa-spin"></i> Carregando abastecimentos de veículos...
@@ -192,17 +211,14 @@ async function fetchAllData(userPropriedade) {
       </div>
     `
 
-    // Configurar as tabs principais
-    setupMainTabs()
+    // Configurar navegação entre categorias
+    setupCategoryNavigation()
 
-    // Configurar as subtabs para máquinas
-    setupSubTabs("maquinas-content")
+    // Configurar navegação entre subcategorias
+    setupSubcategoryNavigation()
 
-    // Configurar as subtabs para veículos
-    setupSubTabs("veiculos-content")
-
-    // Configurar as tabs de status
-    setupStatusTabs()
+    // Configurar filtros de status
+    setupStatusFilters()
 
     // Buscar todos os tipos de dados
     await Promise.all([
@@ -225,57 +241,81 @@ async function fetchAllData(userPropriedade) {
   }
 }
 
-function setupMainTabs() {
-  document.querySelectorAll(".main-tab-button").forEach((button) => {
-    button.addEventListener("click", (e) => {
-      const tabType = e.target.closest(".main-tab-button").dataset.tab
+function setupCategoryNavigation() {
+  // Configurar cliques nos cards de categoria
+  document.querySelectorAll(".category-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      const category = card.dataset.category
 
-      // Atualiza classes ativas nas tabs principais
-      document.querySelectorAll(".main-tab-button").forEach((btn) => btn.classList.remove("active"))
-      e.target.closest(".main-tab-button").classList.add("active")
+      // Esconder o seletor de categorias
+      document.querySelector(".category-selector").style.display = "none"
 
-      // Mostra/esconde conteúdo das tabs principais
-      document.querySelectorAll(".main-tab-content").forEach((content) => {
-        content.style.display = content.id === `${tabType}-content` ? "block" : "none"
+      // Mostrar o conteúdo da categoria selecionada
+      document.querySelectorAll(".category-content").forEach((content) => {
+        content.style.display = content.id === `${category}-content` ? "block" : "none"
+      })
+    })
+  })
+
+  // Configurar botões de voltar
+  document.querySelectorAll(".back-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = button.dataset.target
+
+      // Esconder todos os conteúdos de categoria
+      document.querySelectorAll(".category-content").forEach((content) => {
+        content.style.display = "none"
+      })
+
+      // Mostrar o alvo (seletor de categorias)
+      document.querySelector(`.${target}`).style.display = "flex"
+    })
+  })
+}
+
+function setupSubcategoryNavigation() {
+  document.querySelectorAll(".subcategory-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      const subcategory = card.dataset.subcategory
+      const parent = card.dataset.parent
+
+      // Atualizar classes ativas nas subcategorias
+      document.querySelectorAll(`.subcategory-card[data-parent="${parent}"]`).forEach((c) => {
+        c.classList.remove("active")
+      })
+      card.classList.add("active")
+
+      // Mostrar/esconder conteúdo das subcategorias
+      document.querySelectorAll(`.subcategory-content`).forEach((content) => {
+        content.classList.remove("active")
+        if (content.id === `${subcategory}-container`) {
+          content.classList.add("active")
+        }
       })
     })
   })
 }
 
-function setupSubTabs(containerId) {
-  const container = document.getElementById(containerId)
+function setupStatusFilters() {
+  document.querySelectorAll(".status-filter-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const status = button.dataset.status
+      const container = button.dataset.container
 
-  container.querySelectorAll(".tab-button").forEach((button) => {
-    button.addEventListener("click", (e) => {
-      const tabType = e.target.closest(".tab-button").dataset.tab
-
-      // Atualiza classes ativas nas subtabs
-      container.querySelectorAll(".tab-button").forEach((btn) => btn.classList.remove("active"))
-      e.target.closest(".tab-button").classList.add("active")
-
-      // Mostra/esconde conteúdo das subtabs
-      container.querySelectorAll(".apontamentos-container").forEach((content) => {
-        content.style.display = content.id === `${tabType}-container` ? "block" : "none"
+      // Atualizar classes ativas nos botões de filtro
+      const filterContainer = button.closest(".status-filter")
+      filterContainer.querySelectorAll(".status-filter-button").forEach((btn) => {
+        btn.classList.remove("active")
       })
-    })
-  })
-}
+      button.classList.add("active")
 
-function setupStatusTabs() {
-  document.querySelectorAll(".status-tab-button").forEach((button) => {
-    button.addEventListener("click", (e) => {
-      const statusType = e.target.closest(".status-tab-button").dataset.status
-      const containerType = e.target.closest(".status-tab-button").dataset.container
-      const container = e.target.closest(".apontamentos-container")
-
-      // Atualiza classes ativas nas tabs de status
-      container.querySelectorAll(".status-tab-button").forEach((btn) => btn.classList.remove("active"))
-      e.target.closest(".status-tab-button").classList.add("active")
-
-      // Mostra/esconde conteúdo das tabs de status
-      container.querySelectorAll(".status-content").forEach((content) => {
-        content.style.display = content.id === `${containerType}-${statusType}-content` ? "block" : "none"
-        content.classList.toggle("active", content.id === `${containerType}-${statusType}-content`)
+      // Mostrar/esconder conteúdo dos status
+      const parentContainer = button.closest(".subcategory-content")
+      parentContainer.querySelectorAll(".records-container").forEach((content) => {
+        content.classList.remove("active")
+        if (content.id === `${container}-${status}-content`) {
+          content.classList.add("active")
+        }
       })
     })
   })
@@ -334,21 +374,33 @@ async function fetchApontamentos(userPropriedade) {
           }
 
           return `
-            <div class="apontamento ${isValidado ? "validado" : "em-andamento"}" data-id="${apontamentoSnapshot.key}" data-type="apontamento">
-              <div class="apontamento-info-left">
-                <p><i class="fas fa-tasks"></i><strong>Ficha de Controle:</strong> ${apontamentoData.fichaControle || "N/A"}</p>
-                <p><i class="fas fa-seedling"></i><strong>Cultura:</strong> ${apontamentoData.cultura || "N/A"}</p>
+            <div class="record-card ${isValidado ? "validado" : "em-andamento"}" data-id="${apontamentoSnapshot.key}" data-type="apontamento">
+              <div class="record-header">
+                <div class="record-title">
+                  <i class="fas fa-tasks"></i>
+                  <h4>Ficha de Controle: ${apontamentoData.fichaControle || "N/A"}</h4>
+                </div>
+                <div class="record-status">
+                  ${
+                    !isValidado
+                      ? `
+                    <button class="validar-button" data-propriedade="${userPropriedade}" data-apontamento="${apontamentoSnapshot.key}" data-type="apontamento">
+                      <i class="fas fa-check"></i> Validar
+                    </button>`
+                      : `<span class="status-badge validado"><i class="fas fa-check-circle"></i> Validado</span>`
+                  }
+                </div>
               </div>
-              <div class="apontamento-info-right">
-                <p><i class="fas fa-calendar"></i><strong>Data:</strong> ${apontamentoData.data || new Date(apontamentoData.timestamp).toLocaleDateString()}</p>
-                ${
-                  !isValidado
-                    ? `
-                  <button class="validar-button" data-propriedade="${userPropriedade}" data-apontamento="${apontamentoSnapshot.key}" data-type="apontamento">
-                    <i class="fas fa-check"></i> Validar
-                  </button>`
-                    : `<p><i class="fas fa-check-circle"></i><strong>Status:</strong> Validado</p>`
-                }
+              <div class="record-body">
+                <div class="record-info">
+                  <p><i class="fas fa-seedling"></i><strong>Cultura:</strong> ${apontamentoData.cultura || "N/A"}</p>
+                  <p><i class="fas fa-calendar"></i><strong>Data:</strong> ${apontamentoData.data || new Date(apontamentoData.timestamp).toLocaleDateString()}</p>
+                </div>
+                <div class="record-action">
+                  <button class="view-details-button" data-id="${apontamentoSnapshot.key}" data-type="apontamento">
+                    <i class="fas fa-eye"></i> Ver Detalhes
+                  </button>
+                </div>
               </div>
             </div>
             <div class="modal-overlay" id="modal-apontamento-${apontamentoSnapshot.key}">
@@ -412,7 +464,7 @@ async function fetchApontamentos(userPropriedade) {
         `
       }
 
-      setupApontamentoClicks("apontamento")
+      setupRecordDetails("apontamento")
       setupValidationButtons("apontamento")
     } else {
       apontamentosPendentesContainer.innerHTML = `
@@ -459,21 +511,33 @@ async function fetchAbastecimentos(userPropriedade) {
 
         const abastecimentoPromise = getUserName(abastecimentoData.userId, userPropriedade).then((userName) => {
           return `
-            <div class="apontamento ${isValidado ? "validado" : "em-andamento"}" data-id="${abastecimentoSnapshot.key}" data-type="abastecimento">
-              <div class="apontamento-info-left">
-                <p><i class="fas fa-truck-monster"></i><strong>Equipamento:</strong> ${abastecimentoData.bem || "N/A"}</p>
-                <p><i class="fas fa-gas-pump"></i><strong>Produto:</strong> ${abastecimentoData.produto || "N/A"}</p>
+            <div class="record-card ${isValidado ? "validado" : "em-andamento"}" data-id="${abastecimentoSnapshot.key}" data-type="abastecimento">
+              <div class="record-header">
+                <div class="record-title">
+                  <i class="fas fa-gas-pump"></i>
+                  <h4>Abastecimento: ${abastecimentoData.bem || "N/A"}</h4>
+                </div>
+                <div class="record-status">
+                  ${
+                    !isValidado
+                      ? `
+                    <button class="validar-button" data-propriedade="${userPropriedade}" data-apontamento="${abastecimentoSnapshot.key}" data-type="abastecimento">
+                      <i class="fas fa-check"></i> Validar
+                    </button>`
+                      : `<span class="status-badge validado"><i class="fas fa-check-circle"></i> Validado</span>`
+                  }
+                </div>
               </div>
-              <div class="apontamento-info-right">
-                <p><i class="fas fa-tint"></i><strong>Quantidade:</strong> ${abastecimentoData.quantidade || "0"} L</p>
-                ${
-                  !isValidado
-                    ? `
-                  <button class="validar-button" data-propriedade="${userPropriedade}" data-apontamento="${abastecimentoSnapshot.key}" data-type="abastecimento">
-                    <i class="fas fa-check"></i> Validar
-                  </button>`
-                    : `<p><i class="fas fa-check-circle"></i><strong>Status:</strong> Validado</p>`
-                }
+              <div class="record-body">
+                <div class="record-info">
+                  <p><i class="fas fa-tint"></i><strong>Produto:</strong> ${abastecimentoData.produto || "N/A"}</p>
+                  <p><i class="fas fa-tint"></i><strong>Quantidade:</strong> ${abastecimentoData.quantidade || "0"} L</p>
+                </div>
+                <div class="record-action">
+                  <button class="view-details-button" data-id="${abastecimentoSnapshot.key}" data-type="abastecimento">
+                    <i class="fas fa-eye"></i> Ver Detalhes
+                  </button>
+                </div>
               </div>
             </div>
             <div class="modal-overlay" id="modal-abastecimento-${abastecimentoSnapshot.key}">
@@ -536,7 +600,7 @@ async function fetchAbastecimentos(userPropriedade) {
         `
       }
 
-      setupApontamentoClicks("abastecimento")
+      setupRecordDetails("abastecimento")
       setupValidationButtons("abastecimento")
     } else {
       abastecimentosPendentesContainer.innerHTML = `
@@ -583,21 +647,33 @@ async function fetchPercursos(userPropriedade) {
 
         const percursoPromise = getUserName(percursoData.userId, userPropriedade).then((userName) => {
           return `
-            <div class="apontamento ${isValidado ? "validado" : "em-andamento"}" data-id="${percursoSnapshot.key}" data-type="percurso">
-              <div class="apontamento-info-left">
-                <p><i class="fas fa-truck"></i><strong>Veículo:</strong> ${percursoData.veiculo || "N/A"}</p>
-                <p><i class="fas fa-map-marker-alt"></i><strong>Objetivo:</strong> ${percursoData.objetivo || "N/A"}</p>
+            <div class="record-card ${isValidado ? "validado" : "em-andamento"}" data-id="${percursoSnapshot.key}" data-type="percurso">
+              <div class="record-header">
+                <div class="record-title">
+                  <i class="fas fa-route"></i>
+                  <h4>Percurso: ${percursoData.veiculo || "N/A"}</h4>
+                </div>
+                <div class="record-status">
+                  ${
+                    !isValidado
+                      ? `
+                    <button class="validar-button" data-propriedade="${userPropriedade}" data-apontamento="${percursoSnapshot.key}" data-type="percurso">
+                      <i class="fas fa-check"></i> Validar
+                    </button>`
+                      : `<span class="status-badge validado"><i class="fas fa-check-circle"></i> Validado</span>`
+                  }
+                </div>
               </div>
-              <div class="apontamento-info-right">
-                <p><i class="fas fa-calendar"></i><strong>Data:</strong> ${percursoData.data || new Date(percursoData.timestamp).toLocaleDateString()}</p>
-                ${
-                  !isValidado
-                    ? `
-                  <button class="validar-button" data-propriedade="${userPropriedade}" data-apontamento="${percursoSnapshot.key}" data-type="percurso">
-                    <i class="fas fa-check"></i> Validar
-                  </button>`
-                    : `<p><i class="fas fa-check-circle"></i><strong>Status:</strong> Validado</p>`
-                }
+              <div class="record-body">
+                <div class="record-info">
+                  <p><i class="fas fa-map-marker-alt"></i><strong>Objetivo:</strong> ${percursoData.objetivo || "N/A"}</p>
+                  <p><i class="fas fa-calendar"></i><strong>Data:</strong> ${percursoData.data || new Date(percursoData.timestamp).toLocaleDateString()}</p>
+                </div>
+                <div class="record-action">
+                  <button class="view-details-button" data-id="${percursoSnapshot.key}" data-type="percurso">
+                    <i class="fas fa-eye"></i> Ver Detalhes
+                  </button>
+                </div>
               </div>
             </div>
             <div class="modal-overlay" id="modal-percurso-${percursoSnapshot.key}">
@@ -651,7 +727,7 @@ async function fetchPercursos(userPropriedade) {
         `
       }
 
-      setupApontamentoClicks("percurso")
+      setupRecordDetails("percurso")
       setupValidationButtons("percurso")
     } else {
       percursosPendentesContainer.innerHTML = `
@@ -698,21 +774,33 @@ async function fetchAbastecimentosVeiculos(userPropriedade) {
 
         const abastecimentoPromise = getUserName(abastecimentoData.userId, userPropriedade).then((userName) => {
           return `
-            <div class="apontamento ${isValidado ? "validado" : "em-andamento"}" data-id="${abastecimentoSnapshot.key}" data-type="abastecimentoVeiculo">
-              <div class="apontamento-info-left">
-                <p><i class="fas fa-truck"></i><strong>Veículo:</strong> ${abastecimentoData.veiculo || "N/A"}</p>
-                <p><i class="fas fa-gas-pump"></i><strong>Produto:</strong> ${abastecimentoData.produto || "N/A"}</p>
+            <div class="record-card ${isValidado ? "validado" : "em-andamento"}" data-id="${abastecimentoSnapshot.key}" data-type="abastecimentoVeiculo">
+              <div class="record-header">
+                <div class="record-title">
+                  <i class="fas fa-gas-pump"></i>
+                  <h4>Abastecimento: ${abastecimentoData.veiculo || "N/A"}</h4>
+                </div>
+                <div class="record-status">
+                  ${
+                    !isValidado
+                      ? `
+                    <button class="validar-button" data-propriedade="${userPropriedade}" data-apontamento="${abastecimentoSnapshot.key}" data-type="abastecimentoVeiculo">
+                      <i class="fas fa-check"></i> Validar
+                    </button>`
+                      : `<span class="status-badge validado"><i class="fas fa-check-circle"></i> Validado</span>`
+                  }
+                </div>
               </div>
-              <div class="apontamento-info-right">
-                <p><i class="fas fa-tint"></i><strong>Quantidade:</strong> ${abastecimentoData.quantidade || "0"} L</p>
-                ${
-                  !isValidado
-                    ? `
-                  <button class="validar-button" data-propriedade="${userPropriedade}" data-apontamento="${abastecimentoSnapshot.key}" data-type="abastecimentoVeiculo">
-                    <i class="fas fa-check"></i> Validar
-                  </button>`
-                    : `<p><i class="fas fa-check-circle"></i><strong>Status:</strong> Validado</p>`
-                }
+              <div class="record-body">
+                <div class="record-info">
+                  <p><i class="fas fa-tint"></i><strong>Produto:</strong> ${abastecimentoData.produto || "N/A"}</p>
+                  <p><i class="fas fa-tint"></i><strong>Quantidade:</strong> ${abastecimentoData.quantidade || "0"} L</p>
+                </div>
+                <div class="record-action">
+                  <button class="view-details-button" data-id="${abastecimentoSnapshot.key}" data-type="abastecimentoVeiculo">
+                    <i class="fas fa-eye"></i> Ver Detalhes
+                  </button>
+                </div>
               </div>
             </div>
             <div class="modal-overlay" id="modal-abastecimentoVeiculo-${abastecimentoSnapshot.key}">
@@ -776,7 +864,7 @@ async function fetchAbastecimentosVeiculos(userPropriedade) {
         `
       }
 
-      setupApontamentoClicks("abastecimentoVeiculo")
+      setupRecordDetails("abastecimentoVeiculo")
       setupValidationButtons("abastecimentoVeiculo")
     } else {
       abastecimentosVeiculosPendentesContainer.innerHTML = `
@@ -805,16 +893,13 @@ async function fetchAbastecimentosVeiculos(userPropriedade) {
   }
 }
 
-function setupApontamentoClicks(type) {
-  document.querySelectorAll(`.apontamento[data-type="${type}"]`).forEach((apontamento) => {
-    apontamento.addEventListener("click", function (e) {
-      // Não expandir se o clique foi no botão de validar
-      if (e.target.closest(".validar-button")) {
-        return
-      }
-
-      const apontamentoId = this.dataset.id
-      const modalOverlay = document.getElementById(`modal-${type}-${apontamentoId}`)
+function setupRecordDetails(type) {
+  // Configurar botões de visualização de detalhes
+  document.querySelectorAll(`.view-details-button[data-type="${type}"]`).forEach((button) => {
+    button.addEventListener("click", (e) => {
+      e.stopPropagation()
+      const recordId = button.dataset.id
+      const modalOverlay = document.getElementById(`modal-${type}-${recordId}`)
 
       if (modalOverlay) {
         modalOverlay.style.display = "flex"
@@ -822,11 +907,12 @@ function setupApontamentoClicks(type) {
     })
   })
 
+  // Configurar botões de fechar modal
   document.querySelectorAll(`.close-modal[data-type="${type}"]`).forEach((closeButton) => {
     closeButton.addEventListener("click", function (e) {
       e.stopPropagation()
-      const apontamentoId = this.dataset.apontamento
-      const modalOverlay = document.getElementById(`modal-${type}-${apontamentoId}`)
+      const recordId = this.dataset.apontamento
+      const modalOverlay = document.getElementById(`modal-${type}-${recordId}`)
 
       if (modalOverlay) {
         modalOverlay.style.display = "none"
@@ -834,6 +920,7 @@ function setupApontamentoClicks(type) {
     })
   })
 
+  // Configurar fechamento de modal ao clicar fora
   document.querySelectorAll(`.modal-overlay[id^="modal-${type}-"]`).forEach((modal) => {
     modal.addEventListener("click", function (e) {
       if (e.target === this) {
@@ -920,7 +1007,7 @@ async function validateRecord(propriedadeNome, recordKey, recordType) {
     })
 
     // Obter o elemento do registro
-    const recordElement = document.querySelector(`.apontamento[data-id="${recordKey}"][data-type="${recordType}"]`)
+    const recordElement = document.querySelector(`.record-card[data-id="${recordKey}"][data-type="${recordType}"]`)
 
     // Obter o elemento modal associado
     const modalElement = document.getElementById(`modal-${recordType}-${recordKey}`)
@@ -935,8 +1022,9 @@ async function validateRecord(propriedadeNome, recordKey, recordType) {
     const validarButton = recordElement.querySelector(".validar-button")
     if (validarButton) {
       // Adiciona o status validado
-      const statusElement = document.createElement("p")
-      statusElement.innerHTML = '<i class="fas fa-check-circle"></i><strong>Status:</strong> Validado'
+      const statusElement = document.createElement("span")
+      statusElement.className = "status-badge validado"
+      statusElement.innerHTML = '<i class="fas fa-check-circle"></i> Validado'
       validarButton.parentNode.appendChild(statusElement)
       validarButton.remove()
     }
