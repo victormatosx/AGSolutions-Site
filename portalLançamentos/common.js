@@ -125,14 +125,13 @@ export function setupAuth(callback) {
 
       const userPropriedade = await getUserPropriedade(user.uid)
       if (userPropriedade) {
-        const pageName = document.title
-        propriedadeNomeElement.innerHTML = `${pageName} - Fazenda ${userPropriedade}`
+        propriedadeNomeElement.innerHTML = `Fazenda ${userPropriedade}`
 
         if (callback) {
           callback(user, userPropriedade)
         }
       } else {
-        propriedadeNomeElement.textContent = document.title
+        propriedadeNomeElement.textContent = "J.R. AgroSolutions"
         document.getElementById("data-container").innerHTML = `
           <div class="propriedade">
             <h2><i class="fas fa-exclamation-circle"></i> Acesso Negado</h2>
@@ -148,7 +147,7 @@ export function setupAuth(callback) {
         <span><i class="fas fa-user-slash"></i> Não logado</span>
       `
       loginButton.style.display = "block"
-      propriedadeNomeElement.textContent = document.title
+      propriedadeNomeElement.textContent = "J.R. AgroSolutions"
       document.getElementById("data-container").innerHTML = `
         <div class="propriedade">
           <h2><i class="fas fa-sign-in-alt"></i> Login Necessário</h2>

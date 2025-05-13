@@ -445,6 +445,15 @@ button:hover {
   border-left-width: 6px;
 }
 
+.apontamento.validado {
+  border-left-color: #4caf50;
+  background-color: #f8fff8;
+}
+
+.apontamento.em-andamento {
+  border-left-color: #ff9800;
+}
+
 #login-button {
   background-color: #4285f4;
   padding: 10px 20px;
@@ -458,6 +467,7 @@ button:hover {
   background-color: #3367d6;
 }
 
+/* Estilos para as tabs */
 .apontamentos-tabs {
   display: flex;
   gap: 10px;
@@ -489,6 +499,62 @@ button:hover {
 
 .tab-button i {
   font-size: 1.1em;
+}
+
+/* Estilos para as tabs de status */
+.status-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e0e2e1;
+  padding-bottom: 10px;
+}
+
+.status-tab-button {
+  background-color: transparent;
+  color: #2e3631;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  border-bottom: 3px solid transparent;
+}
+
+.status-tab-button:hover {
+  background-color: #f0f2f1;
+}
+
+.status-tab-button.active {
+  border-bottom: 3px solid #4caf50;
+  font-weight: 500;
+}
+
+.status-tab-button i {
+  font-size: 1.1em;
+  color: #4caf50;
+}
+
+.status-content {
+  display: none;
+}
+
+.status-content.active {
+  display: block;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .empty-state,
@@ -835,6 +901,15 @@ button:hover {
   .apontamento-detalhes-grid {
     grid-template-columns: 1fr;
   }
+
+  .status-tabs {
+    flex-wrap: wrap;
+  }
+
+  .status-tab-button {
+    flex: 1;
+    justify-content: center;
+  }
 }
 
 .modal-overlay {
@@ -1009,70 +1084,48 @@ button:hover {
   box-shadow: 0 6px 8px rgba(76, 175, 80, 0.3);
 }
 
-/* Estilos específicos para o calendário semanal */
-.calendar-container {
-  overflow-x: auto;
-  margin-top: 20px;
+/* Estilos para as tabs principais */
+.main-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
 }
 
-.weekly-calendar {
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid #ddd;
-  background-color: #fff;
+.main-tab-button {
+  background-color: #f0f2f1;
+  color: #2e3631;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  flex: 1;
+  justify-content: center;
 }
 
-.weekly-calendar th,
-.weekly-calendar td {
-  border: 1px solid #ddd;
-  padding: 12px;
-  text-align: center;
+.main-tab-button:hover {
+  background-color: #e0e2e1;
 }
 
-.weekly-calendar th {
-  background-color: #f5f5f5;
-  font-weight: 600;
+.main-tab-button.active {
+  background-color: #2e3631;
+  color: white;
 }
 
-.date-display {
-  display: block;
-  font-size: 0.85em;
-  color: #666;
-  margin-top: 4px;
-  font-weight: normal;
+.main-tab-button i {
+  font-size: 1.2em;
 }
 
-.user-column {
-  text-align: left;
-  font-weight: bold;
-  min-width: 150px;
-}
-
-.user-name {
-  font-weight: bold;
-  text-align: left;
-}
-
-.status-icon {
-  display: inline-block;
-  font-size: 1.5em;
-}
-
-.status-icon.check {
-  color: #4caf50;
-}
-
-.status-icon.error {
-  color: #f44336;
+.main-tab-content {
+  margin-bottom: 20px;
 }
 
 @media (max-width: 768px) {
-  .weekly-calendar th,
-  .weekly-calendar td {
-    padding: 8px;
-  }
-
-  .status-icon {
-    font-size: 1.2em;
+  .main-tabs {
+    flex-direction: column;
   }
 }
