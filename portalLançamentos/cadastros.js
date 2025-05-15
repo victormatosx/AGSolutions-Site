@@ -305,155 +305,11 @@ function setupCadastroModal(propriedadeNome) {
 
 // Função para configurar as abas de cadastro
 function setupCadastroTabs(propriedadeNome) {
-  document.querySelectorAll(".tab-button").forEach((button) => {
-    button.addEventListener("click", async (e) => {
-      const tabType = e.target.closest(".tab-button").dataset.tab
-      const propriedadeElement = e.target.closest(".propriedade")
-
-      propriedadeElement.querySelectorAll(".tab-button").forEach((btn) => btn.classList.remove("active"))
-      e.target.closest(".tab-button").classList.add("active")
-
-      // Implementar a lógica para mostrar o conteúdo de cada aba
-      if (tabType === "maquinas") {
-        showMaquinasCadastro(propriedadeNome)
-      } else if (tabType === "implementos") {
-        showImplementosCadastro(propriedadeNome)
-      } else if (tabType === "direcionadores") {
-        showDirecionadoresCadastro(propriedadeNome)
-      } else if (tabType === "usuarios") {
-        fetchUsers(propriedadeNome)
-      } else if (tabType === "veiculos") {
-        showVeiculosCadastro(propriedadeNome)
-      }
-    })
-  })
-}
-
-// Função para mostrar o cadastro de máquinas
-async function showMaquinasCadastro(propriedadeNome) {
-  const dataContainer = document.getElementById("data-container")
-  try {
-    // Buscar maquinários do Firebase
-    const maquinariosRef = ref(database, `propriedades/${propriedadeNome}/maquinarios`)
-    const maquinariosSnapshot = await get(maquinariosRef)
-
-    let maquinariosHtml = ""
-
-    // Processar maquinários
-    if (maquinariosSnapshot.exists()) {
-      // Converter os dados do Firebase em um array para facilitar a manipulação
-      const maquinariosArray = []
-      maquinariosSnapshot.forEach((maquinaSnapshot) => {
-        maquinariosArray.push({
-          id: maquinaSnapshot.key,
-          ...maquinaSnapshot.val(),
-        })
-      })
-
-      // Gerar o HTML para cada máquina
-      maquinariosHtml = maquinariosArray
-        .map(
-          (maquina) => `
-        <div class="maquina-card ${maquina.status?.toLowerCase() === "operacional" ? "operacional" : "em-manutencao"}">
-          <div class="maquina-icon">
-            <i class="fas fa-tractor"></i>
-          </div>
-          <div class="maquina-info">
-            <h4>${maquina.nome || `Máquina ${maquina.id}`}</h4>
-            <div class="maquina-details">
-              <p><i class="fas fa-hashtag"></i><strong>ID:</strong> ${maquina.id}</p>
-            </div>
-          </div>
-        </div>
-      `,
-        )
-        .join("")
-    } else {
-      // Se não houver dados no Firebase, mostrar mensagem de nenhum maquinário cadastrado
-      console.log("Nenhum maquinário encontrado no banco de dados.")
-    }
-
-    // Renderizar a interface com os dados obtidos
-    dataContainer.innerHTML = `
-      <div class="propriedade">
-        <h2><i class="fas fa-user-plus"></i> Cadastro</h2>
-        <div class="apontamentos-tabs">
-          <button class="tab-button" data-tab="usuarios">
-            <i class="fas fa-users"></i> Usuários
-          </button>
-          <button class="tab-button active" data-tab="maquinas">
-            <i class="fas fa-tractor"></i> Máquinas
-          </button>
-          <button class="tab-button" data-tab="implementos">
-            <i class="fas fa-tools"></i> Implementos
-          </button>
-          <button class="tab-button" data-tab="direcionadores">
-            <i class="fas fa-compass"></i> Direcionadores
-          </button>
-          <button class="tab-button" data-tab="veiculos">
-            <i class="fas fa-car"></i> Veículos
-          </button>
-        </div>
-        
-        <!-- Botões de ação para máquinas -->
-        <div class="action-buttons">
-          <button id="openMaquinaModal" class="action-button">
-            <i class="fas fa-plus-circle"></i> Cadastrar Nova Máquina
-          </button>
-        </div>
-        
-        <!-- Seção de máquinas com estilo melhorado -->
-        <div class="equipment-section maquinas-section">
-          <div class="section-header">
-            <div class="section-icon">
-              <i class="fas fa-tractor"></i>
-            </div>
-            <h3>Máquinas</h3>
-          </div>
-          
-          <!-- Pesquisa de máquinas -->
-          <div class="search-container">
-            <div class="search-wrapper">
-              <i class="fas fa-search search-icon"></i>
-              <input type="text" id="searchMaquinas" class="search-input" placeholder="Pesquisar máquinas...">
-            </div>
-          </div>
-          
-          <!-- Lista de maquinários -->
-          <div class="equipment-grid maquinarios-list">
-            ${maquinariosHtml || '<p class="empty-state"><i class="fas fa-info-circle"></i> Nenhuma máquina cadastrada.</p>'}
-          </div>
-        </div>
-        
-        <!-- Modal de cadastro de máquina -->
-        <div id="maquinaModal" class="modal">
-          <div class="modal-content">
-            <span class="close-button">&times;</span>
-            <form id="maquinaForm" class="cadastro-form">
-              <h3><i class="fas fa-tractor"></i> Cadastrar Nova Máquina</h3>
-              <div class="form-group">
-                <label for="maquinaId"><i class="fas fa-hashtag"></i> ID</label>
-                <input type="text" id="maquinaId" name="maquinaId" required class="form-input" placeholder="ID da máquina">
-              </div>
-              <div class="form-group">
-                <label for="maquinaNome"><i class="fas fa-font"></i> Nome</label>
-                <input type="text" id="maquinaNome" name="maquinaNome" required class="form-input" placeholder="Nome da máquina">
-              </div>
-              <div class="form-group">
-                <button type="submit" class="cadastrar-button">
-                  <i class="fas fa-save"></i> Cadastrar Máquina
-                </button>
-              </div>
-            </form>
-            <div id="maquinaCadastroMessage" class="cadastro-message" style="display: none;"></div>
-          </div>
-        </div>
-      </div>
-    `
-
-    // Adicionar estilos CSS para o novo layout
-    const styleElement = document.createElement("style")
-    styleElement.textContent = `
+  // Adicionar estilos CSS base para todas as abas
+  if (!document.getElementById("equipment-styles")) {
+    const baseStyleElement = document.createElement("style")
+    baseStyleElement.id = "equipment-styles"
+    baseStyleElement.textContent = `
       /* Estilos para as seções de equipamentos */
       .equipment-section {
         background-color: #f9f9f9;
@@ -469,6 +325,14 @@ async function showMaquinasCadastro(propriedadeNome) {
       
       .implementos-section {
         border-left: 5px solid #2196F3;
+      }
+      
+      .direcionadores-section {
+        border-left: 5px solid #9C27B0;
+      }
+      
+      .veiculos-section {
+        border-left: 5px solid #FF9800;
       }
       
       .section-header {
@@ -497,6 +361,16 @@ async function showMaquinasCadastro(propriedadeNome) {
       
       .implementos-section .section-icon {
         background-color: #2196F3;
+        color: white;
+      }
+      
+      .direcionadores-section .section-icon {
+        background-color: #9C27B0;
+        color: white;
+      }
+      
+      .veiculos-section .section-icon {
+        background-color: #FF9800;
         color: white;
       }
       
@@ -691,7 +565,154 @@ async function showMaquinasCadastro(propriedadeNome) {
         }
       }
     `
-    document.head.appendChild(styleElement)
+    document.head.appendChild(baseStyleElement)
+  }
+
+  document.querySelectorAll(".tab-button").forEach((button) => {
+    button.addEventListener("click", async (e) => {
+      const tabType = e.target.closest(".tab-button").dataset.tab
+      const propriedadeElement = e.target.closest(".propriedade")
+
+      propriedadeElement.querySelectorAll(".tab-button").forEach((btn) => btn.classList.remove("active"))
+      e.target.closest(".tab-button").classList.add("active")
+
+      // Implementar a lógica para mostrar o conteúdo de cada aba
+      if (tabType === "maquinas") {
+        showMaquinasCadastro(propriedadeNome)
+      } else if (tabType === "implementos") {
+        showImplementosCadastro(propriedadeNome)
+      } else if (tabType === "direcionadores") {
+        showDirecionadoresCadastro(propriedadeNome)
+      } else if (tabType === "usuarios") {
+        fetchUsers(propriedadeNome)
+      } else if (tabType === "veiculos") {
+        showVeiculosCadastro(propriedadeNome)
+      }
+    })
+  })
+}
+
+// Função para mostrar o cadastro de máquinas
+async function showMaquinasCadastro(propriedadeNome) {
+  const dataContainer = document.getElementById("data-container")
+  try {
+    // Buscar maquinários do Firebase
+    const maquinariosRef = ref(database, `propriedades/${propriedadeNome}/maquinarios`)
+    const maquinariosSnapshot = await get(maquinariosRef)
+
+    let maquinariosHtml = ""
+
+    // Processar maquinários
+    if (maquinariosSnapshot.exists()) {
+      // Converter os dados do Firebase em um array para facilitar a manipulação
+      const maquinariosArray = []
+      maquinariosSnapshot.forEach((maquinaSnapshot) => {
+        maquinariosArray.push({
+          id: maquinaSnapshot.key,
+          ...maquinaSnapshot.val(),
+        })
+      })
+
+      // Gerar o HTML para cada máquina
+      maquinariosHtml = maquinariosArray
+        .map(
+          (maquina) => `
+        <div class="maquina-card ${maquina.status?.toLowerCase() === "operacional" ? "operacional" : "em-manutencao"}">
+          <div class="maquina-icon">
+            <i class="fas fa-tractor"></i>
+          </div>
+          <div class="maquina-info">
+            <h4>${maquina.nome || `Máquina ${maquina.id}`}</h4>
+            <div class="maquina-details">
+              <p><i class="fas fa-hashtag"></i><strong>ID:</strong> ${maquina.id}</p>
+            </div>
+          </div>
+        </div>
+      `,
+        )
+        .join("")
+    } else {
+      // Se não houver dados no Firebase, mostrar mensagem de nenhum maquinário cadastrado
+      console.log("Nenhum maquinário encontrado no banco de dados.")
+    }
+
+    // Renderizar a interface com os dados obtidos
+    dataContainer.innerHTML = `
+      <div class="propriedade">
+        <h2><i class="fas fa-user-plus"></i> Cadastro</h2>
+        <div class="apontamentos-tabs">
+          <button class="tab-button" data-tab="usuarios">
+            <i class="fas fa-users"></i> Usuários
+          </button>
+          <button class="tab-button active" data-tab="maquinas">
+            <i class="fas fa-tractor"></i> Máquinas
+          </button>
+          <button class="tab-button" data-tab="implementos">
+            <i class="fas fa-tools"></i> Implementos
+          </button>
+          <button class="tab-button" data-tab="direcionadores">
+            <i class="fas fa-compass"></i> Direcionadores
+          </button>
+          <button class="tab-button" data-tab="veiculos">
+            <i class="fas fa-car"></i> Veículos
+          </button>
+        </div>
+        
+        <!-- Botões de ação para máquinas -->
+        <div class="action-buttons">
+          <button id="openMaquinaModal" class="action-button">
+            <i class="fas fa-plus-circle"></i> Cadastrar Nova Máquina
+          </button>
+        </div>
+        
+        <!-- Seção de máquinas com estilo melhorado -->
+        <div class="equipment-section maquinas-section">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="fas fa-tractor"></i>
+            </div>
+            <h3>Máquinas</h3>
+          </div>
+          
+          <!-- Pesquisa de máquinas -->
+          <div class="search-container">
+            <div class="search-wrapper">
+              <i class="fas fa-search search-icon"></i>
+              <input type="text" id="searchMaquinas" class="search-input" placeholder="Pesquisar máquinas...">
+            </div>
+          </div>
+          
+          <!-- Lista de maquinários -->
+          <div class="equipment-grid maquinarios-list">
+            ${maquinariosHtml || '<p class="empty-state"><i class="fas fa-info-circle"></i> Nenhuma máquina cadastrada.</p>'}
+          </div>
+        </div>
+        
+        <!-- Modal de cadastro de máquina -->
+        <div id="maquinaModal" class="modal">
+          <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <form id="maquinaForm" class="cadastro-form">
+              <h3><i class="fas fa-tractor"></i> Cadastrar Nova Máquina</h3>
+              <div class="form-group">
+                <label for="maquinaId"><i class="fas fa-hashtag"></i> ID</label>
+                <input type="text" id="maquinaId" name="maquinaId" required class="form-input" placeholder="ID da máquina">
+              </div>
+              <div class="form-group">
+                <label for="maquinaNome"><i class="fas fa-font"></i> Nome</label>
+                <input type="text" id="maquinaNome" name="maquinaNome" required class="form-input" placeholder="Nome da máquina">
+              </div>
+              <div class="form-group">
+                <button type="submit" class="cadastrar-button">
+                  <i class="fas fa-save"></i> Cadastrar Máquina
+                </button>
+              </div>
+            </form>
+            <div id="maquinaCadastroMessage" class="cadastro-message" style="display: none;"></div>
+          </div>
+        </div>
+      </div>
+    `
 
     // Configurar as abas de cadastro novamente
     setupCadastroTabs(propriedadeNome)
@@ -987,21 +1008,6 @@ async function showDirecionadoresCadastro(propriedadeNome) {
       </div>
     `
 
-    // Adicionar estilos CSS para o novo layout
-    const styleElement = document.createElement("style")
-    styleElement.textContent = `
-      /* Estilos para a seção de direcionadores */
-      .direcionadores-section {
-        border-left: 5px solid #9C27B0;
-      }
-      
-      .direcionadores-section .section-icon {
-        background-color: #9C27B0;
-        color: white;
-      }
-    `
-    document.head.appendChild(styleElement)
-
     // Configurar as abas de cadastro novamente
     setupCadastroTabs(propriedadeNome)
 
@@ -1151,21 +1157,6 @@ async function showVeiculosCadastro(propriedadeNome) {
         </div>
       </div>
     `
-
-    // Adicionar estilos CSS para o novo layout
-    const styleElement = document.createElement("style")
-    styleElement.textContent = `
-      /* Estilos para a seção de veículos */
-      .veiculos-section {
-        border-left: 5px solid #FF9800;
-      }
-      
-      .veiculos-section .section-icon {
-        background-color: #FF9800;
-        color: white;
-      }
-    `
-    document.head.appendChild(styleElement)
 
     // Configurar as abas de cadastro novamente
     setupCadastroTabs(propriedadeNome)
