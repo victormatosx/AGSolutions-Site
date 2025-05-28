@@ -37,7 +37,7 @@ async function fetchUsers(propriedadeNome) {
       <div class="propriedade">
         <h2><i class="fas fa-user-plus"></i> Cadastro</h2>
         <div class="apontamentos-tabs">
-          <button class="tab-button active" data-tab="usuarios">
+          <button class="tab-button" data-tab="usuarios">
             <i class="fas fa-users"></i> Usuários
           </button>
           <button class="tab-button" data-tab="maquinas">
@@ -51,6 +51,12 @@ async function fetchUsers(propriedadeNome) {
           </button>
           <button class="tab-button" data-tab="veiculos">
             <i class="fas fa-car"></i> Veículos
+          </button>
+          <button class="tab-button" data-tab="atividades">
+            <i class="fas fa-tasks"></i> Atividades
+          </button>
+          <button class="tab-button" data-tab="tanques">
+            <i class="fas fa-water"></i> Tanques
           </button>
         </div>
         
@@ -296,6 +302,324 @@ function setupCadastroModal(propriedadeNome) {
       cadastroMessage.innerHTML = `
         <div class="error-message">
           <i class="fas fa-exclamation-circle"></i> Erro ao cadastrar usuário: ${errorMessage}
+        </div>
+      `
+      cadastroMessage.style.display = "block"
+    }
+  })
+}
+
+// Função para configurar o modal de cadastro de máquina
+function setupMaquinaModal(propriedadeNome) {
+  const modal = document.getElementById("maquinaModal")
+  const openModalBtn = document.getElementById("openMaquinaModal")
+  const closeBtn = document.querySelector("#maquinaModal .close-button")
+  const maquinaForm = document.getElementById("maquinaForm")
+  const cadastroMessage = document.getElementById("maquinaCadastroMessage")
+
+  // Abrir o modal
+  openModalBtn.addEventListener("click", () => {
+    modal.style.display = "flex"
+  })
+
+  // Fechar o modal
+  closeBtn.addEventListener("click", () => {
+    modal.style.display = "none"
+    maquinaForm.reset()
+    cadastroMessage.style.display = "none"
+  })
+
+  // Fechar o modal ao clicar fora dele
+  window.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      modal.style.display = "none"
+      maquinaForm.reset()
+      cadastroMessage.style.display = "none"
+    }
+  })
+
+  // Configurar o formulário de cadastro
+  maquinaForm.addEventListener("submit", async (e) => {
+    e.preventDefault()
+
+    // Obter os valores do formulário
+    const maquinaId = document.getElementById("maquinaId").value.trim()
+    const maquinaNome = document.getElementById("maquinaNome").value.trim()
+
+    try {
+      // Criar o objeto de máquina
+      const maquinaData = {
+        id: maquinaId,
+        nome: maquinaNome,
+        status: "Operacional", // Defina um status padrão
+        dataCadastro: new Date().toISOString(),
+      }
+
+      // Salvar os dados da máquina no Firebase
+      await set(ref(database, `propriedades/${propriedadeNome}/maquinarios/${maquinaId}`), maquinaData)
+
+      // Exibir mensagem de sucesso
+      cadastroMessage.innerHTML = `
+        <div class="success-message">
+          <i class="fas fa-check-circle"></i> Máquina cadastrada com sucesso!
+        </div>
+      `
+      cadastroMessage.style.display = "block"
+
+      // Limpar o formulário
+      maquinaForm.reset()
+
+      // Atualizar a lista de máquinas
+      setTimeout(() => {
+        modal.style.display = "none"
+        showMaquinasCadastro(propriedadeNome)
+      }, 2000)
+    } catch (error) {
+      console.error("Erro ao cadastrar máquina:", error)
+
+      // Exibir mensagem de erro
+      cadastroMessage.innerHTML = `
+        <div class="error-message">
+          <i class="fas fa-exclamation-circle"></i> Erro ao cadastrar máquina: ${error.message}
+        </div>
+      `
+      cadastroMessage.style.display = "block"
+    }
+  })
+}
+
+// Função para configurar o modal de cadastro de implemento
+function setupImplementoModal(propriedadeNome) {
+  const modal = document.getElementById("implementoModal")
+  const openModalBtn = document.getElementById("openImplementoModal")
+  const closeBtn = document.querySelector("#implementoModal .close-button")
+  const implementoForm = document.getElementById("implementoForm")
+  const cadastroMessage = document.getElementById("implementoCadastroMessage")
+
+  // Abrir o modal
+  openModalBtn.addEventListener("click", () => {
+    modal.style.display = "flex"
+  })
+
+  // Fechar o modal
+  closeBtn.addEventListener("click", () => {
+    modal.style.display = "none"
+    implementoForm.reset()
+    cadastroMessage.style.display = "none"
+  })
+
+  // Fechar o modal ao clicar fora dele
+  window.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      modal.style.display = "none"
+      implementoForm.reset()
+      cadastroMessage.style.display = "none"
+    }
+  })
+
+  // Configurar o formulário de cadastro
+  implementoForm.addEventListener("submit", async (e) => {
+    e.preventDefault()
+
+    // Obter os valores do formulário
+    const implementoId = document.getElementById("implementoId").value.trim()
+    const implementoNome = document.getElementById("implementoNome").value.trim()
+
+    try {
+      // Criar o objeto de implemento
+      const implementoData = {
+        id: implementoId,
+        nome: implementoNome,
+        status: "Operacional", // Defina um status padrão
+        dataCadastro: new Date().toISOString(),
+      }
+
+      // Salvar os dados do implemento no Firebase
+      await set(ref(database, `propriedades/${propriedadeNome}/implementos/${implementoId}`), implementoData)
+
+      // Exibir mensagem de sucesso
+      cadastroMessage.innerHTML = `
+        <div class="success-message">
+          <i class="fas fa-check-circle"></i> Implemento cadastrado com sucesso!
+        </div>
+      `
+      cadastroMessage.style.display = "block"
+
+      // Limpar o formulário
+      implementoForm.reset()
+
+      // Atualizar a lista de implementos
+      setTimeout(() => {
+        modal.style.display = "none"
+        showImplementosCadastro(propriedadeNome)
+      }, 2000)
+    } catch (error) {
+      console.error("Erro ao cadastrar implemento:", error)
+
+      // Exibir mensagem de erro
+      cadastroMessage.innerHTML = `
+        <div class="error-message">
+          <i class="fas fa-exclamation-circle"></i> Erro ao cadastrar implemento: ${error.message}
+        </div>
+      `
+      cadastroMessage.style.display = "block"
+    }
+  })
+}
+
+// Função para configurar o modal de cadastro de direcionador
+function setupDirecionadorModal(propriedadeNome) {
+  const modal = document.getElementById("direcionadorModal")
+  const openModalBtn = document.getElementById("openDirecionadorModal")
+  const closeBtn = document.querySelector("#direcionadorModal .close-button")
+  const direcionadorForm = document.getElementById("direcionadorForm")
+  const cadastroMessage = document.getElementById("direcionadorCadastroMessage")
+
+  // Abrir o modal
+  openModalBtn.addEventListener("click", () => {
+    modal.style.display = "flex"
+  })
+
+  // Fechar o modal
+  closeBtn.addEventListener("click", () => {
+    modal.style.display = "none"
+    direcionadorForm.reset()
+    cadastroMessage.style.display = "none"
+  })
+
+  // Fechar o modal ao clicar fora dele
+  window.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      modal.style.display = "none"
+      direcionadorForm.reset()
+      cadastroMessage.style.display = "none"
+    }
+  })
+
+  // Configurar o formulário de cadastro
+  direcionadorForm.addEventListener("submit", async (e) => {
+    e.preventDefault()
+
+    // Obter os valores do formulário
+    const direcionadorId = document.getElementById("direcionadorId").value.trim()
+    const direcionadorNome = document.getElementById("direcionadorNome").value.trim()
+    const culturaAssociada = document.getElementById("culturaAssociada").value.trim()
+
+    try {
+      // Criar o objeto de direcionador
+      const direcionadorData = {
+        id: direcionadorId,
+        direcionador: direcionadorNome,
+        culturaAssociada: culturaAssociada,
+        dataCadastro: new Date().toISOString(),
+      }
+
+      // Salvar os dados do direcionador no Firebase
+      await set(ref(database, `propriedades/${propriedadeNome}/direcionadores/${direcionadorId}`), direcionadorData)
+
+      // Exibir mensagem de sucesso
+      cadastroMessage.innerHTML = `
+        <div class="success-message">
+          <i class="fas fa-check-circle"></i> Direcionador cadastrado com sucesso!
+        </div>
+      `
+      cadastroMessage.style.display = "block"
+
+      // Limpar o formulário
+      direcionadorForm.reset()
+
+      // Atualizar a lista de direcionadores
+      setTimeout(() => {
+        modal.style.display = "none"
+        showDirecionadoresCadastro(propriedadeNome)
+      }, 2000)
+    } catch (error) {
+      console.error("Erro ao cadastrar direcionador:", error)
+
+      // Exibir mensagem de erro
+      cadastroMessage.innerHTML = `
+        <div class="error-message">
+          <i class="fas fa-exclamation-circle"></i> Erro ao cadastrar direcionador: ${error.message}
+        </div>
+      `
+      cadastroMessage.style.display = "block"
+    }
+  })
+}
+
+// Função para configurar o modal de cadastro de veículo
+function setupVeiculoModal(propriedadeNome) {
+  const modal = document.getElementById("veiculoModal")
+  const openModalBtn = document.getElementById("openVeiculoModal")
+  const closeBtn = document.querySelector("#veiculoModal .close-button")
+  const veiculoForm = document.getElementById("veiculoForm")
+  const cadastroMessage = document.getElementById("veiculoCadastroMessage")
+
+  // Abrir o modal
+  openModalBtn.addEventListener("click", () => {
+    modal.style.display = "flex"
+  })
+
+  // Fechar o modal
+  closeBtn.addEventListener("click", () => {
+    modal.style.display = "none"
+    veiculoForm.reset()
+    cadastroMessage.style.display = "none"
+  })
+
+  // Fechar o modal ao clicar fora dele
+  window.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      modal.style.display = "none"
+      veiculoForm.reset()
+      cadastroMessage.style.display = "none"
+    }
+  })
+
+  // Configurar o formulário de cadastro
+  veiculoForm.addEventListener("submit", async (e) => {
+    e.preventDefault()
+
+    // Obter os valores do formulário
+    const veiculoId = document.getElementById("veiculoId").value.trim()
+    const veiculoPlaca = document.getElementById("veiculoPlaca").value.trim()
+    const veiculoModelo = document.getElementById("veiculoModelo").value.trim()
+
+    try {
+      // Criar o objeto de veículo
+      const veiculoData = {
+        id: veiculoId,
+        placa: veiculoPlaca,
+        modelo: veiculoModelo,
+        dataCadastro: new Date().toISOString(),
+      }
+
+      // Salvar os dados do veículo no Firebase
+      await set(ref(database, `propriedades/${propriedadeNome}/veiculos/${veiculoId}`), veiculoData)
+
+      // Exibir mensagem de sucesso
+      cadastroMessage.innerHTML = `
+        <div class="success-message">
+          <i class="fas fa-check-circle"></i> Veículo cadastrado com sucesso!
+        </div>
+      `
+      cadastroMessage.style.display = "block"
+
+      // Limpar o formulário
+      veiculoForm.reset()
+
+      // Atualizar a lista de veículos
+      setTimeout(() => {
+        modal.style.display = "none"
+        showVeiculosCadastro(propriedadeNome)
+      }, 2000)
+    } catch (error) {
+      console.error("Erro ao cadastrar veículo:", error)
+
+      // Exibir mensagem de erro
+      cadastroMessage.innerHTML = `
+        <div class="error-message">
+          <i class="fas fa-exclamation-circle"></i> Erro ao cadastrar veículo: ${error.message}
         </div>
       `
       cadastroMessage.style.display = "block"
@@ -587,6 +911,10 @@ function setupCadastroTabs(propriedadeNome) {
         fetchUsers(propriedadeNome)
       } else if (tabType === "veiculos") {
         showVeiculosCadastro(propriedadeNome)
+      } else if (tabType === "atividades") {
+        showAtividadesCadastro(propriedadeNome)
+      } else if (tabType === "tanques") {
+        showTanquesCadastro(propriedadeNome)
       }
     })
   })
@@ -655,6 +983,12 @@ async function showMaquinasCadastro(propriedadeNome) {
           </button>
           <button class="tab-button" data-tab="veiculos">
             <i class="fas fa-car"></i> Veículos
+          </button>
+          <button class="tab-button" data-tab="atividades">
+            <i class="fas fa-tasks"></i> Atividades
+          </button>
+          <button class="tab-button" data-tab="tanques">
+            <i class="fas fa-water"></i> Tanques
           </button>
         </div>
         
@@ -799,6 +1133,12 @@ async function showImplementosCadastro(propriedadeNome) {
           </button>
           <button class="tab-button" data-tab="veiculos">
             <i class="fas fa-car"></i> Veículos
+          </button>
+          <button class="tab-button" data-tab="atividades">
+            <i class="fas fa-tasks"></i> Atividades
+          </button>
+          <button class="tab-button" data-tab="tanques">
+            <i class="fas fa-water"></i> Tanques
           </button>
         </div>
         
@@ -945,6 +1285,12 @@ async function showDirecionadoresCadastro(propriedadeNome) {
           </button>
           <button class="tab-button" data-tab="veiculos">
             <i class="fas fa-car"></i> Veículos
+          </button>
+          <button class="tab-button" data-tab="atividades">
+            <i class="fas fa-tasks"></i> Atividades
+          </button>
+          <button class="tab-button" data-tab="tanques">
+            <i class="fas fa-water"></i> Tanques
           </button>
         </div>
         
@@ -1096,6 +1442,12 @@ async function showVeiculosCadastro(propriedadeNome) {
           <button class="tab-button active" data-tab="veiculos">
             <i class="fas fa-car"></i> Veículos
           </button>
+          <button class="tab-button" data-tab="atividades">
+            <i class="fas fa-tasks"></i> Atividades
+          </button>
+          <button class="tab-button" data-tab="tanques">
+            <i class="fas fa-water"></i> Tanques
+          </button>
         </div>
         
         <!-- Botões de ação para veículos -->
@@ -1180,91 +1532,164 @@ async function showVeiculosCadastro(propriedadeNome) {
   }
 }
 
-// Função para configurar o modal de cadastro de máquina
-function setupMaquinaModal(propriedadeNome) {
-  const modal = document.getElementById("maquinaModal")
-  const openModalBtn = document.getElementById("openMaquinaModal")
-  const closeBtn = document.querySelector("#maquinaModal .close-button")
-  const maquinaForm = document.getElementById("maquinaForm")
-  const cadastroMessage = document.getElementById("maquinaCadastroMessage")
+// Função para mostrar o cadastro de atividades
+async function showAtividadesCadastro(propriedadeNome) {
+  const dataContainer = document.getElementById("data-container")
+  try {
+    // Buscar atividades do Firebase
+    const atividadesRef = ref(database, `propriedades/${propriedadeNome}/atividades`)
+    const atividadesSnapshot = await get(atividadesRef)
 
-  // Abrir o modal
-  openModalBtn.addEventListener("click", () => {
-    modal.style.display = "flex"
-  })
+    let atividadesHtml = ""
 
-  // Fechar o modal
-  closeBtn.addEventListener("click", () => {
-    modal.style.display = "none"
-    maquinaForm.reset()
-    cadastroMessage.style.display = "none"
-  })
+    // Processar atividades
+    if (atividadesSnapshot.exists()) {
+      // Converter os dados do Firebase em um array para facilitar a manipulação
+      const atividadesArray = []
+      atividadesSnapshot.forEach((atividadeSnapshot) => {
+        atividadesArray.push({
+          id: atividadeSnapshot.key,
+          ...atividadeSnapshot.val(),
+        })
+      })
 
-  // Fechar o modal ao clicar fora dele
-  window.addEventListener("click", (event) => {
-    if (event.target === modal) {
-      modal.style.display = "none"
-      maquinaForm.reset()
-      cadastroMessage.style.display = "none"
-    }
-  })
-
-  // Configurar o formulário de cadastro
-  maquinaForm.addEventListener("submit", async (e) => {
-    e.preventDefault()
-
-    // Obter os valores do formulário
-    const maquinaId = document.getElementById("maquinaId").value.trim()
-    const maquinaNome = document.getElementById("maquinaNome").value.trim()
-
-    try {
-      // Criar o objeto de máquina
-      const maquinaData = {
-        id: maquinaId,
-        nome: maquinaNome,
-        status: "Operacional", // Defina um status padrão
-      }
-
-      // Salvar os dados da máquina no Firebase
-      await set(ref(database, `propriedades/${propriedadeNome}/maquinarios/${maquinaId}`), maquinaData)
-
-      // Exibir mensagem de sucesso
-      cadastroMessage.innerHTML = `
-        <div class="success-message">
-          <i class="fas fa-check-circle"></i> Máquina cadastrada com sucesso!
+      // Gerar o HTML para cada atividade
+      atividadesHtml = atividadesArray
+        .map(
+          (atividade) => `
+        <div class="atividade-card">
+          <div class="atividade-icon">
+            <i class="fas fa-tasks"></i>
+          </div>
+          <div class="atividade-info">
+            <h4>${atividade.atividade || `Atividade ${atividade.id}`}</h4>
+            <div class="atividade-details">
+              <p><i class="fas fa-hashtag"></i><strong>ID:</strong> ${atividade.id}</p>
+              <p><i class="fas fa-tasks"></i><strong>Atividade:</strong> ${atividade.atividade || "N/A"}</p>
+            </div>
+          </div>
         </div>
-      `
-      cadastroMessage.style.display = "block"
-
-      // Limpar o formulário
-      maquinaForm.reset()
-
-      // Atualizar a lista de máquinas
-      setTimeout(() => {
-        modal.style.display = "none"
-        showMaquinasCadastro(propriedadeNome)
-      }, 2000)
-    } catch (error) {
-      console.error("Erro ao cadastrar máquina:", error)
-
-      // Exibir mensagem de erro
-      cadastroMessage.innerHTML = `
-        <div class="error-message">
-          <i class="fas fa-exclamation-circle"></i> Erro ao cadastrar máquina: ${error.message}
-        </div>
-      `
-      cadastroMessage.style.display = "block"
+      `,
+        )
+        .join("")
+    } else {
+      // Se não houver dados no Firebase, mostrar mensagem de nenhuma atividade cadastrada
+      console.log("Nenhuma atividade encontrada no banco de dados.")
     }
-  })
+
+    // Renderizar a interface com os dados obtidos
+    dataContainer.innerHTML = `
+      <div class="propriedade">
+        <h2><i class="fas fa-user-plus"></i> Cadastro</h2>
+        <div class="apontamentos-tabs">
+          <button class="tab-button" data-tab="usuarios">
+            <i class="fas fa-users"></i> Usuários
+          </button>
+          <button class="tab-button" data-tab="maquinas">
+            <i class="fas fa-tractor"></i> Máquinas
+          </button>
+          <button class="tab-button" data-tab="implementos">
+            <i class="fas fa-tools"></i> Implementos
+          </button>
+          <button class="tab-button" data-tab="direcionadores">
+            <i class="fas fa-compass"></i> Direcionadores
+          </button>
+          <button class="tab-button" data-tab="veiculos">
+            <i class="fas fa-car"></i> Veículos
+          </button>
+          <button class="tab-button active" data-tab="atividades">
+            <i class="fas fa-tasks"></i> Atividades
+          </button>
+          <button class="tab-button" data-tab="tanques">
+            <i class="fas fa-water"></i> Tanques
+          </button>
+        </div>
+        
+        <!-- Botões de ação para atividades -->
+        <div class="action-buttons">
+          <button id="openAtividadeModal" class="action-button">
+            <i class="fas fa-plus-circle"></i> Cadastrar Nova Atividade
+          </button>
+        </div>
+        
+        <!-- Seção de atividades com estilo melhorado -->
+        <div class="equipment-section atividades-section">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="fas fa-tasks"></i>
+            </div>
+            <h3>Atividades</h3>
+          </div>
+          
+          <!-- Pesquisa de atividades -->
+          <div class="search-container">
+            <div class="search-wrapper">
+              <i class="fas fa-search search-icon"></i>
+              <input type="text" id="searchAtividades" class="search-input" placeholder="Pesquisar atividades...">
+            </div>
+          </div>
+          
+          <!-- Lista de atividades -->
+          <div class="equipment-grid atividades-list">
+            ${atividadesHtml || '<p class="empty-state"><i class="fas fa-info-circle"></i> Nenhuma atividade cadastrada.</p>'}
+          </div>
+        </div>
+        
+        <!-- Modal de cadastro de atividade -->
+        <div id="atividadeModal" class="modal">
+          <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <form id="atividadeForm" class="cadastro-form">
+              <h3><i class="fas fa-tasks"></i> Cadastrar Nova Atividade</h3>
+              <div class="form-group">
+                <label for="atividadeId"><i class="fas fa-hashtag"></i> ID</label>
+                <input type="text" id="atividadeId" name="atividadeId" required class="form-input" placeholder="ID da atividade">
+              </div>
+              <div class="form-group">
+                <label for="atividadeNome"><i class="fas fa-tasks"></i> Atividade</label>
+                <input type="text" id="atividadeNome" name="atividadeNome" required class="form-input" placeholder="Nome da atividade">
+              </div>
+              <div class="form-group">
+                <button type="submit" class="cadastrar-button">
+                  <i class="fas fa-save"></i> Cadastrar Atividade
+                </button>
+              </div>
+            </form>
+            <div id="atividadeCadastroMessage" class="cadastro-message" style="display: none;"></div>
+          </div>
+        </div>
+      </div>
+    `
+
+    // Configurar as abas de cadastro novamente
+    setupCadastroTabs(propriedadeNome)
+
+    // Configurar o modal de cadastro de atividade
+    setupAtividadeModal(propriedadeNome)
+
+    // Configurar a pesquisa de atividades
+    setupAtividadeSearch()
+  } catch (error) {
+    console.error("Erro ao carregar atividades:", error)
+    dataContainer.innerHTML = `
+      <div class="propriedade">
+        <h2><i class="fas fa-exclamation-triangle"></i> Erro</h2>
+        <p class="error-state">
+          <i class="fas fa-exclamation-circle"></i>
+          Erro ao carregar os dados: ${error.message}
+        </p>
+      </div>
+    `
+  }
 }
 
-// Função para configurar o modal de cadastro de implemento
-function setupImplementoModal(propriedadeNome) {
-  const modal = document.getElementById("implementoModal")
-  const openModalBtn = document.getElementById("openImplementoModal")
-  const closeBtn = document.querySelector("#implementoModal .close-button")
-  const implementoForm = document.getElementById("implementoForm")
-  const cadastroMessage = document.getElementById("implementoCadastroMessage")
+// Função para configurar o modal de cadastro de atividade
+function setupAtividadeModal(propriedadeNome) {
+  const modal = document.getElementById("atividadeModal")
+  const openModalBtn = document.getElementById("openAtividadeModal")
+  const closeBtn = document.querySelector("#atividadeModal .close-button")
+  const atividadeForm = document.getElementById("atividadeForm")
+  const cadastroMessage = document.getElementById("atividadeCadastroMessage")
 
   // Abrir o modal
   openModalBtn.addEventListener("click", () => {
@@ -1274,7 +1699,7 @@ function setupImplementoModal(propriedadeNome) {
   // Fechar o modal
   closeBtn.addEventListener("click", () => {
     modal.style.display = "none"
-    implementoForm.reset()
+    atividadeForm.reset()
     cadastroMessage.style.display = "none"
   })
 
@@ -1282,133 +1707,53 @@ function setupImplementoModal(propriedadeNome) {
   window.addEventListener("click", (event) => {
     if (event.target === modal) {
       modal.style.display = "none"
-      implementoForm.reset()
+      atividadeForm.reset()
       cadastroMessage.style.display = "none"
     }
   })
 
   // Configurar o formulário de cadastro
-  implementoForm.addEventListener("submit", async (e) => {
+  atividadeForm.addEventListener("submit", async (e) => {
     e.preventDefault()
 
     // Obter os valores do formulário
-    const implementoId = document.getElementById("implementoId").value.trim()
-    const implementoNome = document.getElementById("implementoNome").value.trim()
+    const atividadeId = document.getElementById("atividadeId").value.trim()
+    const atividadeNome = document.getElementById("atividadeNome").value.trim()
 
     try {
-      // Criar o objeto de implemento
-      const implementoData = {
-        id: implementoId,
-        nome: implementoNome,
-        status: "Operacional", // Defina um status padrão
-      }
-
-      // Salvar os dados do implemento no Firebase
-      await set(ref(database, `propriedades/${propriedadeNome}/implementos/${implementoId}`), implementoData)
-
-      // Exibir mensagem de sucesso
-      cadastroMessage.innerHTML = `
-        <div class="success-message">
-          <i class="fas fa-check-circle"></i> Implemento cadastrado com sucesso!
-        </div>
-      `
-      cadastroMessage.style.display = "block"
-
-      // Limpar o formulário
-      implementoForm.reset()
-
-      // Atualizar a lista de implementos
-      setTimeout(() => {
-        modal.style.display = "none"
-        showImplementosCadastro(propriedadeNome)
-      }, 2000)
-    } catch (error) {
-      console.error("Erro ao cadastrar implemento:", error)
-
-      // Exibir mensagem de erro
-      cadastroMessage.innerHTML = `
-        <div class="error-message">
-          <i class="fas fa-exclamation-circle"></i> Erro ao cadastrar implemento: ${error.message}
-        </div>
-      `
-      cadastroMessage.style.display = "block"
-    }
-  })
-}
-
-// Função para configurar o modal de cadastro de direcionador
-function setupDirecionadorModal(propriedadeNome) {
-  const modal = document.getElementById("direcionadorModal")
-  const openModalBtn = document.getElementById("openDirecionadorModal")
-  const closeBtn = document.querySelector("#direcionadorModal .close-button")
-  const direcionadorForm = document.getElementById("direcionadorForm")
-  const cadastroMessage = document.getElementById("direcionadorCadastroMessage")
-
-  // Abrir o modal
-  openModalBtn.addEventListener("click", () => {
-    modal.style.display = "flex"
-  })
-
-  // Fechar o modal
-  closeBtn.addEventListener("click", () => {
-    modal.style.display = "none"
-    direcionadorForm.reset()
-    cadastroMessage.style.display = "none"
-  })
-
-  // Fechar o modal ao clicar fora dele
-  window.addEventListener("click", (event) => {
-    if (event.target === modal) {
-      modal.style.display = "none"
-      direcionadorForm.reset()
-      cadastroMessage.style.display = "none"
-    }
-  })
-
-  // Configurar o formulário de cadastro
-  direcionadorForm.addEventListener("submit", async (e) => {
-    e.preventDefault()
-
-    // Obter os valores do formulário
-    const direcionadorId = document.getElementById("direcionadorId").value.trim()
-    const direcionadorNome = document.getElementById("direcionadorNome").value.trim()
-    const culturaAssociada = document.getElementById("culturaAssociada").value.trim()
-
-    try {
-      // Criar o objeto de direcionador
-      const direcionadorData = {
-        id: direcionadorId,
-        direcionador: direcionadorNome,
-        culturaAssociada: culturaAssociada,
+      // Criar o objeto de atividade
+      const atividadeData = {
+        id: atividadeId,
+        atividade: atividadeNome,
         dataCadastro: new Date().toISOString(),
       }
 
-      // Salvar os dados do direcionador no Firebase
-      await set(ref(database, `propriedades/${propriedadeNome}/direcionadores/${direcionadorId}`), direcionadorData)
+      // Salvar os dados da atividade no Firebase
+      await set(ref(database, `propriedades/${propriedadeNome}/atividades/${atividadeId}`), atividadeData)
 
       // Exibir mensagem de sucesso
       cadastroMessage.innerHTML = `
         <div class="success-message">
-          <i class="fas fa-check-circle"></i> Direcionador cadastrado com sucesso!
+          <i class="fas fa-check-circle"></i> Atividade cadastrada com sucesso!
         </div>
       `
       cadastroMessage.style.display = "block"
 
       // Limpar o formulário
-      direcionadorForm.reset()
+      atividadeForm.reset()
 
-      // Atualizar a lista de direcionadores
+      // Atualizar a lista de atividades
       setTimeout(() => {
         modal.style.display = "none"
-        showDirecionadoresCadastro(propriedadeNome)
+        showAtividadesCadastro(propriedadeNome)
       }, 2000)
     } catch (error) {
-      console.error("Erro ao cadastrar direcionador:", error)
+      console.error("Erro ao cadastrar atividade:", error)
 
       // Exibir mensagem de erro
       cadastroMessage.innerHTML = `
         <div class="error-message">
-          <i class="fas fa-exclamation-circle"></i> Erro ao cadastrar direcionador: ${error.message}
+          <i class="fas fa-exclamation-circle"></i> Erro ao cadastrar atividade: ${error.message}
         </div>
       `
       cadastroMessage.style.display = "block"
@@ -1416,82 +1761,36 @@ function setupDirecionadorModal(propriedadeNome) {
   })
 }
 
-// Função para configurar o modal de cadastro de veículo
-function setupVeiculoModal(propriedadeNome) {
-  const modal = document.getElementById("veiculoModal")
-  const openModalBtn = document.getElementById("openVeiculoModal")
-  const closeBtn = document.querySelector("#veiculoModal .close-button")
-  const veiculoForm = document.getElementById("veiculoForm")
-  const cadastroMessage = document.getElementById("veiculoCadastroMessage")
+// Função para configurar a pesquisa de atividades
+function setupAtividadeSearch() {
+  const searchInput = document.getElementById("searchAtividades")
+  const atividadeItems = document.querySelectorAll(".atividades-list .atividade-card")
 
-  // Abrir o modal
-  openModalBtn.addEventListener("click", () => {
-    modal.style.display = "flex"
-  })
+  searchInput.addEventListener("input", () => {
+    const searchTerm = searchInput.value.toLowerCase()
+    let visibleCount = 0
 
-  // Fechar o modal
-  closeBtn.addEventListener("click", () => {
-    modal.style.display = "none"
-    veiculoForm.reset()
-    cadastroMessage.style.display = "none"
-  })
+    atividadeItems.forEach((item) => {
+      // Buscar em todos os campos de texto dentro do item
+      const itemText = item.textContent.toLowerCase()
 
-  // Fechar o modal ao clicar fora dele
-  window.addEventListener("click", (event) => {
-    if (event.target === modal) {
-      modal.style.display = "none"
-      veiculoForm.reset()
-      cadastroMessage.style.display = "none"
-    }
-  })
-
-  // Configurar o formulário de cadastro
-  veiculoForm.addEventListener("submit", async (e) => {
-    e.preventDefault()
-
-    // Obter os valores do formulário
-    const veiculoId = document.getElementById("veiculoId").value.trim()
-    const veiculoPlaca = document.getElementById("veiculoPlaca").value.trim()
-    const veiculoModelo = document.getElementById("veiculoModelo").value.trim()
-
-    try {
-      // Criar o objeto de veículo
-      const veiculoData = {
-        id: veiculoId,
-        placa: veiculoPlaca,
-        modelo: veiculoModelo,
-        dataCadastro: new Date().toISOString(),
+      if (itemText.includes(searchTerm)) {
+        item.style.display = "flex"
+        visibleCount++
+      } else {
+        item.style.display = "none"
       }
+    })
 
-      // Salvar os dados do veículo no Firebase
-      await set(ref(database, `propriedades/${propriedadeNome}/veiculos/${veiculoId}`), veiculoData)
-
-      // Exibir mensagem de sucesso
-      cadastroMessage.innerHTML = `
-        <div class="success-message">
-          <i class="fas fa-check-circle"></i> Veículo cadastrado com sucesso!
-        </div>
-      `
-      cadastroMessage.style.display = "block"
-
-      // Limpar o formulário
-      veiculoForm.reset()
-
-      // Atualizar a lista de veículos
-      setTimeout(() => {
-        modal.style.display = "none"
-        showVeiculosCadastro(propriedadeNome)
-      }, 2000)
-    } catch (error) {
-      console.error("Erro ao cadastrar veículo:", error)
-
-      // Exibir mensagem de erro
-      cadastroMessage.innerHTML = `
-        <div class="error-message">
-          <i class="fas fa-exclamation-circle"></i> Erro ao cadastrar veículo: ${error.message}
-        </div>
-      `
-      cadastroMessage.style.display = "block"
+    // Mostrar mensagem se nenhum item for encontrado
+    const emptyMessage = document.querySelector(".atividades-list .empty-state")
+    if (emptyMessage) {
+      emptyMessage.style.display = visibleCount === 0 ? "block" : "none"
+    } else if (visibleCount === 0) {
+      const noResultsMessage = document.createElement("p")
+      noResultsMessage.className = "empty-state"
+      noResultsMessage.innerHTML = '<i class="fas fa-search"></i> Nenhum resultado encontrado para a pesquisa.'
+      document.querySelector(".atividades-list").appendChild(noResultsMessage)
     }
   })
 }
@@ -1628,6 +1927,269 @@ function setupVeiculoSearch() {
       noResultsMessage.className = "empty-state"
       noResultsMessage.innerHTML = '<i class="fas fa-search"></i> Nenhum resultado encontrado para a pesquisa.'
       document.querySelector(".veiculos-list").appendChild(noResultsMessage)
+    }
+  })
+}
+
+// Função para mostrar o cadastro de tanques
+async function showTanquesCadastro(propriedadeNome) {
+  const dataContainer = document.getElementById("data-container")
+  try {
+    // Buscar tanques do Firebase
+    const tanquesRef = ref(database, `propriedades/${propriedadeNome}/tanques`)
+    const tanquesSnapshot = await get(tanquesRef)
+
+    let tanquesHtml = ""
+
+    // Processar tanques
+    if (tanquesSnapshot.exists()) {
+      // Converter os dados do Firebase em um array para facilitar a manipulação
+      const tanquesArray = []
+      tanquesSnapshot.forEach((tanqueSnapshot) => {
+        tanquesArray.push({
+          id: tanqueSnapshot.key,
+          ...tanqueSnapshot.val(),
+        })
+      })
+
+      // Gerar o HTML para cada tanque
+      tanquesHtml = tanquesArray
+        .map(
+          (tanque) => `
+        <div class="tanque-card">
+          <div class="tanque-icon">
+            <i class="fas fa-water"></i>
+          </div>
+          <div class="tanque-info">
+            <h4>${tanque.nome || `Tanque ${tanque.id}`}</h4>
+            <div class="tanque-details">
+              <p><i class="fas fa-hashtag"></i><strong>ID:</strong> ${tanque.id}</p>
+              <p><i class="fas fa-font"></i><strong>Nome:</strong> ${tanque.nome || "N/A"}</p>
+            </div>
+          </div>
+        </div>
+      `,
+        )
+        .join("")
+    } else {
+      // Se não houver dados no Firebase, mostrar mensagem de nenhum tanque cadastrado
+      console.log("Nenhum tanque encontrado no banco de dados.")
+    }
+
+    // Renderizar a interface com os dados obtidos
+    dataContainer.innerHTML = `
+      <div class="propriedade">
+        <h2><i class="fas fa-user-plus"></i> Cadastro</h2>
+        <div class="apontamentos-tabs">
+          <button class="tab-button" data-tab="usuarios">
+            <i class="fas fa-users"></i> Usuários
+          </button>
+          <button class="tab-button" data-tab="maquinas">
+            <i class="fas fa-tractor"></i> Máquinas
+          </button>
+          <button class="tab-button" data-tab="implementos">
+            <i class="fas fa-tools"></i> Implementos
+          </button>
+          <button class="tab-button" data-tab="direcionadores">
+            <i class="fas fa-compass"></i> Direcionadores
+          </button>
+          <button class="tab-button" data-tab="veiculos">
+            <i class="fas fa-car"></i> Veículos
+          </button>
+          <button class="tab-button" data-tab="atividades">
+            <i class="fas fa-tasks"></i> Atividades
+          </button>
+          <button class="tab-button active" data-tab="tanques">
+            <i class="fas fa-water"></i> Tanques
+          </button>
+        </div>
+        
+        <!-- Botões de ação para tanques -->
+        <div class="action-buttons">
+          <button id="openTanqueModal" class="action-button">
+            <i class="fas fa-plus-circle"></i> Cadastrar Novo Tanque
+          </button>
+        </div>
+        
+        <!-- Seção de tanques com estilo melhorado -->
+        <div class="equipment-section tanques-section">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="fas fa-water"></i>
+            </div>
+            <h3>Tanques</h3>
+          </div>
+          
+          <!-- Pesquisa de tanques -->
+          <div class="search-container">
+            <div class="search-wrapper">
+              <i class="fas fa-search search-icon"></i>
+              <input type="text" id="searchTanques" class="search-input" placeholder="Pesquisar tanques...">
+            </div>
+          </div>
+          
+          <!-- Lista de tanques -->
+          <div class="equipment-grid tanques-list">
+            ${tanquesHtml || '<p class="empty-state"><i class="fas fa-info-circle"></i> Nenhum tanque cadastrado.</p>'}
+          </div>
+        </div>
+        
+        <!-- Modal de cadastro de tanque -->
+        <div id="tanqueModal" class="modal">
+          <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <form id="tanqueForm" class="cadastro-form">
+              <h3><i class="fas fa-water"></i> Cadastrar Novo Tanque</h3>
+              <div class="form-group">
+                <label for="tanqueId"><i class="fas fa-hashtag"></i> ID</label>
+                <input type="text" id="tanqueId" name="tanqueId" required class="form-input" placeholder="ID do tanque">
+              </div>
+              <div class="form-group">
+                <label for="tanqueNome"><i class="fas fa-font"></i> Nome</label>
+                <input type="text" id="tanqueNome" name="tanqueNome" required class="form-input" placeholder="Nome do tanque">
+              </div>
+              <div class="form-group">
+                <button type="submit" class="cadastrar-button">
+                  <i class="fas fa-save"></i> Cadastrar Tanque
+                </button>
+              </div>
+            </form>
+            <div id="tanqueCadastroMessage" class="cadastro-message" style="display: none;"></div>
+          </div>
+        </div>
+      </div>
+    `
+
+    // Configurar as abas de cadastro novamente
+    setupCadastroTabs(propriedadeNome)
+
+    // Configurar o modal de cadastro de tanque
+    setupTanqueModal(propriedadeNome)
+
+    // Configurar a pesquisa de tanques
+    setupTanqueSearch()
+  } catch (error) {
+    console.error("Erro ao carregar tanques:", error)
+    dataContainer.innerHTML = `
+      <div class="propriedade">
+        <h2><i class="fas fa-exclamation-triangle"></i> Erro</h2>
+        <p class="error-state">
+          <i class="fas fa-exclamation-circle"></i>
+          Erro ao carregar os dados: ${error.message}
+        </p>
+      </div>
+    `
+  }
+}
+
+// Função para configurar o modal de cadastro de tanque
+function setupTanqueModal(propriedadeNome) {
+  const modal = document.getElementById("tanqueModal")
+  const openModalBtn = document.getElementById("openTanqueModal")
+  const closeBtn = document.querySelector("#tanqueModal .close-button")
+  const tanqueForm = document.getElementById("tanqueForm")
+  const cadastroMessage = document.getElementById("tanqueCadastroMessage")
+
+  // Abrir o modal
+  openModalBtn.addEventListener("click", () => {
+    modal.style.display = "flex"
+  })
+
+  // Fechar o modal
+  closeBtn.addEventListener("click", () => {
+    modal.style.display = "none"
+    tanqueForm.reset()
+    cadastroMessage.style.display = "none"
+  })
+
+  // Fechar o modal ao clicar fora dele
+  window.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      modal.style.display = "none"
+      tanqueForm.reset()
+      cadastroMessage.style.display = "none"
+    }
+  })
+
+  // Configurar o formulário de cadastro
+  tanqueForm.addEventListener("submit", async (e) => {
+    e.preventDefault()
+
+    // Obter os valores do formulário
+    const tanqueId = document.getElementById("tanqueId").value.trim()
+    const tanqueNome = document.getElementById("tanqueNome").value.trim()
+
+    try {
+      // Criar o objeto de tanque
+      const tanqueData = {
+        id: tanqueId,
+        nome: tanqueNome,
+        dataCadastro: new Date().toISOString(),
+      }
+
+      // Salvar os dados do tanque no Firebase
+      await set(ref(database, `propriedades/${propriedadeNome}/tanques/${tanqueId}`), tanqueData)
+
+      // Exibir mensagem de sucesso
+      cadastroMessage.innerHTML = `
+        <div class="success-message">
+          <i class="fas fa-check-circle"></i> Tanque cadastrado com sucesso!
+        </div>
+      `
+      cadastroMessage.style.display = "block"
+
+      // Limpar o formulário
+      tanqueForm.reset()
+
+      // Atualizar a lista de tanques
+      setTimeout(() => {
+        modal.style.display = "none"
+        showTanquesCadastro(propriedadeNome)
+      }, 2000)
+    } catch (error) {
+      console.error("Erro ao cadastrar tanque:", error)
+
+      // Exibir mensagem de erro
+      cadastroMessage.innerHTML = `
+        <div class="error-message">
+          <i class="fas fa-exclamation-circle"></i> Erro ao cadastrar tanque: ${error.message}
+        </div>
+      `
+      cadastroMessage.style.display = "block"
+    }
+  })
+}
+
+// Função para configurar a pesquisa de tanques
+function setupTanqueSearch() {
+  const searchInput = document.getElementById("searchTanques")
+  const tanqueItems = document.querySelectorAll(".tanques-list .tanque-card")
+
+  searchInput.addEventListener("input", () => {
+    const searchTerm = searchInput.value.toLowerCase()
+    let visibleCount = 0
+
+    tanqueItems.forEach((item) => {
+      // Buscar em todos os campos de texto dentro do item
+      const itemText = item.textContent.toLowerCase()
+
+      if (itemText.includes(searchTerm)) {
+        item.style.display = "flex"
+        visibleCount++
+      } else {
+        item.style.display = "none"
+      }
+    })
+
+    // Mostrar mensagem se nenhum item for encontrado
+    const emptyMessage = document.querySelector(".tanques-list .empty-state")
+    if (emptyMessage) {
+      emptyMessage.style.display = visibleCount === 0 ? "block" : "none"
+    } else if (visibleCount === 0) {
+      const noResultsMessage = document.createElement("p")
+      noResultsMessage.className = "empty-state"
+      noResultsMessage.innerHTML = '<i class="fas fa-search"></i> Nenhum resultado encontrado para a pesquisa.'
+      document.querySelector(".tanques-list").appendChild(noResultsMessage)
     }
   })
 }

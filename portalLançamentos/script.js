@@ -1,5 +1,6 @@
-// script.js - Página principal (Dashboard)
+// script-maquinas.js - Versão modificada para incluir calendário de máquinas
 import { setupSidebar, setupHeaderButtons, setupAuth, database, ref, get } from "./common.js"
+import { push, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("DOM carregado, configurando dashboard...")
@@ -14,6 +15,8 @@ document.addEventListener("DOMContentLoaded", () => {
 let currentReferenceDate = new Date()
 // Variável global para armazenar o nome da propriedade atual
 let currentPropriedadeNome = ""
+// Variável global para controlar o modo de visualização (operadores ou maquinas)
+let currentViewMode = "operadores"
 
 // Função para obter os dias da semana com base em uma data de referência
 function getWeekDays(referenceDate) {
@@ -69,49 +72,15 @@ function formatDateKey(date) {
   return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`
 }
 
-// Função para buscar e processar todos os dados
-async function fetchAllData(propriedadeNome) {
+// Função para buscar todas as máquinas cadastradas
+async function fetchAllMaquinas(propriedadeNome) {
   try {
-    console.log(`Buscando dados para a propriedade: ${propriedadeNome}`)
+    console.log(`Buscando todas as máquinas cadastradas para a propriedade: ${propriedadeNome}`)
 
-    // Buscar todos os usuários
-    const usersRef = ref(database, `propriedades/${propriedadeNome}/users`)
-    const usersSnapshot = await get(usersRef)
+    const maquinas = []
+    const maquinasSet = new Set()
 
-    if (!usersSnapshot.exists()) {
-      console.log("Nenhum usuário encontrado")
-      return { users: [], activities: {}, justificativas: {} }
-    }
-
-    // Filtrar apenas usuários com role "user"
-    const users = []
-    const usersData = usersSnapshot.val()
-
-    for (const userId in usersData) {
-      const userData = usersData[userId]
-      if (userData.role === "user") {
-        users.push({
-          id: userId,
-          nome: userData.nome || "Sem nome",
-        })
-      }
-    }
-
-    console.log(`Encontrados ${users.length} usuários operacionais`)
-
-    // Mapa para armazenar as atividades por usuário e data
-    const activities = {}
-    // Mapa para armazenar as justificativas por usuário e data
-    const justificativas = {}
-
-    // Inicializar os mapas para todos os usuários
-    users.forEach((user) => {
-      activities[user.id] = {}
-      justificativas[user.id] = {}
-    })
-
-    // 1. Processar apontamentos
-    console.log("Buscando apontamentos...")
+    // Primeiro, buscar máquinas dos apontamentos para garantir que temos todas as que estão sendo usadas
     const apontamentosRef = ref(database, `propriedades/${propriedadeNome}/apontamentos`)
     const apontamentosSnapshot = await get(apontamentosRef)
 
@@ -122,19 +91,132 @@ async function fetchAllData(propriedadeNome) {
       for (const apontamentoId in apontamentos) {
         const apontamento = apontamentos[apontamentoId]
 
-        // Extrair userId diretamente do campo userId
-        const userId = apontamento.userId
+        // Verificar se há operações mecanizadas
+        if (apontamento.operacoesMecanizadas) {
+          for (const operacaoId in apontamento.operacoesMecanizadas) {
+            const operacao = apontamento.operacoesMecanizadas[operacaoId]
 
-        if (!userId) {
-          console.log(`Apontamento ${apontamentoId} não tem userId`)
-          continue
+            // Verificar se há campo "bem" (máquina)
+            if (operacao.bem) {
+              maquinasSet.add(operacao.bem)
+            }
+          }
         }
+      }
+    }
 
-        // Verificar se o usuário existe no nosso mapa
-        if (!activities[userId]) {
-          console.log(`Usuário ${userId} não está na lista de usuários operacionais`)
-          continue
+    // Buscar máquinas do caminho maquinarios
+    const maquinariosRef = ref(database, `propriedades/${propriedadeNome}/maquinarios`)
+    const maquinariosSnapshot = await get(maquinariosRef)
+
+    if (maquinariosSnapshot.exists()) {
+      const maquinariosData = maquinariosSnapshot.val()
+      console.log(`Encontrados ${Object.keys(maquinariosData).length} maquinários cadastrados`)
+
+      for (const maquinaId in maquinariosData) {
+        const maquina = maquinariosData[maquinaId]
+        const nomeMaquina = maquina.nome || `Máquina ${maquinaId}`
+
+        maquinas.push({
+          id: maquinaId,
+          nome: nomeMaquina,
+          bemAttachment: nomeMaquina, // Usar o nome para correspondência
+        })
+
+        // Adicionar ao set para evitar duplicatas
+        maquinasSet.add(nomeMaquina)
+      }
+    }
+
+    // Adicionar máquinas que aparecem nos apontamentos mas não estão cadastradas
+    const maquinasFromApontamentos = Array.from(maquinasSet)
+      .filter((maquinaNome) => {
+        // Verificar se já existe uma máquina cadastrada com esse nome
+        return !maquinas.some((m) => m.bemAttachment === maquinaNome)
+      })
+      .map((maquinaNome, index) => ({
+        id: `maquina_apontamento_${index}`,
+        nome: maquinaNome,
+        bemAttachment: maquinaNome,
+      }))
+
+    // Adicionar as máquinas dos apontamentos que não estão cadastradas
+    maquinas.push(...maquinasFromApontamentos)
+
+    console.log(
+      `Encontradas ${maquinas.length} máquinas total:`,
+      maquinas.map((m) => m.nome),
+    )
+
+    console.log(`Máquinas com apontamentos:`, Array.from(maquinasSet))
+
+    return maquinas
+  } catch (error) {
+    console.error("Erro ao buscar máquinas:", error)
+    return []
+  }
+}
+
+// Função para buscar e processar todos os dados (operadores ou máquinas)
+async function fetchAllData(propriedadeNome, viewMode = "operadores") {
+  try {
+    console.log(`Buscando dados para a propriedade: ${propriedadeNome}, modo: ${viewMode}`)
+
+    let entities = []
+    const activities = {}
+    const justificativas = {}
+
+    if (viewMode === "operadores") {
+      // Buscar todos os usuários
+      const usersRef = ref(database, `propriedades/${propriedadeNome}/users`)
+      const usersSnapshot = await get(usersRef)
+
+      if (!usersSnapshot.exists()) {
+        console.log("Nenhum usuário encontrado")
+        return { entities: [], activities: {}, justificativas: {} }
+      }
+
+      // Filtrar apenas usuários com role "user"
+      const usersData = usersSnapshot.val()
+
+      for (const userId in usersData) {
+        const userData = usersData[userId]
+        if (userData.role === "user") {
+          entities.push({
+            id: userId,
+            nome: userData.nome || "Sem nome",
+            type: "operador",
+          })
         }
+      }
+
+      console.log(`Encontrados ${entities.length} usuários operacionais`)
+    } else {
+      // Buscar todas as máquinas cadastradas
+      entities = await fetchAllMaquinas(propriedadeNome)
+      entities.forEach((maquina) => {
+        maquina.type = "maquina"
+      })
+      console.log(`Encontradas ${entities.length} máquinas`)
+    }
+
+    // Inicializar os mapas para todas as entidades
+    entities.forEach((entity) => {
+      activities[entity.id] = {}
+      justificativas[entity.id] = {}
+    })
+
+    // Processar apontamentos
+    console.log("Buscando apontamentos...")
+    const apontamentosRef = ref(database, `propriedades/${propriedadeNome}/apontamentos`)
+    const apontamentosSnapshot = await get(apontamentosRef)
+
+    if (apontamentosSnapshot.exists()) {
+      const apontamentos = apontamentosSnapshot.val()
+      console.log(`Encontrados ${Object.keys(apontamentos).length} apontamentos`)
+
+      for (const apontamentoId in apontamentos) {
+        const apontamento = apontamentos[apontamentoId]
 
         // Extrair data do campo data (formato DD/MM/YYYY)
         const itemDate = parseBrazilianDate(apontamento.data)
@@ -147,182 +229,150 @@ async function fetchAllData(propriedadeNome) {
         // Formatar a data como YYYY-MM-DD para usar como chave
         const dateKey = formatDateKey(itemDate)
 
-        // Marcar que há atividade nesta data
-        activities[userId][dateKey] = true
+        if (viewMode === "operadores") {
+          // Lógica para operadores (original)
+          const userId = apontamento.userId
 
-        console.log(`Apontamento registrado: Usuário ${userId}, Data ${dateKey}`)
+          if (!userId) {
+            console.log(`Apontamento ${apontamentoId} não tem userId`)
+            continue
+          }
+
+          // Verificar se o usuário existe no nosso mapa
+          if (!activities[userId]) {
+            console.log(`Usuário ${userId} não está na lista de usuários operacionais`)
+            continue
+          }
+
+          // Marcar que há atividade nesta data
+          activities[userId][dateKey] = true
+          console.log(`Apontamento registrado: Usuário ${userId}, Data ${dateKey}`)
+        } else {
+          // Lógica para máquinas
+          if (apontamento.operacoesMecanizadas) {
+            for (const operacaoId in apontamento.operacoesMecanizadas) {
+              const operacao = apontamento.operacoesMecanizadas[operacaoId]
+
+              if (operacao.bem) {
+                // Encontrar a máquina correspondente pelo bemAttachment
+                const maquina = entities.find((m) => m.bemAttachment === operacao.bem)
+                if (maquina && activities[maquina.id]) {
+                  activities[maquina.id][dateKey] = true
+                  console.log(`Apontamento registrado: Máquina ${operacao.bem} (ID: ${maquina.id}), Data ${dateKey}`)
+                } else {
+                  console.log(`Máquina não encontrada para bem: ${operacao.bem}`)
+                }
+              }
+            }
+          }
+        }
       }
     } else {
       console.log("Nenhum apontamento encontrado")
     }
 
-    // 2. Processar percursos
-    console.log("Buscando percursos...")
-    const percursosRef = ref(database, `propriedades/${propriedadeNome}/percursos`)
-    const percursosSnapshot = await get(percursosRef)
+    // Para máquinas, não processamos outros tipos de registros (percursos, abastecimentos)
+    // pois eles não contêm informações sobre máquinas
 
-    if (percursosSnapshot.exists()) {
-      const percursos = percursosSnapshot.val()
-      console.log(`Encontrados ${Object.keys(percursos).length} percursos`)
+    if (viewMode === "operadores") {
+      // Processar percursos (apenas para operadores)
+      console.log("Buscando percursos...")
+      const percursosRef = ref(database, `propriedades/${propriedadeNome}/percursos`)
+      const percursosSnapshot = await get(percursosRef)
 
-      for (const percursoId in percursos) {
-        const percurso = percursos[percursoId]
+      if (percursosSnapshot.exists()) {
+        const percursos = percursosSnapshot.val()
+        console.log(`Encontrados ${Object.keys(percursos).length} percursos`)
 
-        // Extrair userId diretamente do campo userId
-        const userId = percurso.userId
+        for (const percursoId in percursos) {
+          const percurso = percursos[percursoId]
+          const userId = percurso.userId
 
-        if (!userId) {
-          console.log(`Percurso ${percursoId} não tem userId`)
-          continue
+          if (!userId || !activities[userId]) continue
+
+          const itemDate = parseBrazilianDate(percurso.data)
+          if (!itemDate) continue
+
+          const dateKey = formatDateKey(itemDate)
+          activities[userId][dateKey] = true
+          console.log(`Percurso registrado: Usuário ${userId}, Data ${dateKey}`)
         }
-
-        // Verificar se o usuário existe no nosso mapa
-        if (!activities[userId]) {
-          console.log(`Usuário ${userId} não está na lista de usuários operacionais`)
-          continue
-        }
-
-        // Extrair data do campo data (formato DD/MM/YYYY)
-        const itemDate = parseBrazilianDate(percurso.data)
-
-        if (!itemDate) {
-          console.log(`Percurso ${percursoId} não tem data válida: ${percurso.data}`)
-          continue
-        }
-
-        // Formatar a data como YYYY-MM-DD para usar como chave
-        const dateKey = formatDateKey(itemDate)
-
-        // Marcar que há atividade nesta data
-        activities[userId][dateKey] = true
-
-        console.log(`Percurso registrado: Usuário ${userId}, Data ${dateKey}`)
       }
-    } else {
-      console.log("Nenhum percurso encontrado")
+
+      // Processar abastecimentos (apenas para operadores)
+      console.log("Buscando abastecimentos...")
+      const abastecimentosRef = ref(database, `propriedades/${propriedadeNome}/abastecimentos`)
+      const abastecimentosSnapshot = await get(abastecimentosRef)
+
+      if (abastecimentosSnapshot.exists()) {
+        const abastecimentos = abastecimentosSnapshot.val()
+        console.log(`Encontrados ${Object.keys(abastecimentos).length} abastecimentos`)
+
+        for (const abastecimentoId in abastecimentos) {
+          const abastecimento = abastecimentos[abastecimentoId]
+          let userId = abastecimento.userId || abastecimento.operadorId
+
+          if (!userId && abastecimento.operador) {
+            userId = typeof abastecimento.operador === "object" ? abastecimento.operador.id : abastecimento.operador
+          }
+
+          if (!userId || !activities[userId]) continue
+
+          let itemDate = null
+          if (abastecimento.data) {
+            itemDate = parseBrazilianDate(abastecimento.data)
+          } else if (abastecimento.dataAbastecimento) {
+            itemDate = parseBrazilianDate(abastecimento.dataAbastecimento)
+          } else if (abastecimento.timestamp) {
+            itemDate = new Date(abastecimento.timestamp)
+          }
+
+          if (!itemDate) continue
+
+          const dateKey = formatDateKey(itemDate)
+          activities[userId][dateKey] = true
+          console.log(`Abastecimento registrado: Usuário ${userId}, Data ${dateKey}`)
+        }
+      }
+
+      // Processar abastecimentoVeiculos (apenas para operadores)
+      console.log("Buscando abastecimentos de veículos...")
+      const abastecimentoVeiculosRef = ref(database, `propriedades/${propriedadeNome}/abastecimentoVeiculos`)
+      const abastecimentoVeiculosSnapshot = await get(abastecimentoVeiculosRef)
+
+      if (abastecimentoVeiculosSnapshot.exists()) {
+        const abastecimentoVeiculos = abastecimentoVeiculosSnapshot.val()
+        console.log(`Encontrados ${Object.keys(abastecimentoVeiculos).length} abastecimentos de veículos`)
+
+        for (const abastecimentoId in abastecimentoVeiculos) {
+          const abastecimento = abastecimentoVeiculos[abastecimentoId]
+          let userId = abastecimento.userId || abastecimento.motorista
+
+          if (!userId && abastecimento.condutor) {
+            userId = typeof abastecimento.condutor === "object" ? abastecimento.condutor.id : abastecimento.condutor
+          }
+
+          if (!userId || !activities[userId]) continue
+
+          let itemDate = null
+          if (abastecimento.data) {
+            itemDate = parseBrazilianDate(abastecimento.data)
+          } else if (abastecimento.dataAbastecimento) {
+            itemDate = parseBrazilianDate(abastecimento.dataAbastecimento)
+          } else if (abastecimento.timestamp) {
+            itemDate = new Date(abastecimento.timestamp)
+          }
+
+          if (!itemDate) continue
+
+          const dateKey = formatDateKey(itemDate)
+          activities[userId][dateKey] = true
+          console.log(`Abastecimento de veículo registrado: Usuário ${userId}, Data ${dateKey}`)
+        }
+      }
     }
 
-    // 3. Processar abastecimentos
-    console.log("Buscando abastecimentos...")
-    const abastecimentosRef = ref(database, `propriedades/${propriedadeNome}/abastecimentos`)
-    const abastecimentosSnapshot = await get(abastecimentosRef)
-
-    if (abastecimentosSnapshot.exists()) {
-      const abastecimentos = abastecimentosSnapshot.val()
-      console.log(`Encontrados ${Object.keys(abastecimentos).length} abastecimentos`)
-
-      for (const abastecimentoId in abastecimentos) {
-        const abastecimento = abastecimentos[abastecimentoId]
-
-        // Extrair userId - pode estar em diferentes campos
-        let userId = abastecimento.userId || abastecimento.operadorId
-
-        if (!userId && abastecimento.operador) {
-          userId = typeof abastecimento.operador === "object" ? abastecimento.operador.id : abastecimento.operador
-        }
-
-        if (!userId) {
-          console.log(`Abastecimento ${abastecimentoId} não tem userId`)
-          continue
-        }
-
-        // Verificar se o usuário existe no nosso mapa
-        if (!activities[userId]) {
-          console.log(`Usuário ${userId} não está na lista de usuários operacionais`)
-          continue
-        }
-
-        // Extrair data - pode estar em diferentes campos
-        let itemDate = null
-
-        if (abastecimento.data) {
-          itemDate = parseBrazilianDate(abastecimento.data)
-        } else if (abastecimento.dataAbastecimento) {
-          itemDate = parseBrazilianDate(abastecimento.dataAbastecimento)
-        }
-
-        if (!itemDate && abastecimento.timestamp) {
-          itemDate = new Date(abastecimento.timestamp)
-        }
-
-        if (!itemDate) {
-          console.log(`Abastecimento ${abastecimentoId} não tem data válida`)
-          continue
-        }
-
-        // Formatar a data como YYYY-MM-DD para usar como chave
-        const dateKey = formatDateKey(itemDate)
-
-        // Marcar que há atividade nesta data
-        activities[userId][dateKey] = true
-
-        console.log(`Abastecimento registrado: Usuário ${userId}, Data ${dateKey}`)
-      }
-    } else {
-      console.log("Nenhum abastecimento encontrado")
-    }
-
-    // 4. Processar abastecimentoVeiculos
-    console.log("Buscando abastecimentos de veículos...")
-    const abastecimentoVeiculosRef = ref(database, `propriedades/${propriedadeNome}/abastecimentoVeiculos`)
-    const abastecimentoVeiculosSnapshot = await get(abastecimentoVeiculosRef)
-
-    if (abastecimentoVeiculosSnapshot.exists()) {
-      const abastecimentoVeiculos = abastecimentoVeiculosSnapshot.val()
-      console.log(`Encontrados ${Object.keys(abastecimentoVeiculos).length} abastecimentos de veículos`)
-
-      for (const abastecimentoId in abastecimentoVeiculos) {
-        const abastecimento = abastecimentoVeiculos[abastecimentoId]
-
-        // Extrair userId - pode estar em diferentes campos
-        let userId = abastecimento.userId || abastecimento.motorista
-
-        if (!userId && abastecimento.condutor) {
-          userId = typeof abastecimento.condutor === "object" ? abastecimento.condutor.id : abastecimento.condutor
-        }
-
-        if (!userId) {
-          console.log(`Abastecimento de veículo ${abastecimentoId} não tem userId`)
-          continue
-        }
-
-        // Verificar se o usuário existe no nosso mapa
-        if (!activities[userId]) {
-          console.log(`Usuário ${userId} não está na lista de usuários operacionais`)
-          continue
-        }
-
-        // Extrair data - pode estar em diferentes campos
-        let itemDate = null
-
-        if (abastecimento.data) {
-          itemDate = parseBrazilianDate(abastecimento.data)
-        } else if (abastecimento.dataAbastecimento) {
-          itemDate = parseBrazilianDate(abastecimento.dataAbastecimento)
-        }
-
-        if (!itemDate && abastecimento.timestamp) {
-          itemDate = new Date(abastecimento.timestamp)
-        }
-
-        if (!itemDate) {
-          console.log(`Abastecimento de veículo ${abastecimentoId} não tem data válida`)
-          continue
-        }
-
-        // Formatar a data como YYYY-MM-DD para usar como chave
-        const dateKey = formatDateKey(itemDate)
-
-        // Marcar que há atividade nesta data
-        activities[userId][dateKey] = true
-
-        console.log(`Abastecimento de veículo registrado: Usuário ${userId}, Data ${dateKey}`)
-      }
-    } else {
-      console.log("Nenhum abastecimento de veículo encontrado")
-    }
-
-    // 5. Processar justificativas
+    // Processar justificativas (para operadores e máquinas)
     console.log("Buscando justificativas...")
     const justificativasRef = ref(database, `propriedades/${propriedadeNome}/justificativas`)
     const justificativasSnapshot = await get(justificativasRef)
@@ -334,69 +384,66 @@ async function fetchAllData(propriedadeNome) {
       for (const justificativaId in justificativasData) {
         const justificativa = justificativasData[justificativaId]
 
-        // Extrair userId
-        const userId = justificativa.userId
+        // Verificar se é uma justificativa para operador ou máquina
+        if (justificativa.userId && viewMode === "operadores") {
+          // Justificativa para operador
+          const userId = justificativa.userId
+          if (!userId || !justificativas[userId]) continue
 
-        if (!userId) {
-          console.log(`Justificativa ${justificativaId} não tem userId`)
-          continue
+          const itemDate = parseBrazilianDate(justificativa.data)
+          if (!itemDate) continue
+
+          const dateKey = formatDateKey(itemDate)
+          justificativas[userId][dateKey] = justificativa.justificativa
+          console.log(`Justificativa registrada: Usuário ${userId}, Data ${dateKey}`)
+        } else if (justificativa.maquinaId && viewMode === "maquinas") {
+          // Justificativa para máquina
+          const maquinaId = justificativa.maquinaId
+          if (!maquinaId || !justificativas[maquinaId]) continue
+
+          const itemDate = parseBrazilianDate(justificativa.data)
+          if (!itemDate) continue
+
+          const dateKey = formatDateKey(itemDate)
+          justificativas[maquinaId][dateKey] = justificativa.justificativa
+          console.log(`Justificativa registrada: Máquina ${maquinaId}, Data ${dateKey}`)
         }
-
-        // Verificar se o usuário existe no nosso mapa
-        if (!justificativas[userId]) {
-          console.log(`Usuário ${userId} não está na lista de usuários operacionais`)
-          continue
-        }
-
-        // Extrair data do campo data (formato DD/MM/YYYY)
-        const itemDate = parseBrazilianDate(justificativa.data)
-
-        if (!itemDate) {
-          console.log(`Justificativa ${justificativaId} não tem data válida: ${justificativa.data}`)
-          continue
-        }
-
-        // Formatar a data como YYYY-MM-DD para usar como chave
-        const dateKey = formatDateKey(itemDate)
-
-        // Marcar que há justificativa nesta data e armazenar o texto
-        justificativas[userId][dateKey] = justificativa.justificativa
-
-        console.log(`Justificativa registrada: Usuário ${userId}, Data ${dateKey}`)
       }
-    } else {
-      console.log("Nenhuma justificativa encontrada")
     }
 
-    return { users, activities, justificativas }
+    return { entities, activities, justificativas }
   } catch (error) {
     console.error("Erro ao buscar dados:", error)
-    return { users: [], activities: {}, justificativas: {} }
+    return { entities: [], activities: {}, justificativas: {} }
   }
 }
 
 // Função para renderizar o calendário com base na data de referência
-async function renderCalendar(propriedadeNome, referenceDate) {
+async function renderCalendar(propriedadeNome, referenceDate, viewMode = "operadores") {
   try {
     // Armazenar o nome da propriedade atual na variável global
     currentPropriedadeNome = propriedadeNome
+    currentViewMode = viewMode
 
     // Obter os dias da semana com base na data de referência
     const weekDays = getWeekDays(referenceDate)
     console.log("Dias da semana:", weekDays)
 
     // Buscar todos os dados
-    const { users, activities, justificativas } = await fetchAllData(propriedadeNome)
+    const { entities, activities, justificativas } = await fetchAllData(propriedadeNome, viewMode)
 
-    if (users.length === 0) {
+    if (entities.length === 0) {
+      const entityType = viewMode === "operadores" ? "usuários operacionais" : "máquinas"
+      const entityIcon = viewMode === "operadores" ? "fas fa-users-slash" : "fas fa-cogs"
+
       document.getElementById("data-container").innerHTML = `
         <div class="propriedade calendar-modern">
           <div class="calendar-empty">
             <div class="empty-icon">
-              <i class="fas fa-users-slash"></i>
+              <i class="${entityIcon}"></i>
             </div>
-            <h3>Nenhum usuário operacional encontrado</h3>
-            <p>Não há operadores cadastrados no sistema para exibir no calendário.</p>
+            <h3>Nenhum ${entityType} encontrado</h3>
+            <p>Não há ${entityType} ${viewMode === "operadores" ? "cadastrados no sistema" : "registrados no sistema"} para exibir no calendário.</p>
           </div>
         </div>
       `
@@ -437,6 +484,17 @@ async function renderCalendar(propriedadeNome, referenceDate) {
           </div>
         </div>
         
+        <div class="view-mode-tabs">
+          <button class="view-mode-tab ${viewMode === "operadores" ? "active" : ""}" onclick="switchViewMode('operadores')">
+            <i class="fas fa-users"></i>
+            <span>Operadores</span>
+          </button>
+          <button class="view-mode-tab ${viewMode === "maquinas" ? "active" : ""}" onclick="switchViewMode('maquinas')">
+            <i class="fas fa-tractor"></i>
+            <span>Máquinas</span>
+          </button>
+        </div>
+        
         <div class="calendar-navigation">
           <button id="prev-week" class="nav-button">
             <i class="fas fa-chevron-left"></i>
@@ -458,8 +516,8 @@ async function renderCalendar(propriedadeNome, referenceDate) {
               <tr>
                 <th class="operator-column">
                   <div class="th-content">
-                    <i class="fas fa-users"></i>
-                    <span>OPERADORES</span>
+                    <i class="${viewMode === "operadores" ? "fas fa-users" : "fas fa-tractor"}"></i>
+                    <span>${viewMode === "operadores" ? "OPERADORES" : "MÁQUINAS"}</span>
                   </div>
                 </th>
     `
@@ -483,21 +541,21 @@ async function renderCalendar(propriedadeNome, referenceDate) {
             <tbody>
     `
 
-    // Para cada usuário, verificar atividades em cada dia da semana
-    for (const user of users) {
+    // Para cada entidade, verificar atividades em cada dia da semana
+    for (const entity of entities) {
       tableHTML += `
         <tr>
           <td class="operator-name">
             <div class="operator-info">
               <div class="operator-avatar">
-                <i class="fas fa-user"></i>
+                <i class="${viewMode === "operadores" ? "fas fa-user" : "fas fa-tractor"}"></i>
               </div>
-              <span>${user.nome}</span>
+              <span>${entity.nome}</span>
             </div>
           </td>
       `
 
-      // Para cada dia da semana, verificar se o usuário fez alguma atividade
+      // Para cada dia da semana, verificar se a entidade fez alguma atividade
       for (const day of weekDays) {
         // Formatar a data como YYYY-MM-DD para verificar no mapa de atividades
         const dateKey = formatDateKey(day.date)
@@ -506,12 +564,12 @@ async function renderCalendar(propriedadeNome, referenceDate) {
         // Verificar se a data é futura
         const isFutureDate = day.date > today
 
-        // Verificar se há atividade para este usuário nesta data
-        const hasActivity = activities[user.id] && activities[user.id][dateKey]
+        // Verificar se há atividade para esta entidade nesta data
+        const hasActivity = activities[entity.id] && activities[entity.id][dateKey]
 
-        // Verificar se há justificativa para este usuário nesta data
-        const hasJustificativa = justificativas[user.id] && justificativas[user.id][dateKey]
-        const justificativaText = hasJustificativa ? justificativas[user.id][dateKey] : ""
+        // Verificar se há justificativa
+        const hasJustificativa = justificativas[entity.id] && justificativas[entity.id][dateKey]
+        const justificativaText = hasJustificativa ? justificativas[entity.id][dateKey] : ""
 
         if (isFutureDate) {
           tableHTML += `
@@ -538,9 +596,11 @@ async function renderCalendar(propriedadeNome, referenceDate) {
             </td>
           `
         } else {
+          // Permitir justificativas para ambos os modos
+          const entityType = viewMode === "operadores" ? "userId" : "maquinaId"
           tableHTML += `
             <td class="${isToday ? "today-cell" : ""}">
-              <div class="activity-indicator inactive" data-user-id="${user.id}" data-date="${dateKey}" onclick="showJustificativaModal(this)" title="Sem Apontamento - Clique para justificar">
+              <div class="activity-indicator inactive" data-entity-id="${entity.id}" data-entity-type="${entityType}" data-date="${dateKey}" onclick="showJustificativaModal(this)" title="Sem Apontamento - Clique para justificar">
                 <i class="fas fa-times"></i>
               </div>
             </td>
@@ -560,19 +620,19 @@ async function renderCalendar(propriedadeNome, referenceDate) {
 
     // Renderizar a tabela
     document.getElementById("data-container").innerHTML = tableHTML
-    console.log("Calendário semanal renderizado com sucesso")
+    console.log(`Calendário semanal renderizado com sucesso - Modo: ${viewMode}`)
 
     // Adicionar event listeners para os botões de navegação
     document.getElementById("prev-week").addEventListener("click", () => {
-      navigateToWeek(propriedadeNome, -1)
+      navigateToWeek(propriedadeNome, -1, viewMode)
     })
 
     document.getElementById("next-week").addEventListener("click", () => {
-      navigateToWeek(propriedadeNome, 1)
+      navigateToWeek(propriedadeNome, 1, viewMode)
     })
 
     document.getElementById("current-week").addEventListener("click", () => {
-      navigateToCurrentWeek(propriedadeNome)
+      navigateToCurrentWeek(propriedadeNome, viewMode)
     })
   } catch (error) {
     console.error("Erro ao renderizar calendário:", error)
@@ -590,8 +650,26 @@ async function renderCalendar(propriedadeNome, referenceDate) {
   }
 }
 
+// Função para alternar entre modos de visualização
+function switchViewMode(newMode) {
+  if (newMode === currentViewMode) return
+
+  // Mostrar indicador de carregamento
+  document.getElementById("data-container").innerHTML = `
+    <div class="propriedade calendar-modern">
+      <div class="calendar-loading">
+        <div class="pulse-loader"></div>
+        <p>Carregando dados do calendário...</p>
+      </div>
+    </div>
+  `
+
+  // Renderizar o calendário com o novo modo
+  renderCalendar(currentPropriedadeNome, currentReferenceDate, newMode)
+}
+
 // Função para navegar para a semana anterior ou próxima
-function navigateToWeek(propriedadeNome, direction) {
+function navigateToWeek(propriedadeNome, direction, viewMode = currentViewMode) {
   // Mostrar indicador de carregamento
   document.getElementById("data-container").innerHTML = `
     <div class="propriedade calendar-modern">
@@ -608,11 +686,11 @@ function navigateToWeek(propriedadeNome, direction) {
   currentReferenceDate = newDate
 
   // Renderizar o calendário com a nova data
-  renderCalendar(propriedadeNome, currentReferenceDate)
+  renderCalendar(propriedadeNome, currentReferenceDate, viewMode)
 }
 
 // Função para navegar para a semana atual
-function navigateToCurrentWeek(propriedadeNome) {
+function navigateToCurrentWeek(propriedadeNome, viewMode = currentViewMode) {
   // Mostrar indicador de carregamento
   document.getElementById("data-container").innerHTML = `
     <div class="propriedade calendar-modern">
@@ -627,7 +705,7 @@ function navigateToCurrentWeek(propriedadeNome) {
   currentReferenceDate = new Date()
 
   // Renderizar o calendário com a data atual
-  renderCalendar(propriedadeNome, currentReferenceDate)
+  renderCalendar(propriedadeNome, currentReferenceDate, viewMode)
 }
 
 // Função para exibir o calendário semanal
@@ -654,8 +732,8 @@ async function showWeeklyCalendar(propriedadeNome) {
     // Resetar a data de referência para a data atual
     currentReferenceDate = new Date()
 
-    // Renderizar o calendário
-    await renderCalendar(propriedadeNome, currentReferenceDate)
+    // Renderizar o calendário (começar com operadores)
+    await renderCalendar(propriedadeNome, currentReferenceDate, "operadores")
 
     // Adicionar estilos CSS para o calendário e animação de carregamento
     const styleElement = document.createElement("style")
@@ -708,6 +786,50 @@ async function showWeeklyCalendar(propriedadeNome) {
         display: flex;
         align-items: center;
         gap: 20px;
+        flex-wrap: wrap;
+      }
+
+      /* Novo estilo para as abas de modo de visualização */
+      .view-mode-tabs {
+        display: flex;
+        justify-content: center;
+        background-color: #fff;
+        padding: 0;
+        border-bottom: 1px solid #eaedf2;
+      }
+
+      .view-mode-tab {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        background-color: transparent;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 15px 30px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 1rem;
+        font-weight: 500;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        flex: 1;
+        max-width: 200px;
+      }
+
+      .view-mode-tab:hover {
+        background-color: #f8fafc;
+        color: #334155;
+      }
+
+      .view-mode-tab.active {
+        color: #2E3631;
+        border-bottom: 3px solid #2E3631;
+        font-weight: 600;
+      }
+
+      .view-mode-tab i {
+        font-size: 1.2rem;
       }
       
       .calendar-legend {
@@ -1083,11 +1205,18 @@ async function showWeeklyCalendar(propriedadeNome) {
           font-size: 1.5rem;
         }
         
+        .calendar-actions {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 15px;
+        }
+        
         .calendar-legend {
           flex-direction: column;
           align-items: flex-start;
           gap: 10px;
           padding: 15px;
+          width: 100%;
         }
         
         .operator-column,
@@ -1221,11 +1350,16 @@ async function showWeeklyCalendar(propriedadeNome) {
   }
 }
 
-// Função para mostrar o modal de justificativa
+// Função para mostrar o modal de justificativa (para operadores e máquinas)
 function showJustificativaModal(element) {
   // Obter os dados do elemento clicado
-  const userId = element.getAttribute("data-user-id")
+  const entityId = element.getAttribute("data-entity-id")
+  const entityType = element.getAttribute("data-entity-type")
   const dateKey = element.getAttribute("data-date")
+
+  // Determinar o título do modal com base no tipo de entidade
+  const modalTitle =
+    entityType === "userId" ? "Adicionar Justificativa para Operador" : "Adicionar Justificativa para Máquina"
 
   // Criar o modal
   const modalOverlay = document.createElement("div")
@@ -1236,7 +1370,7 @@ function showJustificativaModal(element) {
 
   modalContent.innerHTML = `
     <div class="modal-header">
-      <h3>Adicionar Justificativa</h3>
+      <h3>${modalTitle}</h3>
       <button class="close-modal" onclick="closeJustificativaModal()">
         <i class="fas fa-times"></i>
       </button>
@@ -1247,7 +1381,7 @@ function showJustificativaModal(element) {
     </div>
     <div class="modal-footer">
       <button class="cancel-button" onclick="closeJustificativaModal()">Cancelar</button>
-      <button class="save-button" onclick="salvarJustificativa('${userId}', '${dateKey}')">Salvar</button>
+      <button class="save-button" onclick="salvarJustificativa('${entityId}', '${dateKey}', '${entityType}')">Salvar</button>
     </div>
   `
 
@@ -1392,8 +1526,8 @@ function closeJustificativaModal() {
   }
 }
 
-// Função para salvar a justificativa
-async function salvarJustificativa(userId, dateKey) {
+// Função para salvar a justificativa (para operadores e máquinas)
+async function salvarJustificativa(entityId, dateKey, entityType) {
   try {
     const justificativaText = document.getElementById("justificativa-text").value.trim()
 
@@ -1421,11 +1555,19 @@ async function salvarJustificativa(userId, dateKey) {
 
     // Criar um novo nó para a justificativa
     const justificativaData = {
-      userId: userId,
       data: dataFormatada,
       justificativa: justificativaText,
       timestamp: Date.now(),
       status: "justificado",
+    }
+
+    // Adicionar o campo correto com base no tipo de entidade
+    if (entityType === "userId") {
+      justificativaData.userId = entityId
+      justificativaData.tipo = "operador"
+    } else {
+      justificativaData.maquinaId = entityId
+      justificativaData.tipo = "maquina"
     }
 
     // Referência para o nó de justificativas
@@ -1437,7 +1579,7 @@ async function salvarJustificativa(userId, dateKey) {
 
     // Atualizar o elemento visual para mostrar que foi justificado
     const elementoClicado = document.querySelector(
-      `.activity-indicator[data-user-id="${userId}"][data-date="${dateKey}"]`,
+      `.activity-indicator[data-entity-id="${entityId}"][data-date="${dateKey}"]`,
     )
 
     if (elementoClicado) {
@@ -1530,4 +1672,4 @@ async function salvarJustificativa(userId, dateKey) {
 window.showJustificativaModal = showJustificativaModal
 window.closeJustificativaModal = closeJustificativaModal
 window.salvarJustificativa = salvarJustificativa
-import { push, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"
+window.switchViewMode = switchViewMode
