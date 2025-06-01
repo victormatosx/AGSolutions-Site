@@ -200,6 +200,9 @@ async function fetchAllData(propriedadeNome, viewMode = "operadores") {
       console.log(`Encontradas ${entities.length} máquinas`)
     }
 
+    // Ordenar as entidades por ordem alfabética pelo nome
+    entities.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+
     // Inicializar os mapas para todas as entidades
     entities.forEach((entity) => {
       activities[entity.id] = {}
