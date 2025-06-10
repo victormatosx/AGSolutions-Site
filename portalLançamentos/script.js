@@ -17,6 +17,8 @@ let currentReferenceDate = new Date()
 let currentPropriedadeNome = ""
 // Variável global para controlar o modo de visualização (operadores ou maquinas)
 let currentViewMode = "operadores"
+// Variável global para armazenar os dados atuais do calendário
+let currentCalendarData = { entities: [], activities: {}, justificativas: {} }
 
 // Função para obter os dias da semana com base em uma data de referência
 function getWeekDays(referenceDate) {
@@ -421,6 +423,325 @@ async function fetchAllData(propriedadeNome, viewMode = "operadores") {
   }
 }
 
+// Função para gerar relatório em PDF
+async function generatePDFReport() {
+  try {
+    // Verificar se há dados para gerar o relatório
+    if (!currentCalendarData.entities || currentCalendarData.entities.length === 0) {
+      alert("Não há dados disponíveis para gerar o relatório.")
+      return
+    }
+
+    // Mostrar indicador de carregamento
+    const loadingOverlay = document.createElement("div")
+    loadingOverlay.className = "pdf-loading-overlay"
+    loadingOverlay.innerHTML = `
+      <div class="pdf-loading-content">
+        <div class="pdf-loading-spinner"></div>
+        <h3>Gerando Relatório PDF</h3>
+        <p>Aguarde enquanto o relatório está sendo gerado...</p>
+      </div>
+    `
+    document.body.appendChild(loadingOverlay)
+
+    // Carregar a biblioteca jsPDF dinamicamente
+    if (!window.jsPDF) {
+      const script = document.createElement('script')
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+      document.head.appendChild(script)
+      
+      await new Promise((resolve) => {
+        script.onload = resolve
+      })
+    }
+
+    const { jsPDF } = window.jspdf
+
+    // Criar novo documento PDF
+    const doc = new jsPDF('landscape', 'mm', 'a4')
+    
+    // Obter os dias da semana atual
+    const weekDays = getWeekDays(currentReferenceDate)
+    const startDate = weekDays[0].formattedDate
+    const endDate = weekDays[6].formattedDate
+    
+    // Configurar fonte
+    doc.setFont('helvetica')
+    
+    // Título do relatório
+    doc.setFontSize(18)
+    doc.setTextColor(46, 54, 49) // Cor verde escura
+    const title = `Relatório de Atividades Semanais - ${currentViewMode === 'operadores' ? 'Operadores' : 'Máquinas'}`
+    doc.text(title, 148, 20, { align: 'center' })
+    
+    // Subtítulo com período
+    doc.setFontSize(12)
+    doc.setTextColor(100, 100, 100)
+    doc.text(`Período: ${startDate} a ${endDate}`, 148, 30, { align: 'center' })
+    doc.text(`Propriedade: ${currentPropriedadeNome}`, 148, 38, { align: 'center' })
+    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 148, 46, { align: 'center' })
+    
+    // Linha separadora
+    doc.setDrawColor(200, 200, 200)
+    doc.line(20, 52, 277, 52)
+    
+    // Legenda
+    doc.setFontSize(10)
+    doc.setTextColor(80, 80, 80)
+    doc.text('Legenda:', 20, 62)
+    
+    // Símbolos da legenda
+    const legendY = 68
+    
+    // Atividade realizada (verde)
+    doc.setFillColor(16, 185, 129)
+    doc.circle(25, legendY, 2, 'F')
+    doc.text('Apontamento Realizado', 30, legendY + 1)
+    
+    // Justificado (azul)
+    doc.setFillColor(59, 130, 246)
+    doc.circle(85, legendY, 2, 'F')
+    doc.text('Justificado', 90, legendY + 1)
+    
+    // Sem apontamento (vermelho)
+    doc.setFillColor(239, 68, 68)
+    doc.circle(125, legendY, 2, 'F')
+    doc.text('Sem Apontamento', 130, legendY + 1)
+    
+    // Data futura (cinza)
+    doc.setFillColor(148, 163, 184)
+    doc.circle(185, legendY, 2, 'F')
+    doc.text('Data Futura', 190, legendY + 1)
+    
+    // Configurar tabela
+    let currentY = 80
+    const tableStartY = currentY
+    const rowHeight = 8
+    const colWidths = [60, 31, 31, 31, 31, 31, 31, 31] // Larguras das colunas
+    let colX = 20
+    
+    // Cabeçalho da tabela
+    doc.setFillColor(248, 250, 252)
+    doc.rect(20, currentY, 257, rowHeight, 'F')
+    
+    doc.setFontSize(9)
+    doc.setTextColor(30, 41, 59)
+    doc.setFont('helvetica', 'bold')
+    
+    // Cabeçalho das colunas
+    doc.text(currentViewMode === 'operadores' ? 'OPERADOR' : 'MÁQUINA', 22, currentY + 5)
+    colX = 80
+    
+    weekDays.forEach((day) => {
+      doc.text(day.name.substring(0, 3), colX + 2, currentY + 2)
+      doc.text(day.formattedDate, colX + 2, currentY + 6)
+      colX += 31
+    })
+    
+    currentY += rowHeight
+    
+    // Dados da tabela
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    
+    const today = new Date()
+    const todayFormatted = formatDateKey(today)
+    
+    currentCalendarData.entities.forEach((entity, index) => {
+      // Alternar cor de fundo das linhas
+      if (index % 2 === 0) {
+        doc.setFillColor(255, 255, 255)
+      } else {
+        doc.setFillColor(248, 250, 252)
+      }
+      doc.rect(20, currentY, 257, rowHeight, 'F')
+      
+      // Nome da entidade
+      doc.setTextColor(30, 41, 59)
+      const entityName = entity.nome.length > 25 ? entity.nome.substring(0, 22) + '...' : entity.nome
+      doc.text(entityName, 22, currentY + 5)
+      
+      // Status para cada dia
+      colX = 80
+      weekDays.forEach((day) => {
+        const dateKey = formatDateKey(day.date)
+        const isFutureDate = day.date > today
+        const hasActivity = currentCalendarData.activities[entity.id] && currentCalendarData.activities[entity.id][dateKey]
+        const hasJustificativa = currentCalendarData.justificativas[entity.id] && currentCalendarData.justificativas[entity.id][dateKey]
+        
+        const centerX = colX + 15.5
+        const centerY = currentY + 4
+        
+        if (isFutureDate) {
+          // Data futura (cinza)
+          doc.setFillColor(148, 163, 184)
+          doc.circle(centerX, centerY, 3, 'F')
+          doc.setTextColor(255, 255, 255)
+          doc.text('-', centerX - 1, centerY + 1)
+        } else if (hasActivity) {
+          // Atividade realizada (verde)
+          doc.setFillColor(16, 185, 129)
+          doc.circle(centerX, centerY, 3, 'F')
+          doc.setTextColor(255, 255, 255)
+          doc.text('✓', centerX - 1.5, centerY + 1)
+        } else if (hasJustificativa) {
+          // Justificado (azul)
+          doc.setFillColor(59, 130, 246)
+          doc.circle(centerX, centerY, 3, 'F')
+          doc.setTextColor(255, 255, 255)
+          doc.text('J', centerX - 1, centerY + 1)
+        } else {
+          // Sem apontamento (vermelho)
+          doc.setFillColor(239, 68, 68)
+          doc.circle(centerX, centerY, 3, 'F')
+          doc.setTextColor(255, 255, 255)
+          doc.text('✗', centerX - 1.5, centerY + 1)
+        }
+        
+        colX += 31
+      })
+      
+      currentY += rowHeight
+      
+      // Verificar se precisa de nova página
+      if (currentY > 180) {
+        doc.addPage()
+        currentY = 20
+        
+        // Repetir cabeçalho na nova página
+        doc.setFillColor(248, 250, 252)
+        doc.rect(20, currentY, 257, rowHeight, 'F')
+        
+        doc.setFontSize(9)
+        doc.setTextColor(30, 41, 59)
+        doc.setFont('helvetica', 'bold')
+        
+        doc.text(currentViewMode === 'operadores' ? 'OPERADOR' : 'MÁQUINA', 22, currentY + 5)
+        colX = 80
+        
+        weekDays.forEach((day) => {
+          doc.text(day.name.substring(0, 3), colX + 2, currentY + 2)
+          doc.text(day.formattedDate, colX + 2, currentY + 6)
+          colX += 31
+        })
+        
+        currentY += rowHeight
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8)
+      }
+    })
+    
+    // Adicionar resumo estatístico
+    currentY += 10
+    if (currentY > 170) {
+      doc.addPage()
+      currentY = 20
+    }
+    
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(46, 54, 49)
+    doc.text('Resumo Estatístico', 20, currentY)
+    
+    currentY += 10
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(80, 80, 80)
+    
+    // Calcular estatísticas
+    const totalEntities = currentCalendarData.entities.length
+    const totalDays = weekDays.filter(day => day.date <= today).length
+    const totalPossibleActivities = totalEntities * totalDays
+    
+    let totalActivities = 0
+    let totalJustificativas = 0
+    let totalMissing = 0
+    
+    currentCalendarData.entities.forEach((entity) => {
+      weekDays.forEach((day) => {
+        if (day.date <= today) {
+          const dateKey = formatDateKey(day.date)
+          const hasActivity = currentCalendarData.activities[entity.id] && currentCalendarData.activities[entity.id][dateKey]
+          const hasJustificativa = currentCalendarData.justificativas[entity.id] && currentCalendarData.justificativas[entity.id][dateKey]
+          
+          if (hasActivity) {
+            totalActivities++
+          } else if (hasJustificativa) {
+            totalJustificativas++
+          } else {
+            totalMissing++
+          }
+        }
+      })
+    })
+    
+    const activityPercentage = totalPossibleActivities > 0 ? ((totalActivities / totalPossibleActivities) * 100).toFixed(1) : 0
+    const justifiedPercentage = totalPossibleActivities > 0 ? ((totalJustificativas / totalPossibleActivities) * 100).toFixed(1) : 0
+    const missingPercentage = totalPossibleActivities > 0 ? ((totalMissing / totalPossibleActivities) * 100).toFixed(1) : 0
+    
+    doc.text(`Total de ${currentViewMode}: ${totalEntities}`, 20, currentY)
+    currentY += 6
+    doc.text(`Dias analisados: ${totalDays}`, 20, currentY)
+    currentY += 6
+    doc.text(`Total de atividades possíveis: ${totalPossibleActivities}`, 20, currentY)
+    currentY += 8
+    doc.text(`Apontamentos realizados: ${totalActivities} (${activityPercentage}%)`, 20, currentY)
+    currentY += 6
+    doc.text(`Justificativas: ${totalJustificativas} (${justifiedPercentage}%)`, 20, currentY)
+    currentY += 6
+    doc.text(`Sem apontamento: ${totalMissing} (${missingPercentage}%)`, 20, currentY)
+    
+    // Remover overlay de carregamento
+    document.body.removeChild(loadingOverlay)
+    
+    // Gerar nome do arquivo
+    const fileName = `relatorio_atividades_${currentViewMode}_${startDate.replace(/\//g, '-')}_a_${endDate.replace(/\//g, '-')}.pdf`
+    
+    // Salvar o PDF
+    doc.save(fileName)
+    
+    // Mostrar mensagem de sucesso
+    showToast('Relatório PDF gerado com sucesso!', 'success')
+    
+  } catch (error) {
+    console.error('Erro ao gerar relatório PDF:', error)
+    
+    // Remover overlay de carregamento se existir
+    const loadingOverlay = document.querySelector('.pdf-loading-overlay')
+    if (loadingOverlay) {
+      document.body.removeChild(loadingOverlay)
+    }
+    
+    showToast('Erro ao gerar relatório PDF: ' + error.message, 'error')
+  }
+}
+
+// Função para mostrar toast de notificação
+function showToast(message, type = 'success') {
+  const toastElement = document.createElement("div")
+  toastElement.className = `toast-notification ${type}`
+  
+  const icon = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'
+  const bgColor = type === 'success' ? '#10b981' : '#ef4444'
+  
+  toastElement.innerHTML = `
+    <div class="toast-icon">
+      <i class="${icon}"></i>
+    </div>
+    <div class="toast-message">${message}</div>
+  `
+  
+  toastElement.style.backgroundColor = bgColor
+  document.body.appendChild(toastElement)
+  
+  // Remover o toast após 4 segundos
+  setTimeout(() => {
+    if (document.body.contains(toastElement)) {
+      document.body.removeChild(toastElement)
+    }
+  }, 4000)
+}
+
 // Função para renderizar o calendário com base na data de referência
 async function renderCalendar(propriedadeNome, referenceDate, viewMode = "operadores") {
   try {
@@ -434,6 +755,9 @@ async function renderCalendar(propriedadeNome, referenceDate, viewMode = "operad
 
     // Buscar todos os dados
     const { entities, activities, justificativas } = await fetchAllData(propriedadeNome, viewMode)
+    
+    // Armazenar os dados atuais na variável global
+    currentCalendarData = { entities, activities, justificativas }
 
     if (entities.length === 0) {
       const entityType = viewMode === "operadores" ? "usuários operacionais" : "máquinas"
@@ -466,6 +790,10 @@ async function renderCalendar(propriedadeNome, referenceDate, viewMode = "operad
             <h2>Calendário Semanal de Atividades</h2>
           </div>
           <div class="calendar-actions">
+            <button class="pdf-button" onclick="generatePDFReport()" title="Gerar Relatório PDF">
+              <i class="fas fa-file-pdf"></i>
+              <span>Gerar PDF</span>
+            </button>
             <div class="calendar-legend">
               <div class="legend-item">
                 <span class="legend-dot active"></span>
@@ -790,6 +1118,85 @@ async function showWeeklyCalendar(propriedadeNome) {
         align-items: center;
         gap: 20px;
         flex-wrap: wrap;
+      }
+
+      /* Botão PDF */
+      .pdf-button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background-color: #dc2626;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+      }
+
+      .pdf-button:hover {
+        background-color: #b91c1c;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+      }
+
+      .pdf-button i {
+        font-size: 1rem;
+      }
+
+      /* Loading overlay para PDF */
+      .pdf-loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+      }
+
+      .pdf-loading-content {
+        background-color: white;
+        border-radius: 12px;
+        padding: 40px;
+        text-align: center;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        max-width: 400px;
+      }
+
+      .pdf-loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid #f3f4f6;
+        border-top: 4px solid #dc2626;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+      }
+
+      .pdf-loading-content h3 {
+        margin: 0 0 10px 0;
+        color: #1f2937;
+        font-size: 1.2rem;
+        font-weight: 600;
+      }
+
+      .pdf-loading-content p {
+        margin: 0;
+        color: #6b7280;
+        font-size: 0.9rem;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
       }
 
       /* Novo estilo para as abas de modo de visualização */
@@ -1247,6 +1654,10 @@ async function showWeeklyCalendar(propriedadeNome) {
         .nav-button i {
           font-size: 1.2rem;
         }
+
+        .pdf-button span {
+          display: none;
+        }
       }
       
       @media (max-width: 576px) {
@@ -1597,16 +2008,7 @@ async function salvarJustificativa(entityId, dateKey, entityType) {
     closeJustificativaModal()
 
     // Mostrar mensagem de sucesso
-    const toastElement = document.createElement("div")
-    toastElement.className = "toast-notification"
-    toastElement.innerHTML = `
-      <div class="toast-icon">
-        <i class="fas fa-check-circle"></i>
-      </div>
-      <div class="toast-message">Justificativa salva com sucesso!</div>
-    `
-
-    document.body.appendChild(toastElement)
+    showToast('Justificativa salva com sucesso!', 'success')
 
     // Adicionar estilos para o toast se ainda não existirem
     if (!document.getElementById("toast-styles")) {
@@ -1617,7 +2019,6 @@ async function salvarJustificativa(entityId, dateKey, entityType) {
           position: fixed;
           bottom: 20px;
           right: 20px;
-          background-color: #10b981;
           color: white;
           padding: 15px 20px;
           border-radius: 8px;
@@ -1627,6 +2028,14 @@ async function salvarJustificativa(entityId, dateKey, entityType) {
           box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
           z-index: 1000;
           animation: slideIn 0.3s ease-out, fadeOut 0.5s ease-out 3s forwards;
+        }
+
+        .toast-notification.success {
+          background-color: #10b981;
+        }
+
+        .toast-notification.error {
+          background-color: #ef4444;
         }
         
         .toast-icon {
@@ -1652,15 +2061,9 @@ async function salvarJustificativa(entityId, dateKey, entityType) {
       document.head.appendChild(toastStyleElement)
     }
 
-    // Remover o toast após 3.5 segundos
-    setTimeout(() => {
-      if (document.body.contains(toastElement)) {
-        document.body.removeChild(toastElement)
-      }
-    }, 3500)
   } catch (error) {
     console.error("Erro ao salvar justificativa:", error)
-    alert(`Erro ao salvar justificativa: ${error.message}`)
+    showToast(`Erro ao salvar justificativa: ${error.message}`, 'error')
 
     // Restaurar o botão
     const saveButton = document.querySelector(".save-button")
@@ -1676,3 +2079,4 @@ window.showJustificativaModal = showJustificativaModal
 window.closeJustificativaModal = closeJustificativaModal
 window.salvarJustificativa = salvarJustificativa
 window.switchViewMode = switchViewMode
+window.generatePDFReport = generatePDFReport
