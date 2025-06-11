@@ -5,8 +5,8 @@
   right: 0;
   z-index: 1000;
   transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: transparent;
+  backdrop-filter: none;
 }
 
 .header.scrolled {
@@ -24,6 +24,10 @@
   height: 80px;
 }
 
+.header .nav-link.text-white {
+  color: white;
+}
+
 .logo-text {
   font-size: 1.8rem;
   font-weight: 700;
@@ -35,6 +39,12 @@
 .logo-text:hover {
   color: #1b5e20;
 }
+
+.logo-image {
+  height: 60px; /* ou ajuste conforme necessário */
+  object-fit: contain;
+}
+
 
 .nav {
   display: flex;

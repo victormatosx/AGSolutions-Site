@@ -3,6 +3,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import CofounderCard from '../components/CofounderCard';
 import '../styles/Home.css';
+import qmsomos from '../assets/qmsomos.png';
 
 const Home = () => {
   const [formData, setFormData] = useState({
@@ -48,16 +49,15 @@ const Home = () => {
   return (
     <div className="home">
       <Header />
-      
-      {/* Hero Section */}
-      <section className="hero">
+
+      <section className="hero hero-background">
         <div className="hero-overlay"></div>
         <div className="hero-content">
           <h1 className="hero-title">Inovação para o Agronegócio</h1>
           <p className="hero-subtitle">
             Soluções tecnológicas que transformam a agricultura brasileira
           </p>
-          <button className="hero-cta">Conheça Nossas Soluções</button>
+          <button className="hero-cta">Saiba Mais</button>
         </div>
       </section>
 
@@ -68,19 +68,19 @@ const Home = () => {
             <div className="about-text">
               <h2>Quem Somos</h2>
               <p>
-                A J.R. Agsolutions é uma empresa inovadora que desenvolve soluções 
-                tecnológicas para o agronegócio brasileiro. Nossa missão é transformar 
-                a agricultura através da tecnologia, proporcionando maior eficiência, 
+                A J.R. Agsolutions é uma empresa inovadora que desenvolve soluções
+                tecnológicas para o agronegócio brasileiro. Nossa missão é transformar
+                a agricultura através da tecnologia, proporcionando maior eficiência,
                 sustentabilidade e produtividade para nossos clientes.
               </p>
               <p>
-                Com uma equipe especializada e anos de experiência no setor, oferecemos 
-                desde consultoria estratégica até implementação de sistemas avançados 
+                Com uma equipe especializada e anos de experiência no setor, oferecemos
+                desde consultoria estratégica até implementação de sistemas avançados
                 de gestão agrícola.
               </p>
             </div>
             <div className="about-image">
-              <img src="https://tryeasel.dev/placeholder.svg?width=600&height=400" alt="Agricultura moderna" />
+              <img src= {qmsomos} alt="Agricultura moderna" />
             </div>
           </div>
         </div>

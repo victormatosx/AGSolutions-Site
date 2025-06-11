@@ -1,221 +1,244 @@
-/* Hero Section */
+/* General Styles */
+body {
+  font-family: 'Arial', sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  line-height: 1.6;
+  color: #333;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+h1, h2, h3 {
+  color: #2c3e50;
+}
+
+/* Header Styles (Assuming you have a Header component with its own styles) */
+/* Add your Header styles here if they are in this file */
+
+/* Hero Section Styles */
 .hero {
-  height: 100vh;
-  background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
+  position: relative;
+  height: 100vh; /* Adjust height as needed */
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  overflow: hidden;
+  text-align: center;
+  color: white;
+  overflow: hidden; /* Ensure the background image doesn't overflow */
 }
 
-.hero::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: url('https://tryeasel.dev/placeholder.svg?width=1920&height=1080') center/cover;
-  opacity: 0.1;
+/* Added new class for background image */
+.hero-background {
+  background-image: url('../assets/banner.jpeg'); /* Use the correct path to your image */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .hero-overlay {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(46, 125, 50, 0.8);
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Dark overlay */
+  z-index: 1;
 }
 
 .hero-content {
-  text-align: center;
-  color: white;
-  z-index: 2;
   position: relative;
-  animation: fadeInUp 1s ease-out;
+  z-index: 2;
 }
 
 .hero-title {
-  font-size: 4rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  font-size: 4em;
+  margin-bottom: 0px;
+  color: #ffffff;
 }
 
 .hero-subtitle {
-  font-size: 1.5rem;
-  margin-bottom: 2rem;
-  opacity: 0.9;
+  font-size: 1.5em;
+  margin-bottom: 20px;
 }
 
 .hero-cta {
-  background: white;
-  color: #2e7d32;
-  padding: 15px 40px;
-  font-size: 1.1rem;
-  font-weight: 600;
+  background-color: #2D7B31; /* Green color */
+  color: white;
+  padding: 15px 30px;
+  border: none;
   border-radius: 50px;
-  transition: all 0.3s ease;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+  font-size: 1.2em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 
 .hero-cta:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  background-color: #27ae60; /* Darker green on hover */
 }
 
-/* About Section */
+/* About Section Styles */
 .about {
-  padding: 100px 0;
-  background: #f8f9fa;
+  padding: 80px 0;
+  background-color: #f8f8f8;
 }
 
 .about-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 40px;
   align-items: center;
 }
 
+.about-text {
+  flex: 1;
+  min-width: 300px;
+}
+
 .about-text h2 {
-  font-size: 2.5rem;
-  color: #2e7d32;
-  margin-bottom: 2rem;
-  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 2.5em;
 }
 
 .about-text p {
-  font-size: 1.1rem;
-  line-height: 1.8;
-  margin-bottom: 1.5rem;
-  color: #555;
+  margin-bottom: 15px;
+}
+
+.about-image {
+  flex: 1;
+  min-width: 300px;
+  text-align: center;
 }
 
 .about-image img {
-  width: 100%;
-  border-radius: 15px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.about-image img:hover {
-  transform: scale(1.05);
-}
-
-/* Team Section */
+/* Team Section Styles */
 .team {
-  padding: 100px 0;
-  background: white;
+  padding: 80px 0;
+  text-align: center;
 }
 
 .team h2 {
-  text-align: center;
-  font-size: 2.5rem;
-  color: #2e7d32;
-  margin-bottom: 1rem;
-  font-weight: 600;
+  margin-bottom: 20px;
+  font-size: 2.5em;
 }
 
 .team-subtitle {
-  text-align: center;
-  font-size: 1.2rem;
-  color: #666;
-  margin-bottom: 4rem;
+  font-size: 1.2em;
+  color: #555;
+  margin-bottom: 40px;
 }
 
 .team-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 3rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 30px;
 }
 
-/* Contact Section */
+/* CofounderCard Styles (Assuming you have a CofounderCard component with its own styles) */
+/* Add your CofounderCard styles here if they are in this file */
+
+/* Contact Section Styles */
 .contact {
-  padding: 100px 0;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e8f5e8 100%);
+  padding: 80px 0;
+  background-color: #f8f8f8;
+  text-align: center;
 }
 
 .contact h2 {
-  text-align: center;
-  font-size: 2.5rem;
-  color: #2e7d32;
-  margin-bottom: 1rem;
-  font-weight: 600;
+  margin-bottom: 20px;
+  font-size: 2.5em;
 }
 
 .contact-subtitle {
-  text-align: center;
-  font-size: 1.2rem;
-  color: #666;
-  margin-bottom: 4rem;
+  font-size: 1.2em;
+  color: #555;
+  margin-bottom: 40px;
 }
 
 .contact-form {
   max-width: 600px;
   margin: 0 auto;
+  text-align: left;
+  background-color: #ffffff;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .form-group {
-  margin-bottom: 2rem;
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
 }
 
 .form-group input,
 .form-group textarea {
   width: 100%;
-  padding: 15px 20px;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  background: white;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1em;
 }
 
-.form-group input:focus,
-.form-group textarea:focus {
-  border-color: #2e7d32;
-  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+.form-group textarea {
+  resize: vertical;
 }
 
 .submit-btn {
+  display: block;
   width: 100%;
-  background: #2e7d32;
+  background-color: #006b02; /* Blue color */
   color: white;
   padding: 15px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  border-radius: 10px;
-  transition: all 0.3s ease;
+  border: none;
+  border-radius: 5px;
+  font-size: 1.2em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 
 .submit-btn:hover {
-  background: #1b5e20;
-  box-shadow: 0 5px 20px rgba(46, 125, 50, 0.3);
+  background-color: #2980b9; /* Darker blue on hover */
 }
 
-/* Responsive */
+/* Footer Styles (Assuming you have a Footer component with its own styles) */
+/* Add your Footer styles here if they are in this file */
+
+/* Responsive Design */
 @media (max-width: 768px) {
   .hero-title {
-    font-size: 2.5rem;
+    font-size: 2em;
   }
-  
+
   .hero-subtitle {
-    font-size: 1.2rem;
+    font-size: 1.2em;
   }
-  
+
   .about-content {
-    grid-template-columns: 1fr;
-    gap: 2rem;
+    flex-direction: column;
   }
-  
+
+  .about-image {
+    order: -1; /* Move image above text on smaller screens */
+  }
+
   .team-grid {
     grid-template-columns: 1fr;
-  }
-  
-  .about-text h2,
-  .team h2,
-  .contact h2 {
-    font-size: 2rem;
   }
 }
