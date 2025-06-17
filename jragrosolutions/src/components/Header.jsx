@@ -1,39 +1,126 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import '../styles/Header.css';
-import logoBranca from '../assets/logo2.png';
-import logoVerde from '../assets/logo3.png';
+"use client"
+
+import { useState, useEffect } from "react"
+import { Link } from "react-router-dom"
+import { Menu, X, Leaf } from "lucide-react"
 
 const Header = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
+      setIsScrolled(window.scrollY > 50)
+    }
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const scrollToSection = (sectionId) => {
+    const element = document.getElementById(sectionId)
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" })
+    }
+    setIsMenuOpen(false)
+  }
 
   return (
-    <header className={`header ${isScrolled ? 'scrolled' : ''}`}>
-      <div className="header-container">
-        <div className="logo">
-          <Link to="/">
-            <img src={isScrolled ? logoVerde : logoBranca} alt="J.R. Agsolutions" className="logo-image" />
+    <header
+      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+        isScrolled ? "bg-white/95 backdrop-blur-md shadow-lg" : "bg-transparent"
+      }`}
+    >
+      <div className="container mx-auto px-4 py-4 max-w-6xl">
+        <div className="flex items-center justify-between">
+          {/* Logo */}
+          <Link to="/" className="flex items-center space-x-2">
+            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-700 rounded-full flex items-center justify-center">
+              <Leaf className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-xl font-bold text-gray-800">J.R. AgroSolutions</span>
           </Link>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center space-x-8">
+            <button
+              onClick={() => scrollToSection("about")}
+              className="text-gray-700 hover:text-green-600 transition-colors"
+            >
+              Quem Somos
+            </button>
+            <button
+              onClick={() => scrollToSection("solutions")}
+              className="text-gray-700 hover:text-green-600 transition-colors"
+            >
+              Soluções
+            </button>
+            <button
+              onClick={() => scrollToSection("founders")}
+              className="text-gray-700 hover:text-green-600 transition-colors"
+            >
+              Fundadores
+            </button>
+            <button
+              onClick={() => scrollToSection("contact")}
+              className="text-gray-700 hover:text-green-600 transition-colors"
+            >
+              Fale Conosco
+            </button>
+            <Link
+              to="/login"
+              className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-2 rounded-full hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:scale-105"
+            >
+              Área do Cliente
+            </Link>
+          </nav>
+
+          {/* Mobile Menu Button */}
+          <button className="md:hidden p-2" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
-        <nav className="nav">
-          <Link to="/" className={`nav-link ${!isScrolled ? 'text-white' : ''}`}>Home</Link>
-          <Link to="#about" className={`nav-link ${!isScrolled ? 'text-white' : ''}`}>Sobre</Link>
-          <Link to="#team" className={`nav-link ${!isScrolled ? 'text-white' : ''}`}>Equipe</Link>
-          <Link to="#contact" className={`nav-link ${!isScrolled ? 'text-white' : ''}`}>Contato</Link>
-          <Link to="/login" className="nav-link client-area">Área do Cliente</Link>
-        </nav>
+
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden mt-4 py-4 bg-white rounded-lg shadow-lg">
+            <nav className="flex flex-col space-y-4 px-4">
+              <button
+                onClick={() => scrollToSection("about")}
+                className="text-gray-700 hover:text-green-600 transition-colors text-left"
+              >
+                Quem Somos
+              </button>
+              <button
+                onClick={() => scrollToSection("solutions")}
+                className="text-gray-700 hover:text-green-600 transition-colors text-left"
+              >
+                Soluções
+              </button>
+              <button
+                onClick={() => scrollToSection("founders")}
+                className="text-gray-700 hover:text-green-600 transition-colors text-left"
+              >
+                Fundadores
+              </button>
+              <button
+                onClick={() => scrollToSection("contact")}
+                className="text-gray-700 hover:text-green-600 transition-colors text-left"
+              >
+                Fale Conosco
+              </button>
+              <Link
+                to="/login"
+                className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-2 rounded-full hover:from-green-600 hover:to-green-700 transition-all duration-300 text-center"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Área do Cliente
+              </Link>
+            </nav>
+          </div>
+        )}
       </div>
     </header>
-  );
-};
+  )
+}
 
-export default Header;
+export default Header
