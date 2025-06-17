@@ -1,5 +1,6 @@
 "use client"
-import { Leaf, ArrowUp, Facebook, Instagram, Linkedin, Youtube, Mail, Phone, MapPin } from "lucide-react"
+import { ArrowUp, Facebook, Instagram, Linkedin, Youtube, Mail, Phone, MapPin } from "lucide-react"
+import logo from "../../public/logo2.png"
 
 const Footer = () => {
   const scrollToTop = () => {
@@ -20,10 +21,12 @@ const Footer = () => {
           {/* Company Info */}
           <div className="lg:col-span-1">
             <div className="flex items-center space-x-2 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
-                <Leaf className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-xl font-bold">J.R. AgroSolutions</span>
+              {/* Replaced Leaf icon with the logo image */}
+              <img
+                src={logo} // Use .src to get the image URL
+                alt="J.R. AgroSolutions Logo"
+                className="h-16 w-auto" // Adjust size as needed
+              />
             </div>
             <p className="text-gray-300 leading-relaxed mb-6">
               Transformamos o agronegócio brasileiro através de soluções tecnológicas inovadoras.
@@ -99,11 +102,11 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-semibold mb-6 text-white">Serviços</h3>
             <ul className="space-y-3 text-gray-300">
-              <li>Sensores Agrícolas</li>
+              <li>Integrações
+              </li>
               <li>Dashboards Inteligentes</li>
               <li>Conectividade Rural</li>
-              <li>IA para Agronegócio</li>
-              <li>Consultoria Técnica</li>
+              <li>Geração de Relatórios PDF</li>
             </ul>
           </div>
 
@@ -129,7 +132,7 @@ const Footer = () => {
                 <div>
                   <div className="text-gray-300 text-sm">Telefone</div>
                   <a href="tel:+5511999999999" className="text-white hover:text-green-400 transition-colors">
-                    (11) 9 9999-9999
+                    (34) 9 9653-2577
                   </a>
                 </div>
               </div>
@@ -138,7 +141,7 @@ const Footer = () => {
                 <MapPin className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <div className="text-gray-300 text-sm">Localização</div>
-                  <div className="text-white">São Paulo, SP - Brasil</div>
+                  <div className="text-white">Minas Gerais - Brasil</div>
                 </div>
               </div>
             </div>

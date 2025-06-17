@@ -41,6 +41,11 @@ const Contact = () => {
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-[#21C45D] to-[#16A34A] bg-clip-text text-transparent font-semibold text-sm uppercase tracking-wider mb-4">
+              <div className="w-8 h-px bg-gradient-to-r from-[#21C45D] to-[#16A34A]"></div>
+              Contato           
+              <div className="w-8 h-px bg-gradient-to-r from-[#21C45D] to-[#16A34A]"></div>
+            </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
               Vamos{" "}
               <span className="bg-gradient-to-r from-green-500 to-green-700 bg-clip-text text-transparent">
@@ -82,7 +87,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <div className="font-semibold text-gray-800">Telefone</div>
-                    <div className="text-gray-600">(11) 9 9999-9999</div>
+                    <div className="text-gray-600">(34) 9 9653-2577</div>
                   </div>
                 </div>
 
@@ -92,7 +97,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <div className="font-semibold text-gray-800">Endereço</div>
-                    <div className="text-gray-600">São Paulo, SP - Brasil</div>
+                    <div className="text-gray-600">Minas Gerais - Brasil</div>
                   </div>
                 </div>
               </div>

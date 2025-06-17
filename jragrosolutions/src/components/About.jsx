@@ -24,23 +24,15 @@ const About = () => {
 
   return (
     <section id="about" className="py-20 bg-white relative overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fillRule='evenodd'%3E%3Cg fill='%2310b981' fillOpacity='0.1'%3E%3Cpath d='M30 30c0-11.046-8.954-20-20-20s-20 8.954-20 20 8.954 20 20 20 20-8.954 20-20zm0 0c0 11.046 8.954 20 20 20s20-8.954 20-20-8.954-20-20-20-20 8.954-20 20z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}
-        ></div>
-      </div>
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="text-center mb-16">
-            <div className="inline-flex items-center space-x-2 bg-green-100 px-4 py-2 rounded-full mb-6">
-              <Leaf className="w-5 h-5 text-green-600" />
-              <span className="text-green-700 font-medium">Quem Somos</span>
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-[#21C45D] to-[#16A34A] bg-clip-text text-transparent font-semibold text-sm uppercase tracking-wider mb-4">
+              <div className="w-8 h-px bg-gradient-to-r from-[#21C45D] to-[#16A34A]"></div>
+                Quem Somos
+              <div className="w-8 h-px bg-gradient-to-r from-[#21C45D] to-[#16A34A]"></div>
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
               Inovação que{" "}
@@ -59,7 +51,7 @@ const About = () => {
             {values.map((value, index) => (
               <div
                 key={index}
-                className="group bg-gradient-to-br from-green-50 to-white p-8 rounded-2xl border border-green-100 hover:border-green-200 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                className="group bg-white p-8 rounded-2xl border border-green-100 hover:border-green-200 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
               >
                 <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   <value.icon className="w-8 h-8 text-white" />
@@ -81,8 +73,8 @@ const About = () => {
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
                 <div>
-                  <div className="text-4xl font-bold mb-2">2019</div>
-                  <div className="opacity-90">Ano de fundação</div>
+                  <div className="text-4xl font-bold mb-2">+20 anos</div>
+                  <div className="opacity-90">de experiência acumulada</div>
                 </div>
                 <div>
                   <div className="text-4xl font-bold mb-2">100%</div>

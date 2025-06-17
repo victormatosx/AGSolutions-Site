@@ -9,13 +9,13 @@ const Solutions = () => {
   const solutions = [
     {
       icon: Wifi,
-      title: "Sensores agrícolas",
-      description: "Monitoramento em tempo real de umidade do solo, temperatura, pH e nutrientes",
+      title: "Funcionalidades offline",
+      description: "Soluções que continuam funcionando mesmo sem internet, garantindo a operação em áreas remotas",
       features: [
-        "Sensores IoT de alta precisão",
-        "Conectividade 4G/5G",
-        "Bateria de longa duração",
-        "Resistente às intempéries",
+        "Coleta e armazenamento local de dados",
+        "Sincronização automática quando a conexão retorna",
+        "Aplicativos progressivos (PWA) adaptados ao campo",
+        "Interface leve e intuitiva para uso offline",
       ],
       color: "from-blue-500 to-blue-600",
       image: "/placeholder.svg?height=300&width=400",
@@ -38,9 +38,9 @@ const Solutions = () => {
     },
     {
       icon: Cpu,
-      title: "IA para tomada de decisão",
-      description: "Inteligência artificial que analisa dados e sugere ações otimizadas",
-      features: ["Machine Learning avançado", "Previsões precisas", "Otimização automática", "Aprendizado contínuo"],
+      title: "Gerador de relatórios em PDF",
+      description: "Ferramenta para geração automática de relatórios personalizados",
+      features: ["Relatórios com dados operacionais e produtivos", "Layouts customizáveis", "Exportação e envio por WhatsApp e E-mail", "Compatível com diferentes dispositivos e navegadores"],
       color: "from-green-500 to-green-600",
       image: "/placeholder.svg?height=300&width=400",
     },
@@ -66,6 +66,11 @@ const Solutions = () => {
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-[#21C45D] to-[#16A34A] bg-clip-text text-transparent font-semibold text-sm uppercase tracking-wider mb-4">
+              <div className="w-8 h-px bg-gradient-to-r from-[#21C45D] to-[#16A34A]"></div>
+              Soluções             
+              <div className="w-8 h-px bg-gradient-to-r from-[#21C45D] to-[#16A34A]"></div>
+            </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
               Nossas{" "}
               <span className="bg-gradient-to-r from-green-500 to-green-700 bg-clip-text text-transparent">

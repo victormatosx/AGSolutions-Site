@@ -39,7 +39,12 @@ const Challenges = () => {
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
+
           <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-[#21C45D] to-[#16A34A] bg-clip-text text-transparent font-semibold text-sm uppercase tracking-wider mb-4">
+              <div className="w-8 h-px bg-gradient-to-r from-[#21C45D] to-[#16A34A]"></div>
+              Desafios              <div className="w-8 h-px bg-gradient-to-r from-[#21C45D] to-[#16A34A]"></div>
+            </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
               Desafios que nos{" "}
               <span className="bg-gradient-to-r from-green-500 to-green-700 bg-clip-text text-transparent">
