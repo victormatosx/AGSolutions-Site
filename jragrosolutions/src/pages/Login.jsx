@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { Leaf, Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react"
 import { signInWithEmailAndPassword } from "firebase/auth"
-import { auth } from "../config/firebase"
+import { auth } from "../firebase/firebase"
 import logo from "../../public/logoVerde.png"
 
 const Login = () => {

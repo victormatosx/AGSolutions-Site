@@ -1,18 +1,13 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react" // Import useEffect and useRef
-import { Link } from "react-router-dom"
+import { useState, useEffect, useRef } from "react"
 import { Menu, X } from "lucide-react"
-// Assuming logoVerde is correctly imported or handled in your project setup
-// Note: In a Next.js App Router project, you would typically place images in the public directory
-// and reference them directly like /logoVerde.png.
-// Since this seems to be a React Router project based on the imports, I'll keep the current import path.
 import logoVerde from "../../public/logoVerde.png"
 
-const Header = () => {
+const Header = ({ onNavigate, currentPage }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isVisible, setIsVisible] = useState(true) // State to track header visibility
-  const lastScrollY = useRef(0) // Ref to store the last scroll position
+  const [isVisible, setIsVisible] = useState(true)
+  const lastScrollY = useRef(0)
 
   // Effect to handle scroll behavior
   useEffect(() => {
@@ -39,45 +34,71 @@ const Header = () => {
     return () => {
       window.removeEventListener("scroll", handleScroll)
     }
-  }, []) // Empty dependency array means this effect runs once on mount and cleans up on unmount
+  }, [])
 
   // Function to close menu (used by mobile links)
   const closeMenu = () => {
     setIsMenuOpen(false)
   }
 
+  // Function to handle navigation
+  const handleNavigation = (page) => {
+    onNavigate(page)
+    closeMenu()
+  }
+
   return (
     <header
       className={`fixed top-0 w-full z-50 bg-white/95 backdrop-blur-md shadow-lg transform transition-transform duration-300 ease-in-out
         ${isVisible ? "translate-y-0" : "-translate-y-full"}
-      `} // Apply transform and transition based on isVisible state
+      `}
     >
       <div className="container mx-auto px-4 py-4 max-w-6xl">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center">
-            {/* Using the imported image */}
+          <button onClick={() => handleNavigation('dashboard')} className="flex items-center">
             <img src={logoVerde} alt="J.R. AgroSolutions Logo" className="h-16 w-auto" />
-          </Link>
+          </button>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <Link to="/dashboard" className="text-gray-700 hover:text-green-600 transition-colors">
+            <button 
+              onClick={() => handleNavigation('dashboard')}
+              className={`transition-colors ${
+                currentPage === 'dashboard' 
+                  ? 'text-green-600 font-semibold' 
+                  : 'text-gray-700 hover:text-green-600'
+              }`}
+            >
               Dashboard
-            </Link>
-            <Link to="/apontamentos" className="text-gray-700 hover:text-green-600 transition-colors">
+            </button>
+            <button 
+              onClick={() => handleNavigation('apontamentos')}
+              className={`transition-colors ${
+                currentPage === 'apontamentos' 
+                  ? 'text-green-600 font-semibold' 
+                  : 'text-gray-700 hover:text-green-600'
+              }`}
+            >
               Apontamentos
-            </Link>
-            <Link to="/cadastros" className="text-gray-700 hover:text-green-600 transition-colors">
+            </button>
+            <button 
+              onClick={() => handleNavigation('cadastros')}
+              className={`transition-colors ${
+                currentPage === 'cadastros' 
+                  ? 'text-green-600 font-semibold' 
+                  : 'text-gray-700 hover:text-green-600'
+              }`}
+            >
               Cadastros
-            </Link>
+            </button>
             {/* Styled Home Link moved to the end */}
-            <Link
-              to="/"
+            <button
+              onClick={() => handleNavigation('home')}
               className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-2 rounded-full hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:scale-105"
             >
-              Home
-            </Link>
+              Voltar para Home
+            </button>
           </nav>
 
           {/* Mobile Menu Button */}
@@ -90,35 +111,46 @@ const Header = () => {
         {isMenuOpen && (
           <div className="md:hidden mt-4 py-4 bg-white rounded-lg shadow-lg">
             <nav className="flex flex-col space-y-4 px-4">
-              {/* Mobile Home link remains standard */}
-              <Link
-                to="/"
-                className="text-gray-700 hover:text-green-600 transition-colors text-left"
-                onClick={closeMenu} // Use the closeMenu function
+              <button
+                onClick={() => handleNavigation('home')}
+                className={`text-left transition-colors ${
+                  currentPage === 'home' 
+                    ? 'text-green-600 font-semibold' 
+                    : 'text-gray-700 hover:text-green-600'
+                }`}
               >
                 Home
-              </Link>
-              <Link
-                to="/dashboard"
-                className="text-gray-700 hover:text-green-600 transition-colors text-left"
-                onClick={closeMenu} // Use the closeMenu function
+              </button>
+              <button
+                onClick={() => handleNavigation('dashboard')}
+                className={`text-left transition-colors ${
+                  currentPage === 'dashboard' 
+                    ? 'text-green-600 font-semibold' 
+                    : 'text-gray-700 hover:text-green-600'
+                }`}
               >
                 Dashboard
-              </Link>
-              <Link
-                to="/apontamentos"
-                className="text-gray-700 hover:text-green-600 transition-colors text-left"
-                onClick={closeMenu} // Use the closeMenu function
+              </button>
+              <button
+                onClick={() => handleNavigation('apontamentos')}
+                className={`text-left transition-colors ${
+                  currentPage === 'apontamentos' 
+                    ? 'text-green-600 font-semibold' 
+                    : 'text-gray-700 hover:text-green-600'
+                }`}
               >
                 Apontamentos
-              </Link>
-              <Link
-                to="/cadastros"
-                className="text-gray-700 hover:text-green-600 transition-colors text-left"
-                onClick={closeMenu} // Use the closeMenu function
+              </button>
+              <button
+                onClick={() => handleNavigation('cadastros')}
+                className={`text-left transition-colors ${
+                  currentPage === 'cadastros' 
+                    ? 'text-green-600 font-semibold' 
+                    : 'text-gray-700 hover:text-green-600'
+                }`}
               >
                 Cadastros
-              </Link>
+              </button>
             </nav>
           </div>
         )}
