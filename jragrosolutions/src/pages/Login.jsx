@@ -147,7 +147,7 @@ const Login = () => {
             <p className="text-sm text-gray-500">
               Precisa de ajuda?{" "}
               <a href="#" className="text-green-600 hover:text-green-700 transition-colors">
-                Entre em contato
+                Entre em contato 
               </a>
             </p>
           </div>
