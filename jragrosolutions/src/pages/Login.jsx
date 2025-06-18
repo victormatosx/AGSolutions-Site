@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
-import { Leaf, Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react"
 import { signInWithEmailAndPassword } from "firebase/auth"
-import { auth } from "../firebase/firebase"
+import { ref, get } from "firebase/database"
+import { auth, database } from "../firebase/firebase"
 import logo from "../../public/logoVerde.png"
 
 const Login = () => {
@@ -38,8 +39,49 @@ const Login = () => {
 
       console.log("Usuário logado:", user)
 
-      // Redirecionar para dashboard após login bem-sucedido
-      navigate("/dashboard")
+      // Buscar em todas as propriedades para encontrar o usuário
+      const propriedadesRef = ref(database, "propriedades")
+      const propriedadesSnapshot = await get(propriedadesRef)
+
+      if (propriedadesSnapshot.exists()) {
+        const propriedades = propriedadesSnapshot.val()
+        let userData = null
+        let userProperty = null
+
+        // Percorrer todas as propriedades para encontrar o usuário
+        for (const [propriedadeName, propriedadeData] of Object.entries(propriedades)) {
+          if (propriedadeData.users && propriedadeData.users[user.uid]) {
+            userData = propriedadeData.users[user.uid]
+            userProperty = propriedadeName
+            break
+          }
+        }
+
+        if (userData) {
+          const userRole = userData.role
+
+          console.log("Role do usuário:", userRole)
+          console.log("Propriedade do usuário:", userProperty)
+
+          // Verificar se o usuário tem role "manager"
+          if (userRole === "manager") {
+            // Redirecionar para dashboard apenas se for manager
+            navigate("/dashboard")
+          } else {
+            // Fazer logout do usuário e mostrar erro para roles diferentes de manager
+            await auth.signOut()
+            setError("Seu nível de usuário não permite acesso a esta página.")
+          }
+        } else {
+          // Caso não encontre o usuário em nenhuma propriedade
+          await auth.signOut()
+          setError("Dados do usuário não encontrados. Entre em contato com o suporte.")
+        }
+      } else {
+        // Caso não encontre nenhuma propriedade
+        await auth.signOut()
+        setError("Dados do sistema não encontrados. Entre em contato com o suporte.")
+      }
     } catch (error) {
       console.error("Erro no login:", error)
 
@@ -92,7 +134,7 @@ const Login = () => {
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
           {/* Logo */}
           <div className="text-center mb-8">
-            <img src={logo} alt="J.R. AgroSolutions" />
+            <img src={logo || "/placeholder.svg"} alt="J.R. AgroSolutions" />
             <p className="text-gray-600">Acesse sua conta para gerenciar suas soluções</p>
           </div>
 
@@ -181,7 +223,6 @@ const Login = () => {
                 "Entrar"
               )}
             </button>
-
           </form>
 
           {/* Help Link */}
