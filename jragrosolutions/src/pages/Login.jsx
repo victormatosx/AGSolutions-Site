@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { Leaf, Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react"
+import { signInWithEmailAndPassword } from "firebase/auth"
+import { auth } from "../config/firebase"
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -11,6 +13,7 @@ const Login = () => {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const navigate = useNavigate()
 
   const handleChange = (e) => {
@@ -18,17 +21,53 @@ const Login = () => {
       ...formData,
       [e.target.name]: e.target.value,
     })
+    // Limpar erro quando usuário começar a digitar
+    if (error) setError("")
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
+    setError("")
 
-    // Simulate login process
-    setTimeout(() => {
-      setIsLoading(false)
+    try {
+      // Autenticar com Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password)
+      const user = userCredential.user
+
+      console.log("Usuário logado:", user)
+
+      // Redirecionar para dashboard após login bem-sucedido
       navigate("/dashboard")
-    }, 2000)
+    } catch (error) {
+      console.error("Erro no login:", error)
+
+      // Tratar diferentes tipos de erro
+      switch (error.code) {
+        case "auth/user-not-found":
+          setError("Usuário não encontrado. Verifique seu email.")
+          break
+        case "auth/wrong-password":
+          setError("Senha incorreta. Tente novamente.")
+          break
+        case "auth/invalid-email":
+          setError("Email inválido. Verifique o formato do email.")
+          break
+        case "auth/user-disabled":
+          setError("Esta conta foi desabilitada. Entre em contato com o suporte.")
+          break
+        case "auth/too-many-requests":
+          setError("Muitas tentativas de login. Tente novamente mais tarde.")
+          break
+        case "auth/invalid-credential":
+          setError("Credenciais inválidas. Verifique seu email e senha.")
+          break
+        default:
+          setError("Erro ao fazer login. Tente novamente.")
+      }
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -61,6 +100,13 @@ const Login = () => {
             <h1 className="text-2xl font-bold text-gray-800 mb-2">Área do Cliente</h1>
             <p className="text-gray-600">Acesse sua conta para gerenciar suas soluções</p>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-red-600 text-sm text-center">{error}</p>
+            </div>
+          )}
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
