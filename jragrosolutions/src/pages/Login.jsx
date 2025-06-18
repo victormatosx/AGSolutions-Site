@@ -5,6 +5,7 @@ import { useNavigate, Link } from "react-router-dom"
 import { Leaf, Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react"
 import { signInWithEmailAndPassword } from "firebase/auth"
 import { auth } from "../config/firebase"
+import logo from "../../public/logoVerde.png"
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -91,13 +92,7 @@ const Login = () => {
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-700 rounded-full flex items-center justify-center">
-                <Leaf className="w-7 h-7 text-white" />
-              </div>
-              <span className="text-2xl font-bold text-gray-800">J.R. AgroSolutions</span>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">Área do Cliente</h1>
+            <img src={logo} alt="J.R. AgroSolutions" />
             <p className="text-gray-600">Acesse sua conta para gerenciar suas soluções</p>
           </div>
 
@@ -175,7 +170,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full bg-[linear-gradient(to_right,_#0EAB72,_#0EAB72)] text-white py-3 px-6 rounded-xl font-semibold hover:bg-[#0c955f] transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center space-x-2">
@@ -186,6 +181,7 @@ const Login = () => {
                 "Entrar"
               )}
             </button>
+
           </form>
 
           {/* Help Link */}
@@ -193,7 +189,7 @@ const Login = () => {
             <p className="text-sm text-gray-500">
               Precisa de ajuda?{" "}
               <a href="#" className="text-green-600 hover:text-green-700 transition-colors">
-                Entre em contato 
+                Entre em contato
               </a>
             </p>
           </div>

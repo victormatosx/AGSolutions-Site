@@ -43,7 +43,7 @@ const Contact = () => {
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-[#21C45D] to-[#16A34A] bg-clip-text text-transparent font-semibold text-sm uppercase tracking-wider mb-4">
               <div className="w-8 h-px bg-gradient-to-r from-[#21C45D] to-[#16A34A]"></div>
-              Contato           
+              Contato
               <div className="w-8 h-px bg-gradient-to-r from-[#21C45D] to-[#16A34A]"></div>
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
@@ -81,8 +81,9 @@ const Contact = () => {
                   </div>
                 </div>
 
+                {/* Telefone */}
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
                     <Phone className="w-6 h-6 text-white" />
                   </div>
                   <div>
@@ -91,8 +92,9 @@ const Contact = () => {
                   </div>
                 </div>
 
+                {/* Endereço */}
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
                     <MapPin className="w-6 h-6 text-white" />
                   </div>
                   <div>
@@ -100,6 +102,7 @@ const Contact = () => {
                     <div className="text-gray-600">Minas Gerais - Brasil</div>
                   </div>
                 </div>
+
               </div>
 
               {/* Business Hours */}
