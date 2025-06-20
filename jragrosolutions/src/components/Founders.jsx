@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import { Linkedin, Mail, X, GraduationCap, Briefcase, Award } from "lucide-react"
-import renato from "../../public/renato.png"
-import jeovane from "../../public/jeovane.png"
-import victor from "../../public/victor.png"
+import renato from "../assets/renato.png"
+import jeovane from "../assets/jeovane.png"
+import victor from "../assets/victor.png"
 
 const Founders = () => {
   const [selectedFounder, setSelectedFounder] = useState(null)
@@ -71,7 +71,7 @@ const Founders = () => {
         description:
           "Atuando como Desenvolvedor Fullstack na J. R. AGSOLUTIONS, Victor combina criatividade, tecnologia e paixão por soluções digitais para transformar o agronegócio com sistemas modernos, eficientes e intuitivos.",
         education: [
-          "Graduando em Sistemas de Informação — [sua universidade]",
+          "Graduando em Sistemas de Informação — UNIPAM",
           "Curso de React.js e React Native",
           "Curso de JavaScript (ES6+)",
           "Curso de Tailwind CSS",

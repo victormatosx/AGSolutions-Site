@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { Menu, X } from "lucide-react"
-import logo from "../../public/logo2.png" // Adjust the path as necessary
-import logoVerde from "../../public/logoVerde.png" // Adjust the path as necessary
+import logo from "../assets/logo2.png" // Adjust the path as necessary
+import logoVerde from "../assets/logoVerde.png" // Adjust the path as necessary
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)

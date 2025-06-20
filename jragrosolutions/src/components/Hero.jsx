@@ -1,6 +1,6 @@
 "use client"
 import { ArrowRight, Play } from "lucide-react"
-import banner from "../../public/bannerTrans2.png"
+import banner from "../assets/bannerTrans2.png"
 
 const Hero = () => {
   const scrollToSection = (sectionId) => {

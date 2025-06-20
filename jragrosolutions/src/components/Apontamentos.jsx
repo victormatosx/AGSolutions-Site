@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { database } from "../firebase/firebase"
-import { ref, onValue, update } from "firebase/database"
+import { ref, onValue, update, remove } from "firebase/database"
 import {
   Settings,
   Truck,
@@ -19,6 +19,11 @@ import {
   CheckCircle2,
   X,
   Loader2,
+  Trash2,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  UserPlus, // Added UserPlus import
 } from "lucide-react"
 
 const Apontamentos = () => {
@@ -50,6 +55,10 @@ const Apontamentos = () => {
   const [isEditing, setIsEditing] = useState(false)
   const [editedItem, setEditedItem] = useState(null)
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
+
+  // Estados para notificações e confirmação
+  const [notification, setNotification] = useState(null)
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null)
 
   // Carregar dados do Firebase
   useEffect(() => {
@@ -121,11 +130,18 @@ const Apontamentos = () => {
       } catch (err) {
         console.error("Erro ao carregar dados:", err)
         setLoading(false)
+        showNotification("Erro ao carregar dados.", "error")
       }
     }
 
     loadData()
   }, [])
+
+  // Sistema de notificações
+  const showNotification = (message, type = "success") => {
+    setNotification({ message, type })
+    setTimeout(() => setNotification(null), 4000)
+  }
 
   // Função para validar item
   const validarItem = async (tipo, itemId) => {
@@ -150,11 +166,53 @@ const Apontamentos = () => {
 
       const itemRef = ref(database, path)
       await update(itemRef, { status: "validated" })
+      showNotification("Item validado com sucesso!", "success")
     } catch (error) {
       console.error("Erro ao validar item:", error)
-      alert("Erro ao validar item. Tente novamente.")
+      showNotification("Erro ao validar item. Tente novamente.", "error")
     }
   }
+
+  // Função para excluir item
+  const handleDeleteItem = async (tipo, itemId) => {
+    try {
+      let path = ""
+      switch (tipo) {
+        case "apontamentos":
+          path = `propriedades/Matrice/apontamentos/${itemId}`
+          break
+        case "abastecimentos":
+          path = `propriedades/Matrice/abastecimentos/${itemId}`
+          break
+        case "percursos":
+          path = `propriedades/Matrice/percursos/${itemId}`
+          break
+        case "abastecimentoVeiculos":
+          path = `propriedades/Matrice/abastecimentoVeiculos/${itemId}`
+          break
+        default:
+          throw new Error("Tipo inválido")
+      }
+
+      const itemRef = ref(database, path)
+      await remove(itemRef)
+      setDeleteConfirmation(null)
+      setShowModal(false) // Close modal if the deleted item was open
+      showNotification("Item excluído com sucesso!", "success")
+    } catch (error) {
+      console.error("Erro ao excluir item:", error)
+      showNotification("Erro ao excluir item", "error")
+    }
+  }
+
+  const confirmDelete = (item) => {
+    setDeleteConfirmation({
+      item,
+      title: "Excluir Registro",
+      message: `Tem certeza que deseja excluir este registro?`,
+    })
+  }
+
 
   // Selecionar categoria
   const selectCategory = (category) => {
@@ -196,6 +254,7 @@ const Apontamentos = () => {
           item.cultura,
           item.produto,
           item.objetivo,
+          item.userId ? usuarios[item.userId]?.nome : null, // Search by user name
         ].filter(Boolean)
 
         return searchFields.some((field) => field.toLowerCase().includes(filters.searchTerm.toLowerCase()))
@@ -286,11 +345,10 @@ const Apontamentos = () => {
       setEditedItem(null)
       setShowSaveConfirmation(false)
 
-      // Mostrar notificação de sucesso (se você tiver sistema de notificação)
-      alert("Alterações salvas com sucesso!")
+      showNotification("Alterações salvas com sucesso!", "success")
     } catch (error) {
       console.error("Erro ao salvar alterações:", error)
-      alert("Erro ao salvar alterações. Tente novamente.")
+      showNotification("Erro ao salvar alterações. Tente novamente.", "error")
     }
   }
 
@@ -455,31 +513,43 @@ const Apontamentos = () => {
     }
 
     const getItemDetails = () => {
+      const details = [
+        { icon: <Calendar className="w-4 h-4" />, label: "Data", value: item.data || item.dataHora || item.timestamp || "N/A" },
+      ];
+
+      if (item.userId) {
+        details.push({ icon: <UserPlus className="w-4 h-4" />, label: "Responsável", value: usuarios[item.userId]?.nome || "Usuário não identificado" });
+      }
+
       switch (selectedType) {
         case "apontamentos":
-          return [
+          details.push(
             { icon: <Settings className="w-4 h-4" />, label: "Cultura", value: item.cultura || "N/A" },
-            { icon: <Calendar className="w-4 h-4" />, label: "Data", value: item.data || "N/A" },
-          ]
+          );
+          break;
         case "abastecimentos":
-          return [
+          details.push(
             { icon: <Fuel className="w-4 h-4" />, label: "Produto", value: item.produto || "N/A" },
             { icon: <Settings className="w-4 h-4" />, label: "Quantidade", value: `${item.quantidade || 0}L` },
-          ]
+          );
+          break;
         case "percursos":
-          return [
+          details.push(
             { icon: <MapPin className="w-4 h-4" />, label: "Objetivo", value: item.objetivo || "N/A" },
-            { icon: <Calendar className="w-4 h-4" />, label: "Data", value: item.data || "N/A" },
-          ]
+          );
+          break;
         case "abastecimentoVeiculos":
-          return [
+          details.push(
             { icon: <Fuel className="w-4 h-4" />, label: "Produto", value: item.produto || "N/A" },
             { icon: <Settings className="w-4 h-4" />, label: "Quantidade", value: `${item.quantidade || 0}L` },
-          ]
+          );
+          break;
         default:
-          return []
+          break;
       }
+      return details;
     }
+
 
     return (
       <div
@@ -711,12 +781,14 @@ const Apontamentos = () => {
               ) : (
                 <div className="flex gap-2">
                   <button
+                    type="button"
                     onClick={cancelEditing}
                     className="px-4 py-2 bg-slate-500 text-white rounded-xl font-medium hover:bg-slate-600 transition-colors duration-200"
                   >
                     Cancelar
                   </button>
                   <button
+                    type="button"
                     onClick={confirmSave}
                     className="px-4 py-2 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-colors duration-200"
                   >
@@ -724,6 +796,13 @@ const Apontamentos = () => {
                   </button>
                 </div>
               )}
+               <button
+                onClick={() => confirmDelete(selectedItem)}
+                className="w-10 h-10 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 rounded-xl flex items-center justify-center transition-all duration-300"
+                title="Excluir item"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
               <button
                 onClick={() => setShowModal(false)}
                 className="w-10 h-10 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center justify-center transition-colors duration-200"
@@ -822,12 +901,14 @@ const Apontamentos = () => {
                 </p>
                 <div className="flex gap-3">
                   <button
+                    type="button"
                     onClick={() => setShowSaveConfirmation(false)}
                     className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
                   >
                     Cancelar
                   </button>
                   <button
+                    type="button"
                     onClick={saveChanges}
                     className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/30 transition-all duration-300"
                   >
@@ -867,6 +948,70 @@ const Apontamentos = () => {
 
       {/* Modal */}
       {renderModal()}
+
+      {/* Sistema de Notificações */}
+      {notification && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
+          <div
+            className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-sm border max-w-md ${
+              notification.type === "success"
+                ? "bg-emerald-50/90 border-emerald-200 text-emerald-800"
+                : notification.type === "error"
+                  ? "bg-red-50/90 border-red-200 text-red-800"
+                  : "bg-amber-50/90 border-amber-200 text-amber-800"
+            }`}
+          >
+            {notification.type === "success" && <CheckCircle className="w-5 h-5 text-emerald-600" />}
+            {notification.type === "error" && <XCircle className="w-5 h-5 text-red-600" />}
+            {notification.type === "warning" && <AlertTriangle className="w-5 h-5 text-amber-600" />}
+
+            <div className="flex-1">
+              <p className="font-medium text-sm leading-relaxed">{notification.message}</p>
+            </div>
+
+            <button
+              onClick={() => setNotification(null)}
+              className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-black/5 transition-colors duration-200"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {deleteConfirmation && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-8 h-8 text-red-600" />
+              </div>
+
+              <h3 className="text-xl font-bold text-slate-800 mb-2">{deleteConfirmation.title}</h3>
+              <p className="text-slate-600 mb-6 leading-relaxed">{deleteConfirmation.message}</p>
+              <p className="text-sm text-red-600 mb-6">Esta ação não pode ser desfeita.</p>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmation(null)}
+                  className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteItem(selectedItem.type, deleteConfirmation.item.id)}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/30 transition-all duration-300"
+                >
+                  Excluir
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

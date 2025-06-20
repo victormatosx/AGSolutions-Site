@@ -1,6 +1,6 @@
 "use client"
 import { ArrowUp, Facebook, Instagram, Linkedin, Youtube, Mail, Phone, MapPin } from "lucide-react"
-import logo from "../../public/logo2.png"
+import logo from "../assets/logo2.png"
 
 const Footer = () => {
   const scrollToTop = () => {

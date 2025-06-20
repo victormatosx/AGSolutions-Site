@@ -6,7 +6,7 @@ import { Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react"
 import { signInWithEmailAndPassword } from "firebase/auth"
 import { ref, get } from "firebase/database"
 import { auth, database } from "../firebase/firebase"
-import logo from "../../public/logoVerde.png"
+import logo from "../assets/logoVerde.png"
 
 const Login = () => {
   const [formData, setFormData] = useState({

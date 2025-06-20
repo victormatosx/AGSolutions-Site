@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Menu, X } from "lucide-react"
-import logoVerde from "../../public/logoVerde.png"
+import logoVerde from "../assets/logoVerde.png"
 
 const Header = ({ onNavigate, currentPage }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
