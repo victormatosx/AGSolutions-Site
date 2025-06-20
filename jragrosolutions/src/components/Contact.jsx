@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Mail, Phone, MapPin, Send, CheckCircle } from "lucide-react"
+import { Mail, Phone, MapPin, Send, CheckCircle, AlertCircle } from "lucide-react"
+import emailjs from '@emailjs/browser'
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -11,22 +12,64 @@ const Contact = () => {
     message: "",
   })
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  // Configurações do EmailJS
+  const SERVICE_ID = 'service_7rqbq31'
+  const TEMPLATE_ID = 'template_o8n9htt'
+  const PUBLIC_KEY = '_UNyHJ1bG0EjrVdl3'
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     })
+    // Limpar erro quando usuário começar a digitar
+    if (error) setError("")
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Simulate form submission
-    setIsSubmitted(true)
-    setTimeout(() => {
-      setIsSubmitted(false)
-      setFormData({ name: "", email: "", phone: "", message: "" })
-    }, 3000)
+    setIsLoading(true)
+    setError("")
+
+    try {
+      // Preparar os dados para o EmailJS
+      const templateParams = {
+        from_name: formData.name,
+        from_email: formData.email,
+        phone: formData.phone,
+        message: formData.message,
+        to_name: 'JR Agro Solutions', // Nome da empresa que receberá o email
+        date: new Date().toLocaleString('pt-BR'),
+      }
+
+      // Enviar email através do EmailJS
+      const result = await emailjs.send(
+        SERVICE_ID,
+        TEMPLATE_ID,
+        templateParams,
+        PUBLIC_KEY
+      )
+
+      console.log('Email enviado com sucesso:', result.text)
+      
+      // Mostrar mensagem de sucesso
+      setIsSubmitted(true)
+      
+      // Resetar formulário após 5 segundos
+      setTimeout(() => {
+        setIsSubmitted(false)
+        setFormData({ name: "", email: "", phone: "", message: "" })
+      }, 5000)
+
+    } catch (error) {
+      console.error('Erro ao enviar email:', error)
+      setError('Erro ao enviar mensagem. Tente novamente ou entre em contato diretamente.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -129,6 +172,14 @@ const Contact = () => {
             <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100">
               {!isSubmitted ? (
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Mostrar erro se houver */}
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center space-x-3">
+                      <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                      <p className="text-red-700 text-sm">{error}</p>
+                    </div>
+                  )}
+
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                       Nome completo
@@ -140,7 +191,8 @@ const Contact = () => {
                       value={formData.name}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+                      disabled={isLoading}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
                       placeholder="Seu nome completo"
                     />
                   </div>
@@ -156,7 +208,8 @@ const Contact = () => {
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+                      disabled={isLoading}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
                       placeholder="seu@email.com"
                     />
                   </div>
@@ -171,7 +224,8 @@ const Contact = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+                      disabled={isLoading}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
                       placeholder="(11) 9 9999-9999"
                     />
                   </div>
@@ -187,17 +241,28 @@ const Contact = () => {
                       onChange={handleChange}
                       required
                       rows={4}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors resize-none"
+                      disabled={isLoading}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
                       placeholder="Conte-nos sobre sua propriedade e como podemos ajudar..."
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-300 flex items-center justify-center space-x-2 transform hover:scale-105"
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-300 flex items-center justify-center space-x-2 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
-                    <Send className="w-5 h-5" />
-                    <span>Enviar mensagem</span>
+                    {isLoading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Enviando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-5 h-5" />
+                        <span>Enviar mensagem</span>
+                      </>
+                    )}
                   </button>
                 </form>
               ) : (

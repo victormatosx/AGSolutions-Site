@@ -9,7 +9,7 @@ const HowWeWork = () => {
       description:
         "Realizamos uma análise profunda do seu negócio, identificando gargalos e oportunidades de crescimento através de metodologias comprovadas.",
       features: ["Auditoria completa", "Mapeamento de processos", "Análise de concorrência"],
-      color: "green-step-1", // Usando um nome de cor personalizado
+      color: "green-unified", // Usando um nome de cor unificado
     },
     {
       number: "02",
@@ -18,7 +18,7 @@ const HowWeWork = () => {
       description:
         "Desenvolvemos uma estratégia sob medida para seus objetivos, combinando as melhores práticas do mercado com inovação tecnológica.",
       features: ["Plano de ação detalhado", "Cronograma otimizado", "KPIs definidos"],
-      color: "green-step-2", // Usando um nome de cor personalizado
+      color: "green-unified", // Usando um nome de cor unificado
     },
     {
       number: "03",
@@ -27,7 +27,7 @@ const HowWeWork = () => {
       description:
         "Implementamos as soluções com acompanhamento em tempo real, garantindo que cada etapa seja executada com precisão e qualidade.",
       features: ["Implementação ágil", "Testes contínuos", "Ajustes em tempo real"],
-      color: "green-step-3", // Usando um nome de cor personalizado
+      color: "green-unified", // Usando um nome de cor unificado
     },
     {
       number: "04",
@@ -36,42 +36,20 @@ const HowWeWork = () => {
       description:
         "Otimizamos continuamente os resultados, garantindo crescimento consistente e sustentável para o seu negócio a longo prazo.",
       features: ["Otimização contínua", "Relatórios detalhados", "Suporte especializado"],
-      color: "green-step-4", // Usando um nome de cor personalizado
+      color: "green-unified", // Usando um nome de cor unificado
     },
   ]
 
   const getColorClasses = (color) => {
-    const colors = {
-      "green-step-1": {
-        bg: "bg-green-50",
-        border: "border-green-200",
-        icon: "bg-green-600",
-        text: "text-green-700",
-        gradient: "from-green-600 to-green-700",
-      },
-      "green-step-2": {
-        bg: "bg-emerald-50",
-        border: "border-emerald-200",
-        icon: "bg-emerald-600",
-        text: "text-emerald-700",
-        gradient: "from-emerald-600 to-emerald-700",
-      },
-      "green-step-3": {
-        bg: "bg-teal-50",
-        border: "border-teal-200",
-        icon: "bg-teal-600",
-        text: "text-teal-700",
-        gradient: "from-teal-600 to-teal-700",
-      },
-      "green-step-4": {
-        bg: "bg-lime-50",
-        border: "border-lime-200",
-        icon: "bg-lime-600",
-        text: "text-lime-700",
-        gradient: "from-lime-600 to-lime-700",
-      },
+    // Definindo uma única paleta de verde mais vivo
+    const unifiedGreen = {
+      bg: "bg-emerald-50", // Um verde claro para o fundo do card
+      border: "border-emerald-200", // Uma borda um pouco mais escura
+      icon: "bg-[#16A449]", // O verde vivo para o ícone
+      text: "text-[#16A449]", // O verde vivo para o texto de destaque
+      gradient: "from-[#16A449] to-emerald-700", // Um gradiente que começa com o verde vivo
     }
-    return colors[color]
+    return unifiedGreen
   }
 
   return (
@@ -151,39 +129,38 @@ const HowWeWork = () => {
             })}
           </div>
 
-          {/* Results Section */}
-          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-3xl p-8 md:p-12 text-white relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-green-600/10"></div>
+          {/* Commitment Section */}
+          <div className="bg-[#16A449] rounded-3xl p-8 md:p-12 text-white relative overflow-hidden">
             <div className="relative z-10">
               <div className="text-center mb-12">
-                <h3 className="text-3xl md:text-4xl font-bold mb-4">Resultados que Falam por Si</h3>
+                <h3 className="text-3xl md:text-4xl font-bold mb-4">Nosso Compromisso com Você</h3>
                 <p className="text-xl text-green-100 max-w-3xl mx-auto">
-                  Nossa metodologia comprovada já transformou centenas de negócios, gerando crescimento sustentável e
-                  resultados mensuráveis.
+                  Estamos dedicados a construir uma parceria sólida, focada em inovação, transparência e no seu sucesso
+                  a longo prazo.
                 </p>
               </div>
 
               <div className="grid md:grid-cols-3 gap-8 text-center">
                 <div className="group">
                   <div className="text-4xl md:text-5xl font-bold mb-2 text-white group-hover:scale-110 transition-transform duration-300">
-                    15 dias
+                    Parceria
                   </div>
-                  <div className="text-green-100 font-medium">Análise e Estratégia</div>
-                  <div className="text-sm text-green-200 mt-1">Diagnóstico completo e plano de ação</div>
+                  <div className="text-green-100 font-medium">Colaboração Contínua</div>
+                  <div className="text-sm text-green-200 mt-1">Trabalhamos lado a lado em cada etapa</div>
                 </div>
                 <div className="group">
                   <div className="text-4xl md:text-5xl font-bold mb-2 text-white group-hover:scale-110 transition-transform duration-300">
-                    45 dias
+                    Inovação
                   </div>
-                  <div className="text-green-100 font-medium">Implementação</div>
-                  <div className="text-sm text-green-200 mt-1">Execução e primeiros resultados</div>
+                  <div className="text-green-100 font-medium">Soluções de Ponta</div>
+                  <div className="text-sm text-green-200 mt-1">Sempre buscando o que há de mais novo</div>
                 </div>
                 <div className="group">
                   <div className="text-4xl md:text-5xl font-bold mb-2 text-white group-hover:scale-110 transition-transform duration-300">
-                    24/7
+                    Transparência
                   </div>
-                  <div className="text-green-100 font-medium">Suporte Contínuo</div>
-                  <div className="text-sm text-green-200 mt-1">Monitoramento e otimização</div>
+                  <div className="text-green-100 font-medium">Comunicação Clara</div>
+                  <div className="text-sm text-green-200 mt-1">Relatórios e feedbacks honestos</div>
                 </div>
               </div>
             </div>
