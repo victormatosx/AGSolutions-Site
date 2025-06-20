@@ -135,7 +135,7 @@ const Founders = () => {
               >
                 {/* Photo */}
                 <div className="relative mb-6">
-                  <div className="w-24 h-24 mx-auto rounded-full overflow-hidden bg-gradient-to-br from-green-400 to-green-600 p-1">
+                  <div className="w-32 h-32 mx-auto rounded-full overflow-hidden bg-gradient-to-br from-green-400 to-green-600 p-1">
                     <img
                       src={founder.image || "/placeholder.svg"}
                       alt={founder.name}
