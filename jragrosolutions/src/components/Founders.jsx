@@ -12,7 +12,7 @@ const Founders = () => {
   const founders = [
     {
       name: "Renato Mendes",
-      role: "Esp. em Agronegócio",
+      role: "Especialista em Agronegócio",
       image: renato,
       shortBio: "Vasta experiência no setor de agronegócio com foco em consultoria e gestão de projetos agrícolas.",
       quote: "A consultoria especializada é fundamental para o sucesso do produtor rural.",
@@ -61,28 +61,29 @@ const Founders = () => {
     },
     {
       name: "Victor Matos",
-      role: "Desenvolvimento",
+      role: "Desenvolvimento Fullstack",
       image: victor,
-      shortBio: "Especialista em gestão estratégica e operações com foco em otimização de processos no agronegócio.",
-      quote: "A excelência operacional é o que diferencia os líderes no agronegócio.",
+      shortBio: "Combinando criatividade, tecnologia e paixão, transforma o agronegócio com sistemas modernos, eficientes e intuitivos.",
+      quote: "A inovação nasce quando tecnologia e propósito caminham juntos.",
       linkedin: "https://www.linkedin.com/in/victor-matos-11a12622b/",
       email: "victor@jragrosolutions.com",
       fullInfo: {
         description:
-          "Victor Matos é um estrategista experiente com mais de 15 anos de atuação no agronegócio, especializado em otimização de processos e gestão de operações complexas.",
+          "Atuando como Desenvolvedor Fullstack na J. R. AGSOLUTIONS, Victor combina criatividade, tecnologia e paixão por soluções digitais para transformar o agronegócio com sistemas modernos, eficientes e intuitivos.",
         education: [
-          "MBA em Agronegócios - ESALQ/USP",
-          "Pós-Graduação em Gestão Estratégica - FIA",
-          "Graduação em Administração de Empresas - FECAP",
+          "Graduando em Sistemas de Informação — [sua universidade]",
+          "Curso de React.js e React Native",
+          "Curso de JavaScript (ES6+)",
+          "Curso de Tailwind CSS",
+          "Curso de Firebase, Node.js e MongoDB"
         ],
         experience: [
-          "COO - J. R. AGSOLUTIONS",
-          "Diretor de Operações - AgroTech Solutions",
-          "Gerente de Projetos Estratégicos - Cargill",
-          "Consultor em Processos Agroindustriais",
+          "Desenvolvedor Fullstack — J. R. AGSOLUTIONS",
+          "Criação de aplicações web e mobile voltadas ao agronegócio, com foco em usabilidade, performance e escalabilidade",
+          "Responsável pelo desenvolvimento de soluções como Ordermilk e AgroColeta"
         ],
         expertise:
-          "Victor é reconhecido por sua capacidade de transformar operações complexas em processos eficientes e escaláveis. Sua expertise em gestão de cadeia de suprimentos e otimização de recursos tem sido fundamental para o crescimento sustentável de diversas empresas do setor.",
+          "Integração de front-end e back-end com tecnologias modernas. UI/UX com foco na experiência do produtor rural. Desenvolvimento ágil e colaborativo. Paixão por criar soluções que impactam positivamente a vida no campo."
       },
     },
   ]

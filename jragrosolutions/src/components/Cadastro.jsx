@@ -2,8 +2,24 @@
 
 import { useState, useEffect } from "react"
 import { database } from "../firebase/firebase"
-import { ref, set, onValue, off } from "firebase/database"
-import "../../styles/cadastro.css"
+import { ref, set, onValue, off, remove } from "firebase/database"
+import {
+  Search,
+  Plus,
+  X,
+  Users,
+  Settings,
+  Wrench,
+  Star,
+  Car,
+  FileText,
+  Database,
+  UserPlus,
+  Trash2,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+} from "lucide-react"
 
 const Cadastro = () => {
   // Estados para controlar qual seção está ativa
@@ -70,13 +86,74 @@ const Cadastro = () => {
     nome: "",
   })
 
+  // Estados para notificações e confirmação
+  const [notification, setNotification] = useState(null)
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null)
+
+  // Configuração das seções
+  const sections = {
+    usuarios: {
+      title: "Usuários",
+      icon: Users,
+      color: "emerald",
+      data: usuarios,
+      searchPlaceholder: "Pesquisar usuários...",
+    },
+    maquinarios: {
+      title: "Máquinas",
+      icon: Settings,
+      color: "blue",
+      data: maquinarios,
+      searchPlaceholder: "Pesquisar máquinas...",
+    },
+    implementos: {
+      title: "Implementos",
+      icon: Wrench,
+      color: "purple",
+      data: implementos,
+      searchPlaceholder: "Pesquisar implementos...",
+    },
+    direcionadores: {
+      title: "Direcionadores",
+      icon: Star,
+      color: "orange",
+      data: direcionadores,
+      searchPlaceholder: "Pesquisar direcionadores...",
+    },
+    veiculos: {
+      title: "Veículos",
+      icon: Car,
+      color: "indigo",
+      data: veiculos,
+      searchPlaceholder: "Pesquisar veículos...",
+    },
+    atividades: {
+      title: "Atividades",
+      icon: FileText,
+      color: "green",
+      data: atividades,
+      searchPlaceholder: "Pesquisar atividades...",
+    },
+    tanques: {
+      title: "Tanques",
+      icon: Database,
+      color: "cyan",
+      data: tanques,
+      searchPlaceholder: "Pesquisar tanques...",
+    },
+  }
+
   // Carregar dados do Firebase
   useEffect(() => {
     const usersRef = ref(database, "propriedades/Matrice/users")
     const machinesRef = ref(database, "propriedades/Matrice/maquinarios")
     const implementsRef = ref(database, "propriedades/Matrice/implementos")
+    const direcionadoresRef = ref(database, "propriedades/Matrice/direcionadores")
+    const veiculosRef = ref(database, "propriedades/Matrice/veiculos")
+    const atividadesRef = ref(database, "propriedades/Matrice/atividades")
+    const tanquesRef = ref(database, "propriedades/Matrice/tanques")
 
-    // Listener para usuários
+    // Listeners
     onValue(usersRef, (snapshot) => {
       const data = snapshot.val()
       if (data) {
@@ -88,7 +165,6 @@ const Cadastro = () => {
       }
     })
 
-    // Listener para máquinas
     onValue(machinesRef, (snapshot) => {
       const data = snapshot.val()
       if (data) {
@@ -100,7 +176,6 @@ const Cadastro = () => {
       }
     })
 
-    // Listener para implementos
     onValue(implementsRef, (snapshot) => {
       const data = snapshot.val()
       if (data) {
@@ -112,8 +187,6 @@ const Cadastro = () => {
       }
     })
 
-    // Listener para direcionadores
-    const direcionadoresRef = ref(database, "propriedades/Matrice/direcionadores")
     onValue(direcionadoresRef, (snapshot) => {
       const data = snapshot.val()
       if (data) {
@@ -125,8 +198,6 @@ const Cadastro = () => {
       }
     })
 
-    // Listener para veículos
-    const veiculosRef = ref(database, "propriedades/Matrice/veiculos")
     onValue(veiculosRef, (snapshot) => {
       const data = snapshot.val()
       if (data) {
@@ -138,8 +209,6 @@ const Cadastro = () => {
       }
     })
 
-    // Listener para atividades
-    const atividadesRef = ref(database, "propriedades/Matrice/atividades")
     onValue(atividadesRef, (snapshot) => {
       const data = snapshot.val()
       if (data) {
@@ -151,8 +220,6 @@ const Cadastro = () => {
       }
     })
 
-    // Listener para tanques
-    const tanquesRef = ref(database, "propriedades/Matrice/tanques")
     onValue(tanquesRef, (snapshot) => {
       const data = snapshot.val()
       if (data) {
@@ -193,10 +260,10 @@ const Cadastro = () => {
       })
       setMachineData({ id: "", nome: "" })
       setShowMachineForm(false)
-      alert("Máquina cadastrada com sucesso!")
+      showNotification("Máquina cadastrada com sucesso!", "success")
     } catch (error) {
       console.error("Erro ao cadastrar máquina:", error)
-      alert("Erro ao cadastrar máquina")
+      showNotification("Erro ao cadastrar máquina", "error")
     }
   }
 
@@ -211,10 +278,10 @@ const Cadastro = () => {
       })
       setImplementData({ id: "", nome: "" })
       setShowImplementForm(false)
-      alert("Implemento cadastrado com sucesso!")
+      showNotification("Implemento cadastrado com sucesso!", "success")
     } catch (error) {
       console.error("Erro ao cadastrar implemento:", error)
-      alert("Erro ao cadastrar implemento")
+      showNotification("Erro ao cadastrar implemento", "error")
     }
   }
 
@@ -230,10 +297,10 @@ const Cadastro = () => {
       })
       setDirecionadorData({ id: "", direcionador: "", culturaAssociada: "" })
       setShowDirecionadorForm(false)
-      alert("Direcionador cadastrado com sucesso!")
+      showNotification("Direcionador cadastrado com sucesso!", "success")
     } catch (error) {
       console.error("Erro ao cadastrar direcionador:", error)
-      alert("Erro ao cadastrar direcionador")
+      showNotification("Erro ao cadastrar direcionador", "error")
     }
   }
 
@@ -249,10 +316,10 @@ const Cadastro = () => {
       })
       setVeiculoData({ id: "", placa: "", modelo: "" })
       setShowVeiculoForm(false)
-      alert("Veículo cadastrado com sucesso!")
+      showNotification("Veículo cadastrado com sucesso!", "success")
     } catch (error) {
       console.error("Erro ao cadastrar veículo:", error)
-      alert("Erro ao cadastrar veículo")
+      showNotification("Erro ao cadastrar veículo", "error")
     }
   }
 
@@ -267,10 +334,10 @@ const Cadastro = () => {
       })
       setAtividadeData({ id: "", atividade: "" })
       setShowAtividadeForm(false)
-      alert("Atividade cadastrada com sucesso!")
+      showNotification("Atividade cadastrada com sucesso!", "success")
     } catch (error) {
       console.error("Erro ao cadastrar atividade:", error)
-      alert("Erro ao cadastrar atividade")
+      showNotification("Erro ao cadastrar atividade", "error")
     }
   }
 
@@ -285,871 +352,690 @@ const Cadastro = () => {
       })
       setTanqueData({ id: "", nome: "" })
       setShowTanqueForm(false)
-      alert("Tanque cadastrado com sucesso!")
+      showNotification("Tanque cadastrado com sucesso!", "success")
     } catch (error) {
       console.error("Erro ao cadastrar tanque:", error)
-      alert("Erro ao cadastrar tanque")
+      showNotification("Erro ao cadastrar tanque", "error")
     }
+  }
+
+  // Funções para excluir dados
+  const handleDeleteItem = async (section, itemId) => {
+    try {
+      const itemRef = ref(database, `propriedades/Matrice/${section}/${itemId}`)
+      await remove(itemRef)
+      setDeleteConfirmation(null)
+      showNotification("Item excluído com sucesso!", "success")
+    } catch (error) {
+      console.error("Erro ao excluir item:", error)
+      showNotification("Erro ao excluir item", "error")
+    }
+  }
+
+  const confirmDelete = (section, item) => {
+    setDeleteConfirmation({
+      section,
+      item,
+      title: `Excluir ${sections[section].title.slice(0, -1)}`,
+      message: `Tem certeza que deseja excluir "${item.nome || item.direcionador || item.atividade || item.modelo}"?`,
+    })
+  }
+
+  // Sistema de notificações
+  const showNotification = (message, type = "success") => {
+    setNotification({ message, type })
+    setTimeout(() => setNotification(null), 4000)
   }
 
   // Função para filtrar itens baseado na busca
   const filterItems = (items, searchTerm) => {
     if (!searchTerm) return items
     return items.filter(
-      (item) => item.nome?.toLowerCase().includes(searchTerm.toLowerCase()) || item.id?.toString().includes(searchTerm),
+      (item) =>
+        item.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.id?.toString().includes(searchTerm) ||
+        item.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.direcionador?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.atividade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.placa?.toLowerCase().includes(searchTerm.toLowerCase()),
     )
   }
 
   const handleShowUserForm = () => {
-    alert(
+    showNotification(
       "Você não tem permissão para criar novos usuários. Entre em contato pelo WhatsApp (34) 9 9653-2577 ou pelo E-mail victor@jragrosolutions.com.br para cadastrar novos usuários.",
+      "warning",
     )
   }
 
+  const currentSection = sections[activeSection]
+  const Icon = currentSection.icon
+
   return (
-    <div className="cadastro-container">
-      {/* Header */}
-      <div className="cadastro-header">
-        <div className="header-title">
-          <div className="title-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-                fill="currentColor"
-              />
-              <circle cx="19" cy="8" r="3" fill="currentColor" />
-            </svg>
+    <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/25">
+              <UserPlus className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-800 mb-1">Sistema de Cadastro</h1>
+              <p className="text-slate-600">Gerencie todos os recursos da sua propriedade</p>
+            </div>
           </div>
-          <h1>Cadastro</h1>
+          <div className="h-px bg-gradient-to-r from-emerald-200 via-green-300 to-emerald-200"></div>
         </div>
-        <div className="header-divider"></div>
+
+        {/* Navigation Tabs */}
+        <div className="mb-8">
+          <div className="flex flex-wrap gap-2 p-2 bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20">
+            {Object.entries(sections).map(([key, section]) => {
+              const TabIcon = section.icon
+              return (
+                <button
+                  key={key}
+                  className={`flex items-center gap-3 px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
+                    activeSection === key
+                      ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-500/25 transform scale-105"
+                      : "text-slate-600 hover:text-emerald-600 hover:bg-emerald-50/80 hover:scale-105"
+                  }`}
+                  onClick={() => setActiveSection(key)}
+                >
+                  <TabIcon className="w-5 h-5" />
+                  <span className="hidden sm:inline">{section.title}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
+          {/* Section Header */}
+          <div className="p-8 border-b border-slate-200/50 bg-gradient-to-r from-white to-slate-50/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div
+                  className={`w-16 h-16 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/25`}
+                >
+                  <Icon className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-800">{currentSection.title}</h2>
+                  <p className="text-slate-600">
+                    {currentSection.data.length} {currentSection.data.length === 1 ? "item" : "itens"} cadastrados
+                  </p>
+                </div>
+              </div>
+              <button
+                className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 hover:scale-105 transition-all duration-300"
+                onClick={() => {
+                  if (activeSection === "usuarios") {
+                    handleShowUserForm()
+                  } else {
+                    const setters = {
+                      maquinarios: setShowMachineForm,
+                      implementos: setShowImplementForm,
+                      direcionadores: setShowDirecionadorForm,
+                      veiculos: setShowVeiculoForm,
+                      atividades: setShowAtividadeForm,
+                      tanques: setShowTanqueForm,
+                    }
+                    setters[activeSection]?.(true)
+                  }
+                }}
+              >
+                <Plus className="w-5 h-5" />
+                <span>Cadastrar Novo</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="p-8 pb-4">
+            <div className="relative max-w-md">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <input
+                type="text"
+                placeholder={currentSection.searchPlaceholder}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
+              />
+            </div>
+          </div>
+
+          {/* Items Grid */}
+          <div className="p-8 pt-4">
+            {filterItems(currentSection.data, searchTerm).length === 0 ? (
+              <div className="text-center py-16">
+                <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Icon className="w-12 h-12 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-medium text-slate-600 mb-2">
+                  {searchTerm
+                    ? "Nenhum resultado encontrado"
+                    : `Nenhum ${currentSection.title.toLowerCase()} cadastrado`}
+                </h3>
+                <p className="text-slate-500">
+                  {searchTerm
+                    ? "Tente ajustar sua pesquisa"
+                    : `Clique em "Cadastrar Novo" para adicionar o primeiro item`}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filterItems(currentSection.data, searchTerm).map((item, index) => (
+                  <div
+                    key={item.id}
+                    className="group bg-white rounded-2xl p-6 shadow-lg border border-slate-200/50 hover:shadow-xl hover:shadow-emerald-500/10 hover:border-emerald-200 hover:-translate-y-1 transition-all duration-300"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div
+                        className={`w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:scale-110 transition-transform duration-300`}
+                      >
+                        <Icon className="w-6 h-6 text-white" />
+                      </div>
+                      <button
+                        onClick={() => confirmDelete(activeSection, item)}
+                        className="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+                        title="Excluir item"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-slate-800 group-hover:text-emerald-600 transition-colors duration-300">
+                        {item.nome || item.direcionador || item.atividade || item.modelo || "Sem nome"}
+                      </h3>
+
+                      <div className="space-y-1 text-sm text-slate-600">
+                        <p className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
+                          ID: {item.id}
+                        </p>
+
+                        {item.email && (
+                          <p className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
+                            {item.email}
+                          </p>
+                        )}
+
+                        {item.propriedade && (
+                          <p className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
+                            {item.propriedade}
+                          </p>
+                        )}
+
+                        {item.culturaAssociada && (
+                          <p className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
+                            Cultura: {item.culturaAssociada}
+                          </p>
+                        )}
+
+                        {item.placa && (
+                          <p className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
+                            Placa: {item.placa}
+                          </p>
+                        )}
+
+                        {item.role && (
+                          <p className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
+                            Função: {item.role}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Modais */}
+        {showMachineForm && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-slate-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-slate-800">Cadastrar Nova Máquina</h3>
+                  <button
+                    onClick={() => setShowMachineForm(false)}
+                    className="w-10 h-10 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center justify-center transition-colors duration-200"
+                  >
+                    <X className="w-5 h-5 text-slate-600" />
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleAddMachine} className="p-6 space-y-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">ID da Máquina</label>
+                  <input
+                    type="text"
+                    value={machineData.id}
+                    onChange={(e) => setMachineData({ ...machineData, id: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">Nome da Máquina</label>
+                  <input
+                    type="text"
+                    value={machineData.nome}
+                    onChange={(e) => setMachineData({ ...machineData, nome: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowMachineForm(false)}
+                    className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all duration-300"
+                  >
+                    Cadastrar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {showImplementForm && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-slate-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-slate-800">Cadastrar Novo Implemento</h3>
+                  <button
+                    onClick={() => setShowImplementForm(false)}
+                    className="w-10 h-10 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center justify-center transition-colors duration-200"
+                  >
+                    <X className="w-5 h-5 text-slate-600" />
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleAddImplement} className="p-6 space-y-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">ID do Implemento</label>
+                  <input
+                    type="text"
+                    value={implementData.id}
+                    onChange={(e) => setImplementData({ ...implementData, id: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">Nome do Implemento</label>
+                  <input
+                    type="text"
+                    value={implementData.nome}
+                    onChange={(e) => setImplementData({ ...implementData, nome: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowImplementForm(false)}
+                    className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all duration-300"
+                  >
+                    Cadastrar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {showDirecionadorForm && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-slate-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-slate-800">Cadastrar Novo Direcionador</h3>
+                  <button
+                    onClick={() => setShowDirecionadorForm(false)}
+                    className="w-10 h-10 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center justify-center transition-colors duration-200"
+                  >
+                    <X className="w-5 h-5 text-slate-600" />
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleAddDirecionador} className="p-6 space-y-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">ID do Direcionador</label>
+                  <input
+                    type="text"
+                    value={direcionadorData.id}
+                    onChange={(e) => setDirecionadorData({ ...direcionadorData, id: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">Nome do Direcionador</label>
+                  <input
+                    type="text"
+                    value={direcionadorData.direcionador}
+                    onChange={(e) => setDirecionadorData({ ...direcionadorData, direcionador: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">Cultura Associada</label>
+                  <input
+                    type="text"
+                    value={direcionadorData.culturaAssociada}
+                    onChange={(e) => setDirecionadorData({ ...direcionadorData, culturaAssociada: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowDirecionadorForm(false)}
+                    className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all duration-300"
+                  >
+                    Cadastrar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {showVeiculoForm && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-slate-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-slate-800">Cadastrar Novo Veículo</h3>
+                  <button
+                    onClick={() => setShowVeiculoForm(false)}
+                    className="w-10 h-10 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center justify-center transition-colors duration-200"
+                  >
+                    <X className="w-5 h-5 text-slate-600" />
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleAddVeiculo} className="p-6 space-y-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">ID do Veículo</label>
+                  <input
+                    type="text"
+                    value={veiculoData.id}
+                    onChange={(e) => setVeiculoData({ ...veiculoData, id: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">Placa do Veículo</label>
+                  <input
+                    type="text"
+                    value={veiculoData.placa}
+                    onChange={(e) => setVeiculoData({ ...veiculoData, placa: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">Modelo do Veículo</label>
+                  <input
+                    type="text"
+                    value={veiculoData.modelo}
+                    onChange={(e) => setVeiculoData({ ...veiculoData, modelo: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowVeiculoForm(false)}
+                    className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all duration-300"
+                  >
+                    Cadastrar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {showAtividadeForm && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-slate-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-slate-800">Cadastrar Nova Atividade</h3>
+                  <button
+                    onClick={() => setShowAtividadeForm(false)}
+                    className="w-10 h-10 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center justify-center transition-colors duration-200"
+                  >
+                    <X className="w-5 h-5 text-slate-600" />
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleAddAtividade} className="p-6 space-y-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">ID da Atividade</label>
+                  <input
+                    type="text"
+                    value={atividadeData.id}
+                    onChange={(e) => setAtividadeData({ ...atividadeData, id: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">Nome da Atividade</label>
+                  <input
+                    type="text"
+                    value={atividadeData.atividade}
+                    onChange={(e) => setAtividadeData({ ...atividadeData, atividade: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAtividadeForm(false)}
+                    className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all duration-300"
+                  >
+                    Cadastrar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {showTanqueForm && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-slate-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-slate-800">Cadastrar Novo Tanque</h3>
+                  <button
+                    onClick={() => setShowTanqueForm(false)}
+                    className="w-10 h-10 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center justify-center transition-colors duration-200"
+                  >
+                    <X className="w-5 h-5 text-slate-600" />
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleAddTanque} className="p-6 space-y-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">ID do Tanque</label>
+                  <input
+                    type="text"
+                    value={tanqueData.id}
+                    onChange={(e) => setTanqueData({ ...tanqueData, id: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">Nome do Tanque</label>
+                  <input
+                    type="text"
+                    value={tanqueData.nome}
+                    onChange={(e) => setTanqueData({ ...tanqueData, nome: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowTanqueForm(false)}
+                    className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all duration-300"
+                  >
+                    Cadastrar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Sistema de Notificações */}
+        {notification && (
+          <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
+            <div
+              className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-sm border max-w-md ${
+                notification.type === "success"
+                  ? "bg-emerald-50/90 border-emerald-200 text-emerald-800"
+                  : notification.type === "error"
+                    ? "bg-red-50/90 border-red-200 text-red-800"
+                    : "bg-amber-50/90 border-amber-200 text-amber-800"
+              }`}
+            >
+              {notification.type === "success" && <CheckCircle className="w-5 h-5 text-emerald-600" />}
+              {notification.type === "error" && <XCircle className="w-5 h-5 text-red-600" />}
+              {notification.type === "warning" && <AlertTriangle className="w-5 h-5 text-amber-600" />}
+
+              <div className="flex-1">
+                <p className="font-medium text-sm leading-relaxed">{notification.message}</p>
+              </div>
+
+              <button
+                onClick={() => setNotification(null)}
+                className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-black/5 transition-colors duration-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Confirmação de Exclusão */}
+        {deleteConfirmation && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle className="w-8 h-8 text-red-600" />
+                </div>
+
+                <h3 className="text-xl font-bold text-slate-800 mb-2">{deleteConfirmation.title}</h3>
+                <p className="text-slate-600 mb-6 leading-relaxed">{deleteConfirmation.message}</p>
+                <p className="text-sm text-red-600 mb-6">Esta ação não pode ser desfeita.</p>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setDeleteConfirmation(null)}
+                    className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => handleDeleteItem(deleteConfirmation.section, deleteConfirmation.item.id)}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/30 transition-all duration-300"
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* Navigation Tabs */}
-      <div className="nav-tabs">
-        <button
-          className={`nav-tab ${activeSection === "usuarios" ? "active" : ""}`}
-          onClick={() => setActiveSection("usuarios")}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M16 7c0-2.21-1.79-4-4-4s-4 1.79-4 4 1.79 4 4 4 4-1.79 4-4zM12 14c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-              fill="currentColor"
-            />
-          </svg>
-          Usuários
-        </button>
-        <button
-          className={`nav-tab ${activeSection === "maquinarios" ? "active" : ""}`}
-          onClick={() => setActiveSection("maquinarios")}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"
-              fill="currentColor"
-            />
-          </svg>
-          Máquinas
-        </button>
-        <button
-          className={`nav-tab ${activeSection === "implementos" ? "active" : ""}`}
-          onClick={() => setActiveSection("implementos")}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"
-              fill="currentColor"
-            />
-          </svg>
-          Implementos
-        </button>
-        <button
-          className={`nav-tab ${activeSection === "direcionadores" ? "active" : ""}`}
-          onClick={() => setActiveSection("direcionadores")}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-              fill="currentColor"
-            />
-          </svg>
-          Direcionadores
-        </button>
-        <button
-          className={`nav-tab ${activeSection === "veiculos" ? "active" : ""}`}
-          onClick={() => setActiveSection("veiculos")}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.22.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"
-              fill="currentColor"
-            />
-          </svg>
-          Veículos
-        </button>
-        <button
-          className={`nav-tab ${activeSection === "atividades" ? "active" : ""}`}
-          onClick={() => setActiveSection("atividades")}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h8c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"
-              fill="currentColor"
-            />
-          </svg>
-          Atividades
-        </button>
-        <button
-          className={`nav-tab ${activeSection === "tanques" ? "active" : ""}`}
-          onClick={() => setActiveSection("tanques")}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
-              fill="currentColor"
-            />
-          </svg>
-          Tanques
-        </button>
-      </div>
-
-      {/* Content */}
-      <div className="content-area">
-        {/* Seção de Usuários */}
-        {activeSection === "usuarios" && (
-          <div className="section-content">
-            <div className="section-header">
-              <div className="section-title">
-                <div className="section-icon usuarios">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M16 7c0-2.21-1.79-4-4-4s-4 1.79-4 4 1.79 4 4 4 4-1.79 4-4zM12 14c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                </div>
-                <h2>Usuários</h2>
-              </div>
-              <button className="add-button" onClick={handleShowUserForm}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor" />
-                </svg>
-                Cadastrar Novo Usuário
-              </button>
-            </div>
-
-            <div className="search-container">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
-                  fill="currentColor"
-                />
-              </svg>
-              <input
-                type="text"
-                placeholder="Pesquisar usuários..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="items-grid">
-              {filterItems(usuarios, searchTerm).map((usuario) => (
-                <div key={usuario.id} className="item-card usuarios">
-                  <div className="card-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </div>
-                  <div className="card-content">
-                    <h3>{usuario.nome}</h3>
-                    <p className="card-id"># Email: {usuario.email}</p>
-                    <p className="card-detail">Propriedade: {usuario.propriedade}</p>
-                    <p className="card-detail">Função: {usuario.role}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Seção de Máquinas */}
-        {activeSection === "maquinarios" && (
-          <div className="section-content">
-            <div className="section-header">
-              <div className="section-title">
-                <div className="section-icon maquinarios">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                </div>
-                <h2>Máquinas</h2>
-              </div>
-              <button className="add-button" onClick={() => setShowMachineForm(true)}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor" />
-                </svg>
-                Cadastrar Nova Máquina
-              </button>
-            </div>
-
-            <div className="search-container">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
-                  fill="currentColor"
-                />
-              </svg>
-              <input
-                type="text"
-                placeholder="Pesquisar máquinas..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="items-grid">
-              {filterItems(maquinarios, searchTerm).map((maquina) => (
-                <div key={maquina.id} className="item-card maquinarios">
-                  <div className="card-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </div>
-                  <div className="card-content">
-                    <h3>{maquina.nome}</h3>
-                    <p className="card-id"># ID: {maquina.id}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Seção de Implementos */}
-        {activeSection === "implementos" && (
-          <div className="section-content">
-            <div className="section-header">
-              <div className="section-title">
-                <div className="section-icon implementos">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                </div>
-                <h2>Implementos</h2>
-              </div>
-              <button className="add-button" onClick={() => setShowImplementForm(true)}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor" />
-                </svg>
-                Cadastrar Novo Implemento
-              </button>
-            </div>
-
-            <div className="search-container">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
-                  fill="currentColor"
-                />
-              </svg>
-              <input
-                type="text"
-                placeholder="Pesquisar implementos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="items-grid">
-              {filterItems(implementos, searchTerm).map((implemento) => (
-                <div key={implemento.id} className="item-card implementos">
-                  <div className="card-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </div>
-                  <div className="card-content">
-                    <h3>{implemento.nome}</h3>
-                    <p className="card-id"># ID: {implemento.id}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Seção de Direcionadores */}
-        {activeSection === "direcionadores" && (
-          <div className="section-content">
-            <div className="section-header">
-              <div className="section-title">
-                <div className="section-icon direcionadores">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                </div>
-                <h2>Direcionadores</h2>
-              </div>
-              <button className="add-button" onClick={() => setShowDirecionadorForm(true)}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor" />
-                </svg>
-                Cadastrar Novo Direcionador
-              </button>
-            </div>
-
-            <div className="search-container">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
-                  fill="currentColor"
-                />
-              </svg>
-              <input
-                type="text"
-                placeholder="Pesquisar direcionadores..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="items-grid">
-              {filterItems(direcionadores, searchTerm).map((direcionador) => (
-                <div key={direcionador.id} className="item-card direcionadores">
-                  <div className="card-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </div>
-                  <div className="card-content">
-                    <h3>{direcionador.direcionador}</h3>
-                    <p className="card-id"># ID: {direcionador.id}</p>
-                    <p className="card-detail">Cultura: {direcionador.culturaAssociada}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Seção de Veículos */}
-        {activeSection === "veiculos" && (
-          <div className="section-content">
-            <div className="section-header">
-              <div className="section-title">
-                <div className="section-icon veiculos">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.22.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                </div>
-                <h2>Veículos</h2>
-              </div>
-              <button className="add-button" onClick={() => setShowVeiculoForm(true)}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor" />
-                </svg>
-                Cadastrar Novo Veículo
-              </button>
-            </div>
-
-            <div className="search-container">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
-                  fill="currentColor"
-                />
-              </svg>
-              <input
-                type="text"
-                placeholder="Pesquisar veículos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="items-grid">
-              {filterItems(veiculos, searchTerm).map((veiculo) => (
-                <div key={veiculo.id} className="item-card veiculos">
-                  <div className="card-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.22.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </div>
-                  <div className="card-content">
-                    <h3>{veiculo.modelo}</h3>
-                    <p className="card-id"># ID: {veiculo.id}</p>
-                    <p className="card-detail">Placa: {veiculo.placa}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Seção de Atividades */}
-        {activeSection === "atividades" && (
-          <div className="section-content">
-            <div className="section-header">
-              <div className="section-title">
-                <div className="section-icon atividades">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h8c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                </div>
-                <h2>Atividades</h2>
-              </div>
-              <button className="add-button" onClick={() => setShowAtividadeForm(true)}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor" />
-                </svg>
-                Cadastrar Nova Atividade
-              </button>
-            </div>
-
-            <div className="search-container">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
-                  fill="currentColor"
-                />
-              </svg>
-              <input
-                type="text"
-                placeholder="Pesquisar atividades..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="items-grid">
-              {filterItems(atividades, searchTerm).map((atividade) => (
-                <div key={atividade.id} className="item-card atividades">
-                  <div className="card-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h8c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </div>
-                  <div className="card-content">
-                    <h3>{atividade.atividade}</h3>
-                    <p className="card-id"># ID: {atividade.id}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Seção de Tanques */}
-        {activeSection === "tanques" && (
-          <div className="section-content">
-            <div className="section-header">
-              <div className="section-title">
-                <div className="section-icon tanques">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                </div>
-                <h2>Tanques</h2>
-              </div>
-              <button className="add-button" onClick={() => setShowTanqueForm(true)}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor" />
-                </svg>
-                Cadastrar Novo Tanque
-              </button>
-            </div>
-
-            <div className="search-container">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
-                  fill="currentColor"
-                />
-              </svg>
-              <input
-                type="text"
-                placeholder="Pesquisar tanques..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="items-grid">
-              {filterItems(tanques, searchTerm).map((tanque) => (
-                <div key={tanque.id} className="item-card tanques">
-                  <div className="card-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </div>
-                  <div className="card-content">
-                    <h3>{tanque.nome}</h3>
-                    <p className="card-id"># ID: {tanque.id}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Modais */}
-      {showUserForm && (
-        <div className="modal-overlay" onClick={() => setShowUserForm(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Cadastrar Novo Usuário</h3>
-              <button className="close-button" onClick={() => setShowUserForm(false)}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </button>
-            </div>
-            {/* Formulário de usuário removido */}
-          </div>
-        </div>
-      )}
-
-      {showMachineForm && (
-        <div className="modal-overlay" onClick={() => setShowMachineForm(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Cadastrar Nova Máquina</h3>
-              <button className="close-button" onClick={() => setShowMachineForm(false)}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleAddMachine}>
-              <div className="form-group">
-                <label>ID da Máquina</label>
-                <input
-                  type="text"
-                  value={machineData.id}
-                  onChange={(e) => setMachineData({ ...machineData, id: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Nome da Máquina</label>
-                <input
-                  type="text"
-                  value={machineData.nome}
-                  onChange={(e) => setMachineData({ ...machineData, nome: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="cancel-button" onClick={() => setShowMachineForm(false)}>
-                  Cancelar
-                </button>
-                <button type="submit" className="submit-button">
-                  Cadastrar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showImplementForm && (
-        <div className="modal-overlay" onClick={() => setShowImplementForm(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Cadastrar Novo Implemento</h3>
-              <button className="close-button" onClick={() => setShowImplementForm(false)}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleAddImplement}>
-              <div className="form-group">
-                <label>ID do Implemento</label>
-                <input
-                  type="text"
-                  value={implementData.id}
-                  onChange={(e) => setImplementData({ ...implementData, id: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Nome do Implemento</label>
-                <input
-                  type="text"
-                  value={implementData.nome}
-                  onChange={(e) => setImplementData({ ...implementData, nome: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="cancel-button" onClick={() => setShowImplementForm(false)}>
-                  Cancelar
-                </button>
-                <button type="submit" className="submit-button">
-                  Cadastrar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Direcionador */}
-      {showDirecionadorForm && (
-        <div className="modal-overlay" onClick={() => setShowDirecionadorForm(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Cadastrar Novo Direcionador</h3>
-              <button className="close-button" onClick={() => setShowDirecionadorForm(false)}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleAddDirecionador}>
-              <div className="form-group">
-                <label>ID do Direcionador</label>
-                <input
-                  type="text"
-                  value={direcionadorData.id}
-                  onChange={(e) => setDirecionadorData({ ...direcionadorData, id: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Nome do Direcionador</label>
-                <input
-                  type="text"
-                  value={direcionadorData.direcionador}
-                  onChange={(e) => setDirecionadorData({ ...direcionadorData, direcionador: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Cultura Associada</label>
-                <input
-                  type="text"
-                  value={direcionadorData.culturaAssociada}
-                  onChange={(e) => setDirecionadorData({ ...direcionadorData, culturaAssociada: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="cancel-button" onClick={() => setShowDirecionadorForm(false)}>
-                  Cancelar
-                </button>
-                <button type="submit" className="submit-button">
-                  Cadastrar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Veículo */}
-      {showVeiculoForm && (
-        <div className="modal-overlay" onClick={() => setShowVeiculoForm(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Cadastrar Novo Veículo</h3>
-              <button className="close-button" onClick={() => setShowVeiculoForm(false)}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleAddVeiculo}>
-              <div className="form-group">
-                <label>ID do Veículo</label>
-                <input
-                  type="text"
-                  value={veiculoData.id}
-                  onChange={(e) => setVeiculoData({ ...veiculoData, id: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Placa do Veículo</label>
-                <input
-                  type="text"
-                  value={veiculoData.placa}
-                  onChange={(e) => setVeiculoData({ ...veiculoData, placa: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Modelo do Veículo</label>
-                <input
-                  type="text"
-                  value={veiculoData.modelo}
-                  onChange={(e) => setVeiculoData({ ...veiculoData, modelo: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="cancel-button" onClick={() => setShowVeiculoForm(false)}>
-                  Cancelar
-                </button>
-                <button type="submit" className="submit-button">
-                  Cadastrar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Atividade */}
-      {showAtividadeForm && (
-        <div className="modal-overlay" onClick={() => setShowAtividadeForm(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Cadastrar Nova Atividade</h3>
-              <button className="close-button" onClick={() => setShowAtividadeForm(false)}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleAddAtividade}>
-              <div className="form-group">
-                <label>ID da Atividade</label>
-                <input
-                  type="text"
-                  value={atividadeData.id}
-                  onChange={(e) => setAtividadeData({ ...atividadeData, id: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Nome da Atividade</label>
-                <input
-                  type="text"
-                  value={atividadeData.atividade}
-                  onChange={(e) => setAtividadeData({ ...atividadeData, atividade: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="cancel-button" onClick={() => setShowAtividadeForm(false)}>
-                  Cancelar
-                </button>
-                <button type="submit" className="submit-button">
-                  Cadastrar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Tanque */}
-      {showTanqueForm && (
-        <div className="modal-overlay" onClick={() => setShowTanqueForm(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Cadastrar Novo Tanque</h3>
-              <button className="close-button" onClick={() => setShowTanqueForm(false)}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleAddTanque}>
-              <div className="form-group">
-                <label>ID do Tanque</label>
-                <input
-                  type="text"
-                  value={tanqueData.id}
-                  onChange={(e) => setTanqueData({ ...tanqueData, id: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Nome do Tanque</label>
-                <input
-                  type="text"
-                  value={tanqueData.nome}
-                  onChange={(e) => setTanqueData({ ...tanqueData, nome: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="cancel-button" onClick={() => setShowTanqueForm(false)}>
-                  Cancelar
-                </button>
-                <button type="submit" className="submit-button">
-                  Cadastrar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
