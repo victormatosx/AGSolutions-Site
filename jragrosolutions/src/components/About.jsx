@@ -78,7 +78,7 @@ const About = () => {
                 </div>
                 <div>
                   <div className="text-4xl font-bold mb-2">100%</div>
-                  <div className="opacity-90">Foco em sustentabilidade</div>
+                  <div className="opacity-90">foco em sustentabilidade</div>
                 </div>
               </div>
             </div>
