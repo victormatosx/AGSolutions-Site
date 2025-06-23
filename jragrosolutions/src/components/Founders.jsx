@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Linkedin, Mail, X, GraduationCap, Briefcase, Award } from "lucide-react"
-import renato from "../assets/renato.png"
+import renato from "../assets/renato.jpg"
 import jeovane from "../assets/jeovane.png"
 import victor from "../assets/victor.png"
 
@@ -15,7 +15,7 @@ const Founders = () => {
       role: "Especialista em Agronegócio",
       image: renato,
       shortBio: "Vasta experiência no setor de agronegócio com foco em consultoria e gestão de projetos agrícolas.",
-      quote: "A consultoria especializada é fundamental para o sucesso do produtor rural.",
+      quote: "A consultoria especializada é fundamental para o sucesso do produtor rural. ",
       linkedin: "https://www.linkedin.com/in/renato-mendes-39a1a96/",
       email: "renato@jragrosolutions.com",
       fullInfo: {
