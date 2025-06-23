@@ -787,13 +787,13 @@ const Dashboard = () => {
   const renderCalendar = () => {
     if (isLoading) {
       return (
-        <div className="calendar-loading">
-          <div className="loading-spinner">
-            <Loader2 className="animate-spin" size={48} />
-          </div>
-          <div className="loading-content">
-            <h3>Carregando dados do calendário</h3>
-            <p>Aguarde enquanto buscamos as informações...</p>
+        <div className="min-h-[60vh] bg-white/80 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/25">
+              <Loader2 className="w-8 h-8 text-white animate-spin" />
+            </div>
+            <h3 className="text-lg font-medium text-slate-700 mb-2">Carregando dados do calendário</h3>
+            <p className="text-slate-500">Aguarde enquanto buscamos as informações...</p>
           </div>
         </div>
       )
@@ -931,13 +931,13 @@ const Dashboard = () => {
 
   if (loading || isLoading) {
     return (
-      <div className="dashboard-loading">
-        <div className="loading-spinner">
-          <Loader2 className="animate-spin" size={48} />
-        </div>
-        <div className="loading-content">
-          <h3>Carregando Dashboard</h3>
-          <p>Aguarde enquanto preparamos tudo para você...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/25">
+            <Loader2 className="w-8 h-8 text-white animate-spin" />
+          </div>
+          <h3 className="text-lg font-medium text-slate-700 mb-2">Carregando Dashboard</h3>
+          <p className="text-slate-500">Aguarde enquanto preparamos tudo para você...</p>
         </div>
       </div>
     )
