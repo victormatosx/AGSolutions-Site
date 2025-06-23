@@ -1,13 +1,18 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Menu, X } from "lucide-react"
+import { useAuthState } from "react-firebase-hooks/auth"
+import { auth } from "../firebase/firebase"
+import { useNavigate } from "react-router-dom"
+import { Menu, X, LogOut } from "lucide-react"
 import logoVerde from "../assets/logoVerde.png"
 
 const Header = ({ onNavigate, currentPage }) => {
+  const [user, loading, error] = useAuthState(auth)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(true)
   const lastScrollY = useRef(0)
+  const navigate = useNavigate()
 
   // Effect to handle scroll behavior
   useEffect(() => {
@@ -47,6 +52,21 @@ const Header = ({ onNavigate, currentPage }) => {
     closeMenu()
   }
 
+  // Function to handle logout
+  const handleLogout = async () => {
+    try {
+      await auth.signOut()
+      navigate("/login")
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error)
+    }
+  }
+
+  // Se não há usuário logado, não mostrar o header
+  if (!user && !loading) {
+    return null
+  }
+
   return (
     <header
       className={`fixed top-0 w-full z-50 bg-white/95 backdrop-blur-md shadow-lg transform transition-transform duration-300 ease-in-out
@@ -56,48 +76,51 @@ const Header = ({ onNavigate, currentPage }) => {
       <div className="container mx-auto px-4 py-4 max-w-6xl">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <button onClick={() => handleNavigation('dashboard')} className="flex items-center">
-            <img src={logoVerde} alt="J.R. AgroSolutions Logo" className="h-16 w-auto" />
+          <button onClick={() => handleNavigation("dashboard")} className="flex items-center">
+            <img src={logoVerde || "/placeholder.svg"} alt="J.R. AgroSolutions Logo" className="h-16 w-auto" />
           </button>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <button 
-              onClick={() => handleNavigation('dashboard')}
+            <button
+              onClick={() => handleNavigation("dashboard")}
               className={`transition-colors ${
-                currentPage === 'dashboard' 
-                  ? 'text-green-600 font-semibold' 
-                  : 'text-gray-700 hover:text-green-600'
+                currentPage === "dashboard" ? "text-green-600 font-semibold" : "text-gray-700 hover:text-green-600"
               }`}
             >
               Dashboard
             </button>
-            <button 
-              onClick={() => handleNavigation('apontamentos')}
+            <button
+              onClick={() => handleNavigation("apontamentos")}
               className={`transition-colors ${
-                currentPage === 'apontamentos' 
-                  ? 'text-green-600 font-semibold' 
-                  : 'text-gray-700 hover:text-green-600'
+                currentPage === "apontamentos" ? "text-green-600 font-semibold" : "text-gray-700 hover:text-green-600"
               }`}
             >
               Apontamentos
             </button>
-            <button 
-              onClick={() => handleNavigation('cadastros')}
+            <button
+              onClick={() => handleNavigation("cadastros")}
               className={`transition-colors ${
-                currentPage === 'cadastros' 
-                  ? 'text-green-600 font-semibold' 
-                  : 'text-gray-700 hover:text-green-600'
+                currentPage === "cadastros" ? "text-green-600 font-semibold" : "text-gray-700 hover:text-green-600"
               }`}
             >
               Cadastros
             </button>
             {/* Styled Home Link moved to the end */}
             <button
-              onClick={() => handleNavigation('home')}
+              onClick={() => handleNavigation("home")}
               className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-2 rounded-full hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:scale-105"
             >
               Voltar para Home
+            </button>
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-300"
+              title="Sair do sistema"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Sair</span>
             </button>
           </nav>
 
@@ -112,44 +135,44 @@ const Header = ({ onNavigate, currentPage }) => {
           <div className="md:hidden mt-4 py-4 bg-white rounded-lg shadow-lg">
             <nav className="flex flex-col space-y-4 px-4">
               <button
-                onClick={() => handleNavigation('home')}
+                onClick={() => handleNavigation("home")}
                 className={`text-left transition-colors ${
-                  currentPage === 'home' 
-                    ? 'text-green-600 font-semibold' 
-                    : 'text-gray-700 hover:text-green-600'
+                  currentPage === "home" ? "text-green-600 font-semibold" : "text-gray-700 hover:text-green-600"
                 }`}
               >
                 Home
               </button>
               <button
-                onClick={() => handleNavigation('dashboard')}
+                onClick={() => handleNavigation("dashboard")}
                 className={`text-left transition-colors ${
-                  currentPage === 'dashboard' 
-                    ? 'text-green-600 font-semibold' 
-                    : 'text-gray-700 hover:text-green-600'
+                  currentPage === "dashboard" ? "text-green-600 font-semibold" : "text-gray-700 hover:text-green-600"
                 }`}
               >
                 Dashboard
               </button>
               <button
-                onClick={() => handleNavigation('apontamentos')}
+                onClick={() => handleNavigation("apontamentos")}
                 className={`text-left transition-colors ${
-                  currentPage === 'apontamentos' 
-                    ? 'text-green-600 font-semibold' 
-                    : 'text-gray-700 hover:text-green-600'
+                  currentPage === "apontamentos" ? "text-green-600 font-semibold" : "text-gray-700 hover:text-green-600"
                 }`}
               >
                 Apontamentos
               </button>
               <button
-                onClick={() => handleNavigation('cadastros')}
+                onClick={() => handleNavigation("cadastros")}
                 className={`text-left transition-colors ${
-                  currentPage === 'cadastros' 
-                    ? 'text-green-600 font-semibold' 
-                    : 'text-gray-700 hover:text-green-600'
+                  currentPage === "cadastros" ? "text-green-600 font-semibold" : "text-gray-700 hover:text-green-600"
                 }`}
               >
                 Cadastros
+              </button>
+              <hr className="border-gray-200" />
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-left text-red-600 hover:text-red-700 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sair do sistema</span>
               </button>
             </nav>
           </div>

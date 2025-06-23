@@ -1,8 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { database } from "../firebase/firebase"
+import { useAuthState } from "react-firebase-hooks/auth"
+import { auth, database } from "../firebase/firebase"
 import { ref, onValue, update, remove } from "firebase/database"
+import ProtectedRoute from "./ProtectedRoute"
 import {
   Settings,
   Truck,
@@ -23,14 +25,15 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
-  UserPlus, // Added UserPlus import
+  UserPlus,
 } from "lucide-react"
 
 const Apontamentos = () => {
-  const [currentStep, setCurrentStep] = useState("categories") // categories, types, items
-  const [selectedCategory, setSelectedCategory] = useState(null) // maquinas, veiculos
-  const [selectedType, setSelectedType] = useState(null) // apontamentos, abastecimentos, percursos, abastecimentoVeiculos
-  const [selectedStatus, setSelectedStatus] = useState("pending") // pending, validated
+  const [user, loading, error] = useAuthState(auth)
+  const [currentStep, setCurrentStep] = useState("categories")
+  const [selectedCategory, setSelectedCategory] = useState(null)
+  const [selectedType, setSelectedType] = useState(null)
+  const [selectedStatus, setSelectedStatus] = useState("pending")
   const [selectedItem, setSelectedItem] = useState(null)
   const [showModal, setShowModal] = useState(false)
 
@@ -48,7 +51,7 @@ const Apontamentos = () => {
     percursos: [],
     abastecimentoVeiculos: [],
   })
-  const [loading, setLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
 
   // Adicionar após os outros estados
   const [usuarios, setUsuarios] = useState({})
@@ -60,10 +63,18 @@ const Apontamentos = () => {
   const [notification, setNotification] = useState(null)
   const [deleteConfirmation, setDeleteConfirmation] = useState(null)
 
-  // Carregar dados do Firebase
+  // Verificar se usuário está autenticado antes de carregar dados
   useEffect(() => {
+    if (loading) return // Ainda carregando estado de auth
+
+    if (!user) {
+      setIsLoading(false)
+      return // ProtectedRoute vai lidar com o redirecionamento
+    }
+
+    // Usuário autenticado, carregar dados
     const loadData = async () => {
-      setLoading(true)
+      setIsLoading(true)
 
       try {
         // Carregar usuários
@@ -125,17 +136,17 @@ const Apontamentos = () => {
               }))
             : []
           setData((prev) => ({ ...prev, abastecimentoVeiculos: abastecimentoVeiculosList }))
-          setLoading(false)
+          setIsLoading(false)
         })
       } catch (err) {
         console.error("Erro ao carregar dados:", err)
-        setLoading(false)
+        setIsLoading(false)
         showNotification("Erro ao carregar dados.", "error")
       }
     }
 
     loadData()
-  }, [])
+  }, [user, loading])
 
   // Sistema de notificações
   const showNotification = (message, type = "success") => {
@@ -145,6 +156,11 @@ const Apontamentos = () => {
 
   // Função para validar item
   const validarItem = async (tipo, itemId) => {
+    if (!user) {
+      showNotification("Você precisa estar logado para realizar esta ação.", "error")
+      return
+    }
+
     try {
       let path = ""
       switch (tipo) {
@@ -175,6 +191,11 @@ const Apontamentos = () => {
 
   // Função para excluir item
   const handleDeleteItem = async (tipo, itemId) => {
+    if (!user) {
+      showNotification("Você precisa estar logado para realizar esta ação.", "error")
+      return
+    }
+
     try {
       let path = ""
       switch (tipo) {
@@ -197,7 +218,7 @@ const Apontamentos = () => {
       const itemRef = ref(database, path)
       await remove(itemRef)
       setDeleteConfirmation(null)
-      setShowModal(false) // Close modal if the deleted item was open
+      setShowModal(false)
       showNotification("Item excluído com sucesso!", "success")
     } catch (error) {
       console.error("Erro ao excluir item:", error)
@@ -212,7 +233,6 @@ const Apontamentos = () => {
       message: `Tem certeza que deseja excluir este registro?`,
     })
   }
-
 
   // Selecionar categoria
   const selectCategory = (category) => {
@@ -254,7 +274,7 @@ const Apontamentos = () => {
           item.cultura,
           item.produto,
           item.objetivo,
-          item.userId ? usuarios[item.userId]?.nome : null, // Search by user name
+          item.userId ? usuarios[item.userId]?.nome : null,
         ].filter(Boolean)
 
         return searchFields.some((field) => field.toLowerCase().includes(filters.searchTerm.toLowerCase()))
@@ -278,7 +298,7 @@ const Apontamentos = () => {
     currentData.sort((a, b) => {
       const dateA = new Date(a.data || a.dataHora || a.timestamp || 0)
       const dateB = new Date(b.data || b.dataHora || b.timestamp || 0)
-      return dateB - dateA // Mais recente primeiro
+      return dateB - dateA
     })
 
     return currentData
@@ -316,6 +336,11 @@ const Apontamentos = () => {
   }
 
   const saveChanges = async () => {
+    if (!user) {
+      showNotification("Você precisa estar logado para realizar esta ação.", "error")
+      return
+    }
+
     try {
       const { id, type, ...dataToSave } = editedItem
 
@@ -354,7 +379,6 @@ const Apontamentos = () => {
 
   const handleInputChange = (key, value, operacaoIndex = null) => {
     if (operacaoIndex !== null) {
-      // Editando operação mecanizada
       const newOperacoes = [...(editedItem.operacoesMecanizadas || [])]
       newOperacoes[operacaoIndex] = {
         ...newOperacoes[operacaoIndex],
@@ -365,7 +389,6 @@ const Apontamentos = () => {
         operacoesMecanizadas: newOperacoes,
       })
     } else {
-      // Editando campo principal
       setEditedItem({
         ...editedItem,
         [key]: value,
@@ -514,42 +537,45 @@ const Apontamentos = () => {
 
     const getItemDetails = () => {
       const details = [
-        { icon: <Calendar className="w-4 h-4" />, label: "Data", value: item.data || item.dataHora || item.timestamp || "N/A" },
-      ];
+        {
+          icon: <Calendar className="w-4 h-4" />,
+          label: "Data",
+          value: item.data || item.dataHora || item.timestamp || "N/A",
+        },
+      ]
 
       if (item.userId) {
-        details.push({ icon: <UserPlus className="w-4 h-4" />, label: "Responsável", value: usuarios[item.userId]?.nome || "Usuário não identificado" });
+        details.push({
+          icon: <UserPlus className="w-4 h-4" />,
+          label: "Responsável",
+          value: usuarios[item.userId]?.nome || "Usuário não identificado",
+        })
       }
 
       switch (selectedType) {
         case "apontamentos":
-          details.push(
-            { icon: <Settings className="w-4 h-4" />, label: "Cultura", value: item.cultura || "N/A" },
-          );
-          break;
+          details.push({ icon: <Settings className="w-4 h-4" />, label: "Cultura", value: item.cultura || "N/A" })
+          break
         case "abastecimentos":
           details.push(
             { icon: <Fuel className="w-4 h-4" />, label: "Produto", value: item.produto || "N/A" },
             { icon: <Settings className="w-4 h-4" />, label: "Quantidade", value: `${item.quantidade || 0}L` },
-          );
-          break;
+          )
+          break
         case "percursos":
-          details.push(
-            { icon: <MapPin className="w-4 h-4" />, label: "Objetivo", value: item.objetivo || "N/A" },
-          );
-          break;
+          details.push({ icon: <MapPin className="w-4 h-4" />, label: "Objetivo", value: item.objetivo || "N/A" })
+          break
         case "abastecimentoVeiculos":
           details.push(
             { icon: <Fuel className="w-4 h-4" />, label: "Produto", value: item.produto || "N/A" },
             { icon: <Settings className="w-4 h-4" />, label: "Quantidade", value: `${item.quantidade || 0}L` },
-          );
-          break;
+          )
+          break
         default:
-          break;
+          break
       }
-      return details;
+      return details
     }
-
 
     return (
       <div
@@ -730,7 +756,6 @@ const Apontamentos = () => {
   const renderModal = () => {
     if (!selectedItem || !showModal) return null
 
-    // Função para obter o nome do responsável baseado no userId
     const getResponsavelName = (userId) => {
       if (!userId || !usuarios[userId]) {
         return "Usuário não identificado"
@@ -738,19 +763,16 @@ const Apontamentos = () => {
       return usuarios[userId].nome || "Nome não disponível"
     }
 
-    // Separar informações principais das operações mecanizadas
     const currentItem = isEditing ? editedItem : selectedItem
     const mainInfo = {}
     const operacoesMecanizadas = currentItem.operacoesMecanizadas || []
 
-    // Filtrar campos principais (excluir userId, timestamp e operacoesMecanizadas)
     Object.entries(currentItem)
       .filter(([key]) => !["id", "type", "userId", "timestamp", "operacoesMecanizadas"].includes(key))
       .forEach(([key, value]) => {
         mainInfo[key] = value
       })
 
-    // Adicionar responsável se userId existir
     if (currentItem.userId) {
       mainInfo.responsavel = getResponsavelName(currentItem.userId)
     }
@@ -796,7 +818,7 @@ const Apontamentos = () => {
                   </button>
                 </div>
               )}
-               <button
+              <button
                 onClick={() => confirmDelete(selectedItem)}
                 className="w-10 h-10 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 rounded-xl flex items-center justify-center transition-all duration-300"
                 title="Excluir item"
@@ -813,7 +835,6 @@ const Apontamentos = () => {
           </div>
 
           <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
-            {/* Informações Principais */}
             <div className="mb-8">
               <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -842,7 +863,6 @@ const Apontamentos = () => {
               </div>
             </div>
 
-            {/* Operações Mecanizadas */}
             {operacoesMecanizadas.length > 0 && (
               <div>
                 <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
@@ -885,7 +905,6 @@ const Apontamentos = () => {
           </div>
         </div>
 
-        {/* Modal de Confirmação de Salvamento */}
         {showSaveConfirmation && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-60 p-4">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
@@ -923,7 +942,7 @@ const Apontamentos = () => {
     )
   }
 
-  if (loading) {
+  if (loading || isLoading) {
     return (
       <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50 flex items-center justify-center">
         <div className="text-center">
@@ -938,81 +957,79 @@ const Apontamentos = () => {
   }
 
   return (
-    <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50">
-      {/* Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {currentStep === "categories" && renderCategories()}
-        {currentStep === "types" && renderTypes()}
-        {currentStep === "items" && renderItems()}
-      </main>
+    <ProtectedRoute requiredRole="manager">
+      <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {currentStep === "categories" && renderCategories()}
+          {currentStep === "types" && renderTypes()}
+          {currentStep === "items" && renderItems()}
+        </main>
 
-      {/* Modal */}
-      {renderModal()}
+        {renderModal()}
 
-      {/* Sistema de Notificações */}
-      {notification && (
-        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
-          <div
-            className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-sm border max-w-md ${
-              notification.type === "success"
-                ? "bg-emerald-50/90 border-emerald-200 text-emerald-800"
-                : notification.type === "error"
-                  ? "bg-red-50/90 border-red-200 text-red-800"
-                  : "bg-amber-50/90 border-amber-200 text-amber-800"
-            }`}
-          >
-            {notification.type === "success" && <CheckCircle className="w-5 h-5 text-emerald-600" />}
-            {notification.type === "error" && <XCircle className="w-5 h-5 text-red-600" />}
-            {notification.type === "warning" && <AlertTriangle className="w-5 h-5 text-amber-600" />}
-
-            <div className="flex-1">
-              <p className="font-medium text-sm leading-relaxed">{notification.message}</p>
-            </div>
-
-            <button
-              onClick={() => setNotification(null)}
-              className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-black/5 transition-colors duration-200"
+        {notification && (
+          <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
+            <div
+              className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-sm border max-w-md ${
+                notification.type === "success"
+                  ? "bg-emerald-50/90 border-emerald-200 text-emerald-800"
+                  : notification.type === "error"
+                    ? "bg-red-50/90 border-red-200 text-red-800"
+                    : "bg-amber-50/90 border-amber-200 text-amber-800"
+              }`}
             >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+              {notification.type === "success" && <CheckCircle className="w-5 h-5 text-emerald-600" />}
+              {notification.type === "error" && <XCircle className="w-5 h-5 text-red-600" />}
+              {notification.type === "warning" && <AlertTriangle className="w-5 h-5 text-amber-600" />}
 
-      {/* Modal de Confirmação de Exclusão */}
-      {deleteConfirmation && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
-            <div className="p-6 text-center">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertTriangle className="w-8 h-8 text-red-600" />
+              <div className="flex-1">
+                <p className="font-medium text-sm leading-relaxed">{notification.message}</p>
               </div>
 
-              <h3 className="text-xl font-bold text-slate-800 mb-2">{deleteConfirmation.title}</h3>
-              <p className="text-slate-600 mb-6 leading-relaxed">{deleteConfirmation.message}</p>
-              <p className="text-sm text-red-600 mb-6">Esta ação não pode ser desfeita.</p>
+              <button
+                onClick={() => setNotification(null)}
+                className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-black/5 transition-colors duration-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setDeleteConfirmation(null)}
-                  className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDeleteItem(selectedItem.type, deleteConfirmation.item.id)}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/30 transition-all duration-300"
-                >
-                  Excluir
-                </button>
+        {deleteConfirmation && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle className="w-8 h-8 text-red-600" />
+                </div>
+
+                <h3 className="text-xl font-bold text-slate-800 mb-2">{deleteConfirmation.title}</h3>
+                <p className="text-slate-600 mb-6 leading-relaxed">{deleteConfirmation.message}</p>
+                <p className="text-sm text-red-600 mb-6">Esta ação não pode ser desfeita.</p>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirmation(null)}
+                    className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteItem(selectedItem.type, deleteConfirmation.item.id)}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/30 transition-all duration-300"
+                  >
+                    Excluir
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </ProtectedRoute>
   )
 }
 

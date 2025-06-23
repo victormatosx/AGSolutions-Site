@@ -1,10 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { database } from "../firebase/firebase"
-import { ref, get, push, set } from "firebase/database"
 import { useAuthState } from "react-firebase-hooks/auth"
-import { auth } from "../firebase/firebase"
+import { auth, database } from "../firebase/firebase"
+import { ref, get, push, set } from "firebase/database"
 import {
   Calendar,
   Users,
@@ -48,8 +47,36 @@ const Dashboard = () => {
     }, 5000)
   }
 
+  // Verificar se usuário está autenticado antes de carregar dados
+  useEffect(() => {
+    if (loading) return // Ainda carregando estado de auth
+
+    if (!user) {
+      setIsLoading(false)
+      return // ProtectedRoute vai lidar com o redirecionamento
+    }
+
+    // Usuário autenticado, carregar dados
+    const loadData = async () => {
+      const propriedadeNome = await getPropriedadeNome(user)
+      if (propriedadeNome) {
+        setCurrentPropriedadeNome(propriedadeNome)
+        const data = await fetchAllData(propriedadeNome, currentViewMode)
+        setCurrentCalendarData(data)
+      }
+      setIsLoading(false)
+    }
+
+    loadData()
+  }, [user, loading, currentViewMode])
+
   // Função para gerar PDF com layout profissional
   const generatePDF = async () => {
+    if (!user) {
+      showNotification("error", "Você precisa estar logado para gerar relatórios")
+      return
+    }
+
     try {
       setIsGeneratingPDF(true)
 
@@ -656,28 +683,9 @@ const Dashboard = () => {
     }
   }
 
-  // Carregar dados iniciais
-  useEffect(() => {
-    const loadData = async () => {
-      if (user) {
-        const propriedadeNome = await getPropriedadeNome(user)
-        if (propriedadeNome) {
-          setCurrentPropriedadeNome(propriedadeNome)
-          const data = await fetchAllData(propriedadeNome, currentViewMode)
-          setCurrentCalendarData(data)
-        }
-      }
-      setIsLoading(false)
-    }
-
-    if (!loading) {
-      loadData()
-    }
-  }, [user, loading, currentViewMode])
-
   // Função para alternar modo de visualização
   const switchViewMode = async (newMode) => {
-    if (newMode === currentViewMode) return
+    if (newMode === currentViewMode || !user) return
 
     setIsLoading(true)
     setCurrentViewMode(newMode)
@@ -691,6 +699,8 @@ const Dashboard = () => {
 
   // Função para navegar entre semanas
   const navigateToWeek = async (direction) => {
+    if (!user) return
+
     setIsLoading(true)
     const newDate = new Date(currentReferenceDate)
     newDate.setDate(currentReferenceDate.getDate() + direction * 7)
@@ -705,6 +715,8 @@ const Dashboard = () => {
 
   // Função para ir para semana atual
   const navigateToCurrentWeek = async () => {
+    if (!user) return
+
     setIsLoading(true)
     setCurrentReferenceDate(new Date())
 
@@ -724,6 +736,11 @@ const Dashboard = () => {
 
   // Função para salvar justificativa
   const salvarJustificativa = async () => {
+    if (!user) {
+      showNotification("error", "Você precisa estar logado para realizar esta ação.")
+      return
+    }
+
     if (!justificativaText.trim()) {
       showNotification("error", "Por favor, digite uma justificativa.")
       return
@@ -912,7 +929,7 @@ const Dashboard = () => {
     )
   }
 
-  if (loading) {
+  if (loading || isLoading) {
     return (
       <div className="dashboard-loading">
         <div className="loading-spinner">
