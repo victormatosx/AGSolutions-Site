@@ -3,49 +3,65 @@
 import { useState, useEffect } from "react"
 import { useAuthState } from "react-firebase-hooks/auth"
 import { auth, database } from "../firebase/firebase"
-import { ref, get, push, set } from "firebase/database"
+import { ref, onValue, update, remove } from "firebase/database"
+import ProtectedRoute from "./ProtectedRoute"
 import {
-  Calendar,
-  Users,
-  Tractor,
-  Check,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  CalendarDays,
-  Download,
-  CheckCircle,
-  AlertCircle,
-  Activity,
-  Clock,
+  Settings,
+  Truck,
   FileText,
+  Fuel,
+  Route,
+  ArrowLeft,
+  ChevronDown,
+  MapPin,
+  Calendar,
+  Eye,
+  Filter,
+  Clock,
+  CheckCircle2,
+  X,
   Loader2,
+  Trash2,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  UserPlus,
 } from "lucide-react"
-import jsPDF from "jspdf"
 
-const Dashboard = () => {
-  // Estados principais
+const Apontamentos = () => {
   const [user, loading, error] = useAuthState(auth)
-  const [currentReferenceDate, setCurrentReferenceDate] = useState(new Date())
-  const [currentPropriedadeNome, setCurrentPropriedadeNome] = useState("")
-  const [currentViewMode, setCurrentViewMode] = useState("operadores")
-  const [currentCalendarData, setCurrentCalendarData] = useState({ entities: [], activities: {}, justificativas: {} })
+  const [currentStep, setCurrentStep] = useState("categories")
+  const [selectedCategory, setSelectedCategory] = useState(null)
+  const [selectedType, setSelectedType] = useState(null)
+  const [selectedStatus, setSelectedStatus] = useState("pending")
+  const [selectedItem, setSelectedItem] = useState(null)
+  const [showModal, setShowModal] = useState(false)
+
+  const [showFilters, setShowFilters] = useState(false)
+  const [filters, setFilters] = useState({
+    dateFrom: "",
+    dateTo: "",
+    searchTerm: "",
+  })
+
+  // Estados para os dados
+  const [data, setData] = useState({
+    apontamentos: [],
+    abastecimentos: [],
+    percursos: [],
+    abastecimentoVeiculos: [],
+  })
   const [isLoading, setIsLoading] = useState(true)
-  const [showJustificativaModal, setShowJustificativaModal] = useState(false)
-  const [selectedJustificativa, setSelectedJustificativa] = useState(null)
-  const [justificativaText, setJustificativaText] = useState("")
 
-  // Estados para notificações
+  // Adicionar após os outros estados
+  const [usuarios, setUsuarios] = useState({})
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedItem, setEditedItem] = useState(null)
+  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
+
+  // Estados para notificações e confirmação
   const [notification, setNotification] = useState(null)
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
-
-  // Função para mostrar notificação
-  const showNotification = (type, message) => {
-    setNotification({ type, message })
-    setTimeout(() => {
-      setNotification(null)
-    }, 5000)
-  }
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null)
 
   // Verificar se usuário está autenticado antes de carregar dados
   useEffect(() => {
@@ -58,1075 +74,1054 @@ const Dashboard = () => {
 
     // Usuário autenticado, carregar dados
     const loadData = async () => {
-      const propriedadeNome = await getPropriedadeNome(user)
-      if (propriedadeNome) {
-        setCurrentPropriedadeNome(propriedadeNome)
-        const data = await fetchAllData(propriedadeNome, currentViewMode)
-        setCurrentCalendarData(data)
+      setIsLoading(true)
+
+      try {
+        // Carregar usuários
+        const usersRef = ref(database, "propriedades/Matrice/users")
+        onValue(usersRef, (snapshot) => {
+          const usersData = snapshot.val()
+          if (usersData) {
+            setUsuarios(usersData)
+          }
+        })
+
+        // Carregar apontamentos
+        const apontamentosRef = ref(database, "propriedades/Matrice/apontamentos")
+        onValue(apontamentosRef, (snapshot) => {
+          const apontamentosData = snapshot.val()
+          const apontamentosList = apontamentosData
+            ? Object.keys(apontamentosData).map((key) => ({
+                id: key,
+                ...apontamentosData[key],
+              }))
+            : []
+          setData((prev) => ({ ...prev, apontamentos: apontamentosList }))
+        })
+
+        // Carregar abastecimentos
+        const abastecimentosRef = ref(database, "propriedades/Matrice/abastecimentos")
+        onValue(abastecimentosRef, (snapshot) => {
+          const abastecimentosData = snapshot.val()
+          const abastecimentosList = abastecimentosData
+            ? Object.keys(abastecimentosData).map((key) => ({
+                id: key,
+                ...abastecimentosData[key],
+              }))
+            : []
+          setData((prev) => ({ ...prev, abastecimentos: abastecimentosList }))
+        })
+
+        // Carregar percursos
+        const percursosRef = ref(database, "propriedades/Matrice/percursos")
+        onValue(percursosRef, (snapshot) => {
+          const percursosData = snapshot.val()
+          const percursosList = percursosData
+            ? Object.keys(percursosData).map((key) => ({
+                id: key,
+                ...percursosData[key],
+              }))
+            : []
+          setData((prev) => ({ ...prev, percursos: percursosList }))
+        })
+
+        // Carregar abastecimento de veículos
+        const abastecimentoVeiculosRef = ref(database, "propriedades/Matrice/abastecimentoVeiculos")
+        onValue(abastecimentoVeiculosRef, (snapshot) => {
+          const abastecimentoVeiculosData = snapshot.val()
+          const abastecimentoVeiculosList = abastecimentoVeiculosData
+            ? Object.keys(abastecimentoVeiculosData).map((key) => ({
+                id: key,
+                ...abastecimentoVeiculosData[key],
+              }))
+            : []
+          setData((prev) => ({ ...prev, abastecimentoVeiculos: abastecimentoVeiculosList }))
+          setIsLoading(false)
+        })
+      } catch (err) {
+        console.error("Erro ao carregar dados:", err)
+        setIsLoading(false)
+        showNotification("Erro ao carregar dados.", "error")
       }
-      setIsLoading(false)
     }
 
     loadData()
-  }, [user, loading, currentViewMode])
+  }, [user, loading])
 
-  // Função para gerar PDF com layout profissional
-  const generatePDF = async () => {
+  // Sistema de notificações
+  const showNotification = (message, type = "success") => {
+    setNotification({ message, type })
+    setTimeout(() => setNotification(null), 4000)
+  }
+
+  // Função para validar item
+  const validarItem = async (tipo, itemId) => {
     if (!user) {
-      showNotification("error", "Você precisa estar logado para gerar relatórios")
+      showNotification("Você precisa estar logado para realizar esta ação.", "error")
       return
     }
 
     try {
-      setIsGeneratingPDF(true)
-
-      // Verificar se há dados para gerar o relatório
-      if (!currentCalendarData.entities || currentCalendarData.entities.length === 0) {
-        showNotification("error", "Não há dados disponíveis para gerar o relatório")
-        return
+      let path = ""
+      switch (tipo) {
+        case "apontamentos":
+          path = `propriedades/Matrice/apontamentos/${itemId}`
+          break
+        case "abastecimentos":
+          path = `propriedades/Matrice/abastecimentos/${itemId}`
+          break
+        case "percursos":
+          path = `propriedades/Matrice/percursos/${itemId}`
+          break
+        case "abastecimentoVeiculos":
+          path = `propriedades/Matrice/abastecimentoVeiculos/${itemId}`
+          break
+        default:
+          throw new Error("Tipo inválido")
       }
 
-      // Criar documento PDF em formato paisagem
-      const doc = new jsPDF("landscape", "mm", "a4")
-      const weekDays = getWeekDays(currentReferenceDate)
-      const startDate = weekDays[0].formattedDate
-      const endDate = weekDays[6].formattedDate
-
-      // Configurar fonte
-      doc.setFont("helvetica")
-
-      // === CABEÇALHO PRINCIPAL ===
-      doc.setFontSize(18)
-      doc.setTextColor(46, 54, 49) // Verde escuro
-      const title = `Relatório de Atividades Semanais - ${currentViewMode === "operadores" ? "Operadores" : "Máquinas"}`
-      doc.text(title, 148, 20, { align: "center" })
-
-      // Subtítulos
-      doc.setFontSize(12)
-      doc.setTextColor(100, 100, 100)
-      doc.text(`Período: ${startDate} a ${endDate}`, 148, 30, { align: "center" })
-      doc.text(`Propriedade: ${currentPropriedadeNome}`, 148, 38, { align: "center" })
-      doc.text(
-        `Gerado em: ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR")}`,
-        148,
-        46,
-        { align: "center" },
-      )
-
-      // Linha separadora
-      doc.setDrawColor(200, 200, 200)
-      doc.line(20, 52, 277, 52)
-
-      // === LEGENDA ===
-      doc.setFontSize(10)
-      doc.setTextColor(80, 80, 80)
-      doc.text("Legenda:", 20, 62)
-
-      const legendY = 68
-
-      // Círculos da legenda com cores
-      doc.setFillColor(16, 185, 129) // Verde
-      doc.circle(25, legendY, 2, "F")
-      doc.text("Apontamento Realizado", 30, legendY + 1)
-
-      doc.setFillColor(59, 130, 246) // Azul
-      doc.circle(85, legendY, 2, "F")
-      doc.text("Justificado", 90, legendY + 1)
-
-      doc.setFillColor(239, 68, 68) // Vermelho
-      doc.circle(125, legendY, 2, "F")
-      doc.text("Sem Apontamento", 130, legendY + 1)
-
-      doc.setFillColor(148, 163, 184) // Cinza
-      doc.circle(185, legendY, 2, "F")
-      doc.text("Data Futura", 190, legendY + 1)
-
-      // === TABELA ===
-      let currentY = 80
-      const rowHeight = 8
-      const colWidths = [60, 31, 31, 31, 31, 31, 31, 31] // Larguras das colunas
-      let colX = 20
-
-      // Cabeçalho da tabela
-      doc.setFillColor(248, 250, 252)
-      doc.rect(20, currentY, 257, rowHeight, "F")
-
-      doc.setFontSize(9)
-      doc.setTextColor(30, 41, 59)
-      doc.setFont("helvetica", "bold")
-
-      // Nome da coluna principal
-      doc.text(currentViewMode === "operadores" ? "OPERADOR" : "MÁQUINA", 22, currentY + 5)
-      colX = 80
-
-      // Cabeçalhos dos dias
-      weekDays.forEach((day) => {
-        doc.text(day.name.substring(0, 3), colX + 2, currentY + 2)
-        doc.text(day.formattedDate, colX + 2, currentY + 6)
-        colX += 31
-      })
-
-      currentY += rowHeight
-
-      // === DADOS DA TABELA ===
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(8)
-
-      const today = new Date()
-      let totalActivities = 0
-      let totalJustificativas = 0
-      let totalMissing = 0
-      let totalPossibleActivities = 0
-
-      currentCalendarData.entities.forEach((entity, index) => {
-        // Alternar cor de fundo das linhas
-        if (index % 2 === 0) {
-          doc.setFillColor(255, 255, 255)
-        } else {
-          doc.setFillColor(248, 250, 252)
-        }
-        doc.rect(20, currentY, 257, rowHeight, "F")
-
-        // Nome da entidade
-        doc.setTextColor(30, 41, 59)
-        const entityName = entity.nome.length > 25 ? entity.nome.substring(0, 22) + "..." : entity.nome
-        doc.text(entityName, 22, currentY + 5)
-
-        // Status para cada dia
-        colX = 80
-        weekDays.forEach((day) => {
-          const dateKey = formatDateKey(day.date)
-          const isFutureDate = day.date > today
-          const hasActivity =
-            currentCalendarData.activities[entity.id] && currentCalendarData.activities[entity.id][dateKey]
-          const hasJustificativa =
-            currentCalendarData.justificativas[entity.id] && currentCalendarData.justificativas[entity.id][dateKey]
-
-          const centerX = colX + 15.5
-          const centerY = currentY + 4
-
-          if (isFutureDate) {
-            // Data futura (cinza)
-            doc.setFillColor(148, 163, 184)
-            doc.circle(centerX, centerY, 3, "F")
-            doc.setTextColor(255, 255, 255)
-            doc.text("-", centerX - 1, centerY + 1)
-          } else {
-            totalPossibleActivities++
-            if (hasActivity) {
-              // Atividade realizada (verde)
-              doc.setFillColor(16, 185, 129)
-              doc.circle(centerX, centerY, 3, "F")
-              doc.setTextColor(255, 255, 255)
-              doc.text("✓", centerX - 1.5, centerY + 1)
-              totalActivities++
-            } else if (hasJustificativa) {
-              // Justificado (azul)
-              doc.setFillColor(59, 130, 246)
-              doc.circle(centerX, centerY, 3, "F")
-              doc.setTextColor(255, 255, 255)
-              doc.text("J", centerX - 1, centerY + 1)
-              totalJustificativas++
-            } else {
-              // Sem apontamento (vermelho)
-              doc.setFillColor(239, 68, 68)
-              doc.circle(centerX, centerY, 3, "F")
-              doc.setTextColor(255, 255, 255)
-              doc.text("✗", centerX - 1.5, centerY + 1)
-              totalMissing++
-            }
-          }
-
-          colX += 31
-        })
-
-        currentY += rowHeight
-
-        // Verificar se precisa de nova página
-        if (currentY > 180) {
-          doc.addPage()
-          currentY = 20
-
-          // Repetir cabeçalho na nova página
-          doc.setFillColor(248, 250, 252)
-          doc.rect(20, currentY, 257, rowHeight, "F")
-
-          doc.setFontSize(9)
-          doc.setTextColor(30, 41, 59)
-          doc.setFont("helvetica", "bold")
-
-          doc.text(currentViewMode === "operadores" ? "OPERADOR" : "MÁQUINA", 22, currentY + 5)
-          colX = 80
-
-          weekDays.forEach((day) => {
-            doc.text(day.name.substring(0, 3), colX + 2, currentY + 2)
-            doc.text(day.formattedDate, colX + 2, currentY + 6)
-            colX += 31
-          })
-
-          currentY += rowHeight
-          doc.setFont("helvetica", "normal")
-          doc.setFontSize(8)
-        }
-      })
-
-      // === RESUMO ESTATÍSTICO ===
-      currentY += 10
-      if (currentY > 170) {
-        doc.addPage()
-        currentY = 20
-      }
-
-      doc.setFontSize(12)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(46, 54, 49)
-      doc.text("Resumo Estatístico", 20, currentY)
-
-      currentY += 10
-      doc.setFontSize(10)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(80, 80, 80)
-
-      // Calcular percentuais
-      const totalEntities = currentCalendarData.entities.length
-      const totalDays = weekDays.filter((day) => day.date <= today).length
-      const activityPercentage =
-        totalPossibleActivities > 0 ? ((totalActivities / totalPossibleActivities) * 100).toFixed(1) : 0
-      const justifiedPercentage =
-        totalPossibleActivities > 0 ? ((totalJustificativas / totalPossibleActivities) * 100).toFixed(1) : 0
-      const missingPercentage =
-        totalPossibleActivities > 0 ? ((totalMissing / totalPossibleActivities) * 100).toFixed(1) : 0
-
-      // Estatísticas detalhadas
-      doc.text(`Total de ${currentViewMode}: ${totalEntities}`, 20, currentY)
-      currentY += 6
-      doc.text(`Dias analisados: ${totalDays}`, 20, currentY)
-      currentY += 6
-      doc.text(`Total de atividades possíveis: ${totalPossibleActivities}`, 20, currentY)
-      currentY += 8
-      doc.text(`Apontamentos realizados: ${totalActivities} (${activityPercentage}%)`, 20, currentY)
-      currentY += 6
-      doc.text(`Justificativas: ${totalJustificativas} (${justifiedPercentage}%)`, 20, currentY)
-      currentY += 6
-      doc.text(`Sem apontamento: ${totalMissing} (${missingPercentage}%)`, 20, currentY)
-
-      // === ANÁLISE DE PERFORMANCE ===
-      currentY += 15
-      doc.setFontSize(12)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(46, 54, 49)
-      doc.text("Análise de Performance", 20, currentY)
-
-      currentY += 10
-      doc.setFontSize(10)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(80, 80, 80)
-
-      const performanceScore =
-        totalPossibleActivities > 0 ? ((totalActivities + totalJustificativas) / totalPossibleActivities) * 100 : 0
-      let performanceStatus = ""
-      let performanceColor = [0, 0, 0]
-
-      if (performanceScore >= 90) {
-        performanceStatus = "Excelente"
-        performanceColor = [16, 185, 129]
-      } else if (performanceScore >= 75) {
-        performanceStatus = "Bom"
-        performanceColor = [59, 130, 246]
-      } else if (performanceScore >= 60) {
-        performanceStatus = "Regular"
-        performanceColor = [245, 158, 11]
-      } else {
-        performanceStatus = "Necessita Atenção"
-        performanceColor = [239, 68, 68]
-      }
-
-      doc.setTextColor(...performanceColor)
-      doc.text(`Score de Performance: ${performanceScore.toFixed(1)}% - ${performanceStatus}`, 20, currentY)
-
-      // === RODAPÉ ===
-      const pageHeight = doc.internal.pageSize.height
-      doc.setFontSize(8)
-      doc.setTextColor(128, 128, 128)
-      doc.text(
-        `Relatório gerado automaticamente pelo sistema em ${new Date().toLocaleString("pt-BR")}`,
-        20,
-        pageHeight - 10,
-      )
-      doc.text(`Página ${doc.internal.getNumberOfPages()}`, 260, pageHeight - 10)
-
-      // Salvar PDF
-      const fileName = `relatorio_atividades_${currentViewMode}_${startDate.replace(/\//g, "-")}_a_${endDate.replace(/\//g, "-")}.pdf`
-      doc.save(fileName)
-
-      showNotification("success", "Relatório PDF gerado com sucesso!")
+      const itemRef = ref(database, path)
+      await update(itemRef, { status: "validated" })
+      showNotification("Item validado com sucesso!", "success")
     } catch (error) {
-      console.error("Erro ao gerar PDF:", error)
-      showNotification("error", "Erro ao gerar o relatório PDF. Tente novamente.")
-    } finally {
-      setIsGeneratingPDF(false)
+      console.error("Erro ao validar item:", error)
+      showNotification("Erro ao validar item. Tente novamente.", "error")
     }
   }
 
-  // Função para obter os dias da semana
-  const getWeekDays = (referenceDate) => {
-    const days = ["DOMINGO", "SEGUNDA-FEIRA", "TERÇA-FEIRA", "QUARTA-FEIRA", "QUINTA-FEIRA", "SEXTA-FEIRA", "SÁBADO"]
-    const currentDay = referenceDate.getDay()
-    const sunday = new Date(referenceDate)
-    sunday.setDate(referenceDate.getDate() - currentDay)
-
-    const weekDays = []
-    for (let i = 0; i < 7; i++) {
-      const day = new Date(sunday)
-      day.setDate(sunday.getDate() + i)
-      const formattedDate = `${day.getDate().toString().padStart(2, "0")}/${(day.getMonth() + 1).toString().padStart(2, "0")}`
-
-      weekDays.push({
-        name: days[i],
-        date: day,
-        formattedDate: formattedDate,
-      })
-    }
-    return weekDays
-  }
-
-  // Função para converter data brasileira
-  const parseBrazilianDate = (dateString) => {
-    if (!dateString) return null
-    try {
-      const parts = dateString.split("/")
-      if (parts.length === 3) {
-        const day = Number.parseInt(parts[0], 10)
-        const month = Number.parseInt(parts[1], 10) - 1
-        const year = Number.parseInt(parts[2], 10)
-        return new Date(year, month, day)
-      }
-      return null
-    } catch (error) {
-      console.error("Erro ao converter data:", error, dateString)
-      return null
-    }
-  }
-
-  // Função para formatar data como chave
-  const formatDateKey = (date) => {
-    if (!date) return null
-    return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`
-  }
-
-  // Função para buscar todas as máquinas
-  const fetchAllMaquinas = async (propriedadeNome) => {
-    try {
-      const maquinas = []
-      const maquinasSet = new Set()
-
-      // Buscar máquinas dos apontamentos
-      const apontamentosRef = ref(database, `propriedades/${propriedadeNome}/apontamentos`)
-      const apontamentosSnapshot = await get(apontamentosRef)
-
-      if (apontamentosSnapshot.exists()) {
-        const apontamentos = apontamentosSnapshot.val()
-        for (const apontamentoId in apontamentos) {
-          const apontamento = apontamentos[apontamentoId]
-          if (apontamento.operacoesMecanizadas) {
-            for (const operacaoId in apontamento.operacoesMecanizadas) {
-              const operacao = apontamento.operacoesMecanizadas[operacaoId]
-              if (operacao.bem) {
-                maquinasSet.add(operacao.bem)
-              }
-            }
-          }
-        }
-      }
-
-      // Buscar máquinas cadastradas
-      const maquinariosRef = ref(database, `propriedades/${propriedadeNome}/maquinarios`)
-      const maquinariosSnapshot = await get(maquinariosRef)
-
-      if (maquinariosSnapshot.exists()) {
-        const maquinariosData = maquinariosSnapshot.val()
-        for (const maquinaId in maquinariosData) {
-          const maquina = maquinariosData[maquinaId]
-          const nomeMaquina = maquina.nome || `Máquina ${maquinaId}`
-          maquinas.push({
-            id: maquinaId,
-            nome: nomeMaquina,
-            bemAttachment: nomeMaquina,
-          })
-          maquinasSet.add(nomeMaquina)
-        }
-      }
-
-      // Adicionar máquinas dos apontamentos não cadastradas
-      const maquinasFromApontamentos = Array.from(maquinasSet)
-        .filter((maquinaNome) => !maquinas.some((m) => m.bemAttachment === maquinaNome))
-        .map((maquinaNome, index) => ({
-          id: `maquina_apontamento_${index}`,
-          nome: maquinaNome,
-          bemAttachment: maquinaNome,
-        }))
-
-      maquinas.push(...maquinasFromApontamentos)
-      return maquinas
-    } catch (error) {
-      console.error("Erro ao buscar máquinas:", error)
-      return []
-    }
-  }
-
-  // Função para buscar todos os dados
-  const fetchAllData = async (propriedadeNome, viewMode = "operadores") => {
-    try {
-      let entities = []
-      const activities = {}
-      const justificativas = {}
-
-      if (viewMode === "operadores") {
-        const usersRef = ref(database, `propriedades/${propriedadeNome}/users`)
-        const usersSnapshot = await get(usersRef)
-
-        if (usersSnapshot.exists()) {
-          const usersData = usersSnapshot.val()
-          for (const userId in usersData) {
-            const userData = usersData[userId]
-            if (userData.role === "user") {
-              entities.push({
-                id: userId,
-                nome: userData.nome || "Sem nome",
-                type: "operador",
-              })
-            }
-          }
-        }
-      } else {
-        entities = await fetchAllMaquinas(propriedadeNome)
-        entities.forEach((maquina) => {
-          maquina.type = "maquina"
-        })
-      }
-
-      entities.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-
-      entities.forEach((entity) => {
-        activities[entity.id] = {}
-        justificativas[entity.id] = {}
-      })
-
-      // Processar apontamentos
-      const apontamentosRef = ref(database, `propriedades/${propriedadeNome}/apontamentos`)
-      const apontamentosSnapshot = await get(apontamentosRef)
-
-      if (apontamentosSnapshot.exists()) {
-        const apontamentos = apontamentosSnapshot.val()
-        for (const apontamentoId in apontamentos) {
-          const apontamento = apontamentos[apontamentoId]
-          const itemDate = parseBrazilianDate(apontamento.data)
-          if (!itemDate) continue
-
-          const dateKey = formatDateKey(itemDate)
-
-          if (viewMode === "operadores") {
-            const userId = apontamento.userId
-            if (userId && activities[userId]) {
-              activities[userId][dateKey] = true
-            }
-          } else {
-            if (apontamento.operacoesMecanizadas) {
-              for (const operacaoId in apontamento.operacoesMecanizadas) {
-                const operacao = apontamento.operacoesMecanizadas[operacaoId]
-                if (operacao.bem) {
-                  const maquina = entities.find((m) => m.bemAttachment === operacao.bem)
-                  if (maquina && activities[maquina.id]) {
-                    activities[maquina.id][dateKey] = true
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // Processar outros tipos de dados apenas para operadores
-      if (viewMode === "operadores") {
-        // Percursos
-        const percursosRef = ref(database, `propriedades/${propriedadeNome}/percursos`)
-        const percursosSnapshot = await get(percursosRef)
-        if (percursosSnapshot.exists()) {
-          const percursos = percursosSnapshot.val()
-          for (const percursoId in percursos) {
-            const percurso = percursos[percursoId]
-            const userId = percurso.userId
-            if (!userId || !activities[userId]) continue
-            const itemDate = parseBrazilianDate(percurso.data)
-            if (!itemDate) continue
-            const dateKey = formatDateKey(itemDate)
-            activities[userId][dateKey] = true
-          }
-        }
-
-        // Abastecimentos
-        const abastecimentosRef = ref(database, `propriedades/${propriedadeNome}/abastecimentos`)
-        const abastecimentosSnapshot = await get(abastecimentosRef)
-        if (abastecimentosSnapshot.exists()) {
-          const abastecimentos = abastecimentosSnapshot.val()
-          for (const abastecimentoId in abastecimentos) {
-            const abastecimento = abastecimentos[abastecimentoId]
-            let userId = abastecimento.userId || abastecimento.operadorId
-            if (!userId && abastecimento.operador) {
-              userId = typeof abastecimento.operador === "object" ? abastecimento.operador.id : abastecimento.operador
-            }
-            if (!userId || !activities[userId]) continue
-
-            let itemDate = null
-            if (abastecimento.data) {
-              itemDate = parseBrazilianDate(abastecimento.data)
-            } else if (abastecimento.dataAbastecimento) {
-              itemDate = parseBrazilianDate(abastecimento.dataAbastecimento)
-            } else if (abastecimento.timestamp) {
-              itemDate = new Date(abastecimento.timestamp)
-            }
-            if (!itemDate) continue
-
-            const dateKey = formatDateKey(itemDate)
-            activities[userId][dateKey] = true
-          }
-        }
-
-        // Abastecimento de veículos
-        const abastecimentoVeiculosRef = ref(database, `propriedades/${propriedadeNome}/abastecimentoVeiculos`)
-        const abastecimentoVeiculosSnapshot = await get(abastecimentoVeiculosRef)
-        if (abastecimentoVeiculosSnapshot.exists()) {
-          const abastecimentoVeiculos = abastecimentoVeiculosSnapshot.val()
-          for (const abastecimentoId in abastecimentoVeiculos) {
-            const abastecimento = abastecimentoVeiculos[abastecimentoId]
-            let userId = abastecimento.userId || abastecimento.motorista
-            if (!userId && abastecimento.condutor) {
-              userId = typeof abastecimento.condutor === "object" ? abastecimento.condutor.id : abastecimento.condutor
-            }
-            if (!userId || !activities[userId]) continue
-
-            let itemDate = null
-            if (abastecimento.data) {
-              itemDate = parseBrazilianDate(abastecimento.data)
-            } else if (abastecimento.dataAbastecimento) {
-              itemDate = parseBrazilianDate(abastecimento.dataAbastecimento)
-            } else if (abastecimento.timestamp) {
-              itemDate = new Date(abastecimento.timestamp)
-            }
-            if (!itemDate) continue
-
-            const dateKey = formatDateKey(itemDate)
-            activities[userId][dateKey] = true
-          }
-        }
-      }
-
-      // Processar justificativas
-      const justificativasRef = ref(database, `propriedades/${propriedadeNome}/justificativas`)
-      const justificativasSnapshot = await get(justificativasRef)
-      if (justificativasSnapshot.exists()) {
-        const justificativasData = justificativasSnapshot.val()
-        for (const justificativaId in justificativasData) {
-          const justificativa = justificativasData[justificativaId]
-
-          if (justificativa.userId && viewMode === "operadores") {
-            const userId = justificativa.userId
-            if (!userId || !justificativas[userId]) continue
-            const itemDate = parseBrazilianDate(justificativa.data)
-            if (!itemDate) continue
-            const dateKey = formatDateKey(itemDate)
-            justificativas[userId][dateKey] = justificativa.justificativa
-          } else if (justificativa.maquinaId && viewMode === "maquinas") {
-            const maquinaId = justificativa.maquinaId
-            if (!maquinaId || !justificativas[maquinaId]) continue
-            const itemDate = parseBrazilianDate(justificativa.data)
-            if (!itemDate) continue
-            const dateKey = formatDateKey(itemDate)
-            justificativas[maquinaId][dateKey] = justificativa.justificativa
-          }
-        }
-      }
-
-      return { entities, activities, justificativas }
-    } catch (error) {
-      console.error("Erro ao buscar dados:", error)
-      return { entities: [], activities: {}, justificativas: {} }
-    }
-  }
-
-  // Função para obter nome da propriedade do usuário
-  const getPropriedadeNome = async (user) => {
-    try {
-      if (!user?.email) return null
-
-      const propriedadesRef = ref(database, "propriedades")
-      const snapshot = await get(propriedadesRef)
-
-      if (snapshot.exists()) {
-        const propriedades = snapshot.val()
-        for (const propriedadeNome in propriedades) {
-          const propriedade = propriedades[propriedadeNome]
-          if (propriedade.users) {
-            for (const userId in propriedade.users) {
-              const userData = propriedade.users[userId]
-              if (userData.email === user.email) {
-                return propriedadeNome
-              }
-            }
-          }
-        }
-      }
-      return null
-    } catch (error) {
-      console.error("Erro ao buscar propriedade:", error)
-      return null
-    }
-  }
-
-  // Função para alternar modo de visualização
-  const switchViewMode = async (newMode) => {
-    if (newMode === currentViewMode || !user) return
-
-    setIsLoading(true)
-    setCurrentViewMode(newMode)
-
-    if (currentPropriedadeNome) {
-      const data = await fetchAllData(currentPropriedadeNome, newMode)
-      setCurrentCalendarData(data)
-    }
-    setIsLoading(false)
-  }
-
-  // Função para navegar entre semanas
-  const navigateToWeek = async (direction) => {
-    if (!user) return
-
-    setIsLoading(true)
-    const newDate = new Date(currentReferenceDate)
-    newDate.setDate(currentReferenceDate.getDate() + direction * 7)
-    setCurrentReferenceDate(newDate)
-
-    if (currentPropriedadeNome) {
-      const data = await fetchAllData(currentPropriedadeNome, currentViewMode)
-      setCurrentCalendarData(data)
-    }
-    setIsLoading(false)
-  }
-
-  // Função para ir para semana atual
-  const navigateToCurrentWeek = async () => {
-    if (!user) return
-
-    setIsLoading(true)
-    setCurrentReferenceDate(new Date())
-
-    if (currentPropriedadeNome) {
-      const data = await fetchAllData(currentPropriedadeNome, currentViewMode)
-      setCurrentCalendarData(data)
-    }
-    setIsLoading(false)
-  }
-
-  // Função para abrir modal de justificativa
-  const openJustificativaModal = (entityId, dateKey, entityType) => {
-    setSelectedJustificativa({ entityId, dateKey, entityType })
-    setJustificativaText("")
-    setShowJustificativaModal(true)
-  }
-
-  // Função para salvar justificativa
-  const salvarJustificativa = async () => {
+  // Função para excluir item
+  const handleDeleteItem = async (tipo, itemId) => {
     if (!user) {
-      showNotification("error", "Você precisa estar logado para realizar esta ação.")
-      return
-    }
-
-    if (!justificativaText.trim()) {
-      showNotification("error", "Por favor, digite uma justificativa.")
+      showNotification("Você precisa estar logado para realizar esta ação.", "error")
       return
     }
 
     try {
-      const { entityId, dateKey, entityType } = selectedJustificativa
-      const [year, month, day] = dateKey.split("-")
-      const dataFormatada = `${day}/${month}/${year}`
-
-      const justificativaData = {
-        data: dataFormatada,
-        justificativa: justificativaText,
-        timestamp: Date.now(),
-        status: "justificado",
+      let path = ""
+      switch (tipo) {
+        case "apontamentos":
+          path = `propriedades/Matrice/apontamentos/${itemId}`
+          break
+        case "abastecimentos":
+          path = `propriedades/Matrice/abastecimentos/${itemId}`
+          break
+        case "percursos":
+          path = `propriedades/Matrice/percursos/${itemId}`
+          break
+        case "abastecimentoVeiculos":
+          path = `propriedades/Matrice/abastecimentoVeiculos/${itemId}`
+          break
+        default:
+          throw new Error("Tipo inválido")
       }
 
-      if (entityType === "userId") {
-        justificativaData.userId = entityId
-        justificativaData.tipo = "operador"
-      } else {
-        justificativaData.maquinaId = entityId
-        justificativaData.tipo = "maquina"
-      }
-
-      const justificativasRef = ref(database, `propriedades/${currentPropriedadeNome}/justificativas`)
-      const newJustificativaRef = push(justificativasRef)
-      await set(newJustificativaRef, justificativaData)
-
-      // Atualizar dados locais
-      const updatedData = { ...currentCalendarData }
-      updatedData.justificativas[entityId][dateKey] = justificativaText
-      setCurrentCalendarData(updatedData)
-
-      setShowJustificativaModal(false)
-      showNotification("success", "Justificativa salva com sucesso!")
+      const itemRef = ref(database, path)
+      await remove(itemRef)
+      setDeleteConfirmation(null)
+      setShowModal(false)
+      showNotification("Item excluído com sucesso!", "success")
     } catch (error) {
-      console.error("Erro ao salvar justificativa:", error)
-      showNotification("error", `Erro ao salvar justificativa: ${error.message}`)
+      console.error("Erro ao excluir item:", error)
+      showNotification("Erro ao excluir item", "error")
     }
   }
 
-  // Renderizar calendário
-  const renderCalendar = () => {
-    if (isLoading) {
-      return (
-        <div className="min-h-[60vh] bg-white/80 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/25">
-              <Loader2 className="w-8 h-8 text-white animate-spin" />
-            </div>
-            <h3 className="text-lg font-medium text-slate-700 mb-2">Carregando dados do calendário</h3>
-            <p className="text-slate-500">Aguarde enquanto buscamos as informações...</p>
+  const confirmDelete = (item) => {
+    setDeleteConfirmation({
+      item,
+      title: "Excluir Registro",
+      message: `Tem certeza que deseja excluir este registro?`,
+    })
+  }
+
+  // Selecionar categoria
+  const selectCategory = (category) => {
+    setSelectedCategory(category)
+    setCurrentStep("types")
+  }
+
+  // Selecionar tipo
+  const selectType = (type) => {
+    setSelectedType(type)
+    setCurrentStep("items")
+    setSelectedStatus("pending")
+  }
+
+  // Voltar para categorias
+  const backToCategories = () => {
+    setCurrentStep("categories")
+    setSelectedCategory(null)
+    setSelectedType(null)
+  }
+
+  // Função para formatar valores complexos
+  const formatValue = (key, value) => {
+    if (!value) return "N/A"
+
+    // Tratar especificamente o campo direcionadores
+    if (key.toLowerCase() === "direcionadores" || key.toLowerCase() === "direcionador") {
+      if (Array.isArray(value)) {
+        return value.map((item, index) => (
+          <div key={index} className="mb-2 p-2 bg-white rounded-lg border border-green-100">
+            <div className="font-medium text-green-800">{item.name || "Nome não disponível"}</div>
+            <div className="text-sm text-green-600">Cultura: {item.culturaAssociada || "N/A"}</div>
+            <div className="text-xs text-slate-500">ID: {item.id || "N/A"}</div>
           </div>
-        </div>
-      )
+        ))
+      }
+      // Se for string que parece JSON, tentar fazer parse
+      if (typeof value === "string" && value.startsWith("[")) {
+        try {
+          const parsed = JSON.parse(value)
+          if (Array.isArray(parsed)) {
+            return parsed.map((item, index) => (
+              <div key={index} className="mb-2 p-2 bg-white rounded-lg border border-green-100">
+                <div className="font-medium text-green-800">{item.name || "Nome não disponível"}</div>
+                <div className="text-sm text-green-600">Cultura: {item.culturaAssociada || "N/A"}</div>
+                <div className="text-xs text-slate-500">ID: {item.id || "N/A"}</div>
+              </div>
+            ))
+          }
+        } catch (e) {
+          // Se não conseguir fazer parse, retorna o valor original
+          return value
+        }
+      }
     }
 
-    if (currentCalendarData.entities.length === 0) {
-      const entityType = currentViewMode === "operadores" ? "usuários operacionais" : "máquinas"
-
-      return (
-        <div className="calendar-empty">
-          <div className="empty-illustration">
-            {currentViewMode === "operadores" ? (
-              <Users size={64} className="empty-icon" />
-            ) : (
-              <Tractor size={64} className="empty-icon" />
-            )}
+    // Tratar especificamente o campo implementos
+    if (key.toLowerCase() === "implementos" || key.toLowerCase() === "implemento") {
+      if (Array.isArray(value)) {
+        return value.map((item, index) => (
+          <div key={index} className="mb-2 p-2 bg-white rounded-lg border border-green-100">
+            <div className="font-medium text-green-800">{item.name || "Nome não disponível"}</div>
+            <div className="text-xs text-slate-500">ID: {item.id || "N/A"}</div>
           </div>
-          <div className="empty-content">
-            <h3>Nenhum {entityType} encontrado</h3>
-            <p>
-              Não há {entityType}{" "}
-              {currentViewMode === "operadores" ? "cadastrados no sistema" : "registrados no sistema"} para exibir no
-              calendário.
-            </p>
-          </div>
-        </div>
-      )
+        ))
+      }
+      // Se for string que parece JSON, tentar fazer parse
+      if (typeof value === "string" && (value.startsWith("[") || value.startsWith("{"))) {
+        try {
+          const parsed = JSON.parse(value)
+          if (Array.isArray(parsed)) {
+            return parsed.map((item, index) => (
+              <div key={index} className="mb-2 p-2 bg-white rounded-lg border border-green-100">
+                <div className="font-medium text-green-800">{item.name || "Nome não disponível"}</div>
+                <div className="text-xs text-slate-500">ID: {item.id || "N/A"}</div>
+              </div>
+            ))
+          } else if (typeof parsed === "object" && parsed.name) {
+            // Se for um único objeto
+            return (
+              <div className="p-2 bg-white rounded-lg border border-green-100">
+                <div className="font-medium text-green-800">{parsed.name || "Nome não disponível"}</div>
+                <div className="text-xs text-slate-500">ID: {parsed.id || "N/A"}</div>
+              </div>
+            )
+          }
+        } catch (e) {
+          // Se não conseguir fazer parse, retorna o valor original
+          return value
+        }
+      }
     }
 
-    const weekDays = getWeekDays(currentReferenceDate)
-    const today = new Date()
-    const todayFormatted = formatDateKey(today)
+    // Para outros arrays de objetos
+    if (Array.isArray(value)) {
+      return value.map((item, index) => (
+        <div key={index} className="mb-1 text-sm">
+          {typeof item === "object" ? JSON.stringify(item) : item}
+        </div>
+      ))
+    }
+
+    // Para objetos simples
+    if (typeof value === "object") {
+      return JSON.stringify(value)
+    }
+
+    return value
+  }
+
+  // Obter dados filtrados
+  const getFilteredData = () => {
+    if (!selectedType) return []
+
+    let currentData = data[selectedType] || []
+
+    // Filtrar por status
+    currentData = currentData.filter((item) => item.status === selectedStatus)
+
+    // Filtrar por termo de busca
+    if (filters.searchTerm) {
+      currentData = currentData.filter((item) => {
+        const searchFields = [
+          item.fichaControle,
+          item.bem,
+          item.veiculo,
+          item.placa,
+          item.cultura,
+          item.produto,
+          item.objetivo,
+          item.userId ? usuarios[item.userId]?.nome : null,
+        ].filter(Boolean)
+
+        return searchFields.some((field) => field.toLowerCase().includes(filters.searchTerm.toLowerCase()))
+      })
+    }
+
+    // Filtrar por data
+    if (filters.dateFrom || filters.dateTo) {
+      currentData = currentData.filter((item) => {
+        const itemDate = new Date(item.data || item.dataHora || item.timestamp)
+        const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : null
+        const toDate = filters.dateTo ? new Date(filters.dateTo) : null
+
+        if (fromDate && itemDate < fromDate) return false
+        if (toDate && itemDate > toDate) return false
+        return true
+      })
+    }
+
+    // Ordenar por mais recente
+    currentData.sort((a, b) => {
+      const dateA = new Date(a.data || a.dataHora || a.timestamp || 0)
+      const dateB = new Date(b.data || b.dataHora || b.timestamp || 0)
+      return dateB - dateA
+    })
+
+    return currentData
+  }
+
+  // Contar itens por status
+  const getStatusCounts = () => {
+    if (!selectedType) return { pending: 0, validated: 0 }
+
+    const currentData = data[selectedType] || []
+    const pending = currentData.filter((item) => item.status === "pending").length
+    const validated = currentData.filter((item) => item.status === "validated").length
+
+    return { pending, validated }
+  }
+
+  // Abrir modal com detalhes
+  const openModal = (item) => {
+    setSelectedItem({ ...item, type: selectedType })
+    setShowModal(true)
+  }
+
+  const startEditing = () => {
+    setEditedItem({ ...selectedItem })
+    setIsEditing(true)
+  }
+
+  const cancelEditing = () => {
+    setIsEditing(false)
+    setEditedItem(null)
+  }
+
+  const confirmSave = () => {
+    setShowSaveConfirmation(true)
+  }
+
+  const saveChanges = async () => {
+    if (!user) {
+      showNotification("Você precisa estar logado para realizar esta ação.", "error")
+      return
+    }
+
+    try {
+      const { id, type, ...dataToSave } = editedItem
+
+      let path = ""
+      switch (type) {
+        case "apontamentos":
+          path = `propriedades/Matrice/apontamentos/${id}`
+          break
+        case "abastecimentos":
+          path = `propriedades/Matrice/abastecimentos/${id}`
+          break
+        case "percursos":
+          path = `propriedades/Matrice/percursos/${id}`
+          break
+        case "abastecimentoVeiculos":
+          path = `propriedades/Matrice/abastecimentoVeiculos/${id}`
+          break
+        default:
+          throw new Error("Tipo inválido")
+      }
+
+      const itemRef = ref(database, path)
+      await update(itemRef, dataToSave)
+
+      setSelectedItem(editedItem)
+      setIsEditing(false)
+      setEditedItem(null)
+      setShowSaveConfirmation(false)
+
+      showNotification("Alterações salvas com sucesso!", "success")
+    } catch (error) {
+      console.error("Erro ao salvar alterações:", error)
+      showNotification("Erro ao salvar alterações. Tente novamente.", "error")
+    }
+  }
+
+  const handleInputChange = (key, value, operacaoIndex = null) => {
+    if (operacaoIndex !== null) {
+      const newOperacoes = [...(editedItem.operacoesMecanizadas || [])]
+      newOperacoes[operacaoIndex] = {
+        ...newOperacoes[operacaoIndex],
+        [key]: value,
+      }
+      setEditedItem({
+        ...editedItem,
+        operacoesMecanizadas: newOperacoes,
+      })
+    } else {
+      setEditedItem({
+        ...editedItem,
+        [key]: value,
+      })
+    }
+  }
+
+  // Renderizar tela de categorias
+  const renderCategories = () => (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div
+          className="group bg-white/80 backdrop-blur-sm rounded-3xl p-8 text-center cursor-pointer transition-all duration-500 border border-white/20 shadow-lg hover:shadow-2xl hover:shadow-green-500/10 hover:-translate-y-2 hover:border-green-200"
+          onClick={() => selectCategory("maquinas")}
+        >
+          <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-500/25 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+            <Settings className="w-10 h-10 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-3 group-hover:text-green-600 transition-colors duration-300">
+            Máquinas
+          </h2>
+          <p className="text-slate-600 leading-relaxed">Apontamentos e abastecimentos de máquinas agrícolas</p>
+          <div className="mt-6 w-full h-1 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+        </div>
+
+        <div
+          className="group bg-white/80 backdrop-blur-sm rounded-3xl p-8 text-center cursor-pointer transition-all duration-500 border border-white/20 shadow-lg hover:shadow-2xl hover:shadow-green-500/10 hover:-translate-y-2 hover:border-green-200"
+          onClick={() => selectCategory("veiculos")}
+        >
+          <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-500/25 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+            <Truck className="w-10 h-10 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-3 group-hover:text-green-600 transition-colors duration-300">
+            Veículos
+          </h2>
+          <p className="text-slate-600 leading-relaxed">Percursos e abastecimentos de veículos</p>
+          <div className="mt-6 w-full h-1 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+        </div>
+      </div>
+    </div>
+  )
+
+  // Renderizar tela de tipos
+  const renderTypes = () => (
+    <div className="max-w-4xl mx-auto">
+      <button
+        className="flex items-center gap-3 mb-8 px-4 py-2 text-slate-600 hover:text-green-600 transition-colors duration-300 group"
+        onClick={backToCategories}
+      >
+        <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-300" />
+        <span className="font-medium">Voltar para categorias</span>
+      </button>
+
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
+          {selectedCategory === "maquinas" ? (
+            <>
+              <div
+                className={`group bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 border-2 shadow-lg hover:shadow-xl hover:-translate-y-1 ${
+                  selectedType === "apontamentos"
+                    ? "border-green-500 bg-green-50/50 shadow-green-500/20"
+                    : "border-white/20 hover:border-green-200"
+                }`}
+                onClick={() => selectType("apontamentos")}
+              >
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/25 group-hover:scale-110 transition-transform duration-300">
+                  <FileText className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 group-hover:text-green-600 transition-colors duration-300">
+                  Apontamentos
+                </h3>
+              </div>
+
+              <div
+                className={`group bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 border-2 shadow-lg hover:shadow-xl hover:-translate-y-1 ${
+                  selectedType === "abastecimentos"
+                    ? "border-green-500 bg-green-50/50 shadow-green-500/20"
+                    : "border-white/20 hover:border-green-200"
+                }`}
+                onClick={() => selectType("abastecimentos")}
+              >
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/25 group-hover:scale-110 transition-transform duration-300">
+                  <Fuel className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 group-hover:text-green-600 transition-colors duration-300">
+                  Abastecimentos
+                </h3>
+              </div>
+            </>
+          ) : (
+            <>
+              <div
+                className={`group bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 border-2 shadow-lg hover:shadow-xl hover:-translate-y-1 ${
+                  selectedType === "percursos"
+                    ? "border-green-500 bg-green-50/50 shadow-green-500/20"
+                    : "border-white/20 hover:border-green-200"
+                }`}
+                onClick={() => selectType("percursos")}
+              >
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/25 group-hover:scale-110 transition-transform duration-300">
+                  <Route className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 group-hover:text-green-600 transition-colors duration-300">
+                  Percursos
+                </h3>
+              </div>
+
+              <div
+                className={`group bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 border-2 shadow-lg hover:shadow-xl hover:-translate-y-1 ${
+                  selectedType === "abastecimentoVeiculos"
+                    ? "border-green-500 bg-green-50/50 shadow-green-500/20"
+                    : "border-white/20 hover:border-green-200"
+                }`}
+                onClick={() => selectType("abastecimentoVeiculos")}
+              >
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/25 group-hover:scale-110 transition-transform duration-300">
+                  <Fuel className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 group-hover:text-green-600 transition-colors duration-300">
+                  Abastecimentos
+                </h3>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+
+  // Renderizar item da lista
+  const renderListItem = (item, index) => {
+    const getItemTitle = () => {
+      switch (selectedType) {
+        case "apontamentos":
+          return `Ficha de Controle: ${item.fichaControle || "N/A"}`
+        case "abastecimentos":
+          return `Equipamento: ${item.bem || "N/A"}`
+        case "percursos":
+          return `Percurso: ${item.veiculo || "N/A"} (${item.placa || "N/A"})`
+        case "abastecimentoVeiculos":
+          return `Abastecimento: ${item.veiculo || "N/A"} (${item.placa || "N/A"})`
+        default:
+          return "Item"
+      }
+    }
+
+    const getItemDetails = () => {
+      const details = [
+        {
+          icon: <Calendar className="w-4 h-4" />,
+          label: "Data",
+          value: item.data || item.dataHora || item.timestamp || "N/A",
+        },
+      ]
+
+      if (item.userId) {
+        details.push({
+          icon: <UserPlus className="w-4 h-4" />,
+          label: "Responsável",
+          value: usuarios[item.userId]?.nome || "Usuário não identificado",
+        })
+      }
+
+      switch (selectedType) {
+        case "apontamentos":
+          details.push({ icon: <Settings className="w-4 h-4" />, label: "Cultura", value: item.cultura || "N/A" })
+          break
+        case "abastecimentos":
+          details.push(
+            { icon: <Fuel className="w-4 h-4" />, label: "Produto", value: item.produto || "N/A" },
+            { icon: <Settings className="w-4 h-4" />, label: "Quantidade", value: `${item.quantidade || 0}L` },
+          )
+          break
+        case "percursos":
+          details.push({ icon: <MapPin className="w-4 h-4" />, label: "Objetivo", value: item.objetivo || "N/A" })
+          break
+        case "abastecimentoVeiculos":
+          details.push(
+            { icon: <Fuel className="w-4 h-4" />, label: "Produto", value: item.produto || "N/A" },
+            { icon: <Settings className="w-4 h-4" />, label: "Quantidade", value: `${item.quantidade || 0}L` },
+          )
+          break
+        default:
+          break
+      }
+      return details
+    }
 
     return (
-      <div className="calendar-body">
-        <div className="calendar-table-container">
-          <table className="calendar-table">
-            <thead>
-              <tr>
-                <th className="entity-column">
-                  <div className="th-content">
-                    <div className="entity-header-icon">
-                      {currentViewMode === "operadores" ? <Users size={20} /> : <Tractor size={20} />}
-                    </div>
-                    <span className="entity-header-text">
-                      {currentViewMode === "operadores" ? "OPERADORES" : "MÁQUINAS"}
-                    </span>
+      <div
+        key={item.id}
+        className="group bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 hover:border-green-200"
+        style={{ animationDelay: `${index * 100}ms` }}
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="flex-1">
+            <h4 className="text-lg font-semibold text-slate-800 mb-4 group-hover:text-green-600 transition-colors duration-300">
+              {getItemTitle()}
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {getItemDetails().map((detail, detailIndex) => (
+                <div key={detailIndex} className="flex items-center gap-3 text-sm">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center text-green-600">
+                    {detail.icon}
                   </div>
-                </th>
-                {weekDays.map((day, index) => {
-                  const isToday = formatDateKey(day.date) === todayFormatted
-                  return (
-                    <th key={index} className={`day-column ${isToday ? "today-column" : ""}`}>
-                      <div className={`day-header ${isToday ? "today" : ""}`}>
-                        <span className="day-name">{day.name}</span>
-                        <span className="day-date">{day.formattedDate}</span>
-                        {isToday && <div className="today-indicator"></div>}
+                  <div>
+                    <span className="font-medium text-slate-600">{detail.label}:</span>
+                    <span className="ml-2 text-slate-800">{detail.value}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 lg:flex-col">
+            {selectedStatus === "pending" && (
+              <button
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/30 hover:scale-105 transition-all duration-300"
+                onClick={() => validarItem(selectedType, item.id)}
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Validar</span>
+              </button>
+            )}
+            <button
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-white border-2 border-green-500 text-green-600 rounded-xl font-medium hover:bg-green-500 hover:text-white transition-all duration-300"
+              onClick={() => openModal(item)}
+            >
+              <Eye className="w-4 h-4" />
+              <span>Detalhes</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Renderizar tela de itens
+  const renderItems = () => {
+    const { pending, validated } = getStatusCounts()
+    const filteredData = getFilteredData()
+
+    return (
+      <div className="max-w-6xl mx-auto">
+        <button
+          className="flex items-center gap-3 mb-8 px-4 py-2 text-slate-600 hover:text-green-600 transition-colors duration-300 group"
+          onClick={() => setCurrentStep("types")}
+        >
+          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-300" />
+          <span className="font-medium">Voltar para tipos</span>
+        </button>
+
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+          <div className="flex flex-wrap gap-4">
+            <button
+              className={`flex items-center gap-3 px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
+                selectedStatus === "pending"
+                  ? "bg-gradient-to-r from-slate-500 to-slate-600 text-white shadow-lg shadow-slate-500/25"
+                  : "bg-white/80 border-2 border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+              onClick={() => setSelectedStatus("pending")}
+            >
+              <Clock className="w-5 h-5" />
+              <span>Para Validar</span>
+              <span className="bg-white/20 px-2 py-1 rounded-lg text-sm font-bold">{pending}</span>
+            </button>
+            <button
+              className={`flex items-center gap-3 px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
+                selectedStatus === "validated"
+                  ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/25"
+                  : "bg-white/80 border-2 border-green-200 text-green-600 hover:bg-green-50"
+              }`}
+              onClick={() => setSelectedStatus("validated")}
+            >
+              <CheckCircle2 className="w-5 h-5" />
+              <span>Validados</span>
+              <span className="bg-white/20 px-2 py-1 rounded-lg text-sm font-bold">{validated}</span>
+            </button>
+          </div>
+
+          <div className="relative">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-4 py-2 bg-white/80 border border-white/20 rounded-xl text-slate-600 hover:text-green-600 hover:border-green-200 transition-all duration-300"
+            >
+              <Filter className="w-5 h-5" />
+              <span>Filtros</span>
+              <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showFilters ? "rotate-180" : ""}`} />
+            </button>
+
+            {showFilters && (
+              <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-white/20 p-6 z-50">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4">Filtros</h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Buscar</label>
+                    <input
+                      type="text"
+                      value={filters.searchTerm}
+                      onChange={(e) => setFilters((prev) => ({ ...prev, searchTerm: e.target.value }))}
+                      placeholder="Buscar por equipamento, cultura, etc..."
+                      className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Data inicial</label>
+                    <input
+                      type="date"
+                      value={filters.dateFrom}
+                      onChange={(e) => setFilters((prev) => ({ ...prev, dateFrom: e.target.value }))}
+                      className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Data final</label>
+                    <input
+                      type="date"
+                      value={filters.dateTo}
+                      onChange={(e) => setFilters((prev) => ({ ...prev, dateTo: e.target.value }))}
+                      className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => setFilters({ dateFrom: "", dateTo: "", searchTerm: "" })}
+                      className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
+                    >
+                      Limpar
+                    </button>
+                    <button
+                      onClick={() => setShowFilters(false)}
+                      className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/30 transition-all duration-300"
+                    >
+                      Aplicar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {filteredData.length === 0 ? (
+            <div className="text-center py-16 bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20">
+              <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileText className="w-12 h-12 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-medium text-slate-600 mb-2">Nenhum item encontrado</h3>
+              <p className="text-slate-500">Não há registros para esta categoria no momento.</p>
+            </div>
+          ) : (
+            filteredData.map((item, index) => renderListItem(item, index))
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Renderizar modal
+  const renderModal = () => {
+    if (!selectedItem || !showModal) return null
+
+    const getResponsavelName = (userId) => {
+      if (!userId || !usuarios[userId]) {
+        return "Usuário não identificado"
+      }
+      return usuarios[userId].nome || "Nome não disponível"
+    }
+
+    const currentItem = isEditing ? editedItem : selectedItem
+    const mainInfo = {}
+    const operacoesMecanizadas = currentItem.operacoesMecanizadas || []
+
+    Object.entries(currentItem)
+      .filter(([key]) => !["id", "type", "userId", "timestamp", "operacoesMecanizadas"].includes(key))
+      .forEach(([key, value]) => {
+        mainInfo[key] = value
+      })
+
+    if (currentItem.userId) {
+      mainInfo.responsavel = getResponsavelName(currentItem.userId)
+    }
+
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+          <div className="flex items-center justify-between p-6 border-b border-slate-200">
+            <h2 className="text-2xl font-bold text-slate-800">
+              {isEditing ? "Editando Registro" : "Detalhes do Registro"}
+            </h2>
+            <div className="flex items-center gap-2">
+              {!isEditing ? (
+                <button
+                  onClick={startEditing}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-colors duration-200 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
+                  Editar
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={cancelEditing}
+                    className="px-4 py-2 bg-slate-500 text-white rounded-xl font-medium hover:bg-slate-600 transition-colors duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmSave}
+                    className="px-4 py-2 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-colors duration-200"
+                  >
+                    Salvar
+                  </button>
+                </div>
+              )}
+              <button
+                onClick={() => confirmDelete(selectedItem)}
+                className="w-10 h-10 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 rounded-xl flex items-center justify-center transition-all duration-300"
+                title="Excluir item"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setShowModal(false)}
+                className="w-10 h-10 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center justify-center transition-colors duration-200"
+              >
+                <X className="w-5 h-5 text-slate-600" />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                Informações Principais
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(mainInfo).map(([key, value]) => (
+                  <div key={key} className="bg-slate-50 rounded-xl p-4">
+                    <div className="text-sm font-medium text-slate-600 mb-2 capitalize">
+                      {key === "responsavel" ? "Responsável" : key === "direcionadores" ? "Direcionadores" : key}:
+                    </div>
+                    {isEditing && key !== "responsavel" && key !== "direcionadores" ? (
+                      <input
+                        type="text"
+                        value={value || ""}
+                        onChange={(e) => handleInputChange(key, e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                      />
+                    ) : (
+                      <div className="text-slate-800 font-medium">
+                        {key === "direcionadores" || key === "direcionador" ? (
+                          <div className="space-y-2">{formatValue(key, value)}</div>
+                        ) : (
+                          formatValue(key, value)
+                        )}
                       </div>
-                    </th>
-                  )
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {currentCalendarData.entities.map((entity, entityIndex) => (
-                <tr key={entity.id} className="entity-row">
-                  <td className="entity-name">
-                    <div className="entity-info">
-                      <div className="entity-avatar">
-                        {currentViewMode === "operadores" ? <Users size={18} /> : <Tractor size={18} />}
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {operacoesMecanizadas.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  Operações Mecanizadas
+                </h3>
+                <div className="space-y-4">
+                  {operacoesMecanizadas.map((operacao, index) => (
+                    <div key={index} className="bg-green-50 rounded-xl p-6 border border-green-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-semibold text-green-800 text-lg">Operação {index + 1}</h4>
+                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                          <span className="text-white font-bold text-sm">{index + 1}</span>
+                        </div>
                       </div>
-                      <div className="entity-details">
-                        <span className="entity-name-text">{entity.nome}</span>
-                        <span className="entity-type">{entity.type}</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {Object.entries(operacao).map(([key, value]) => (
+                          <div key={key} className="bg-white rounded-lg p-3 border border-green-100">
+                            <div className="text-xs font-medium text-green-600 mb-1 uppercase tracking-wide">{key}</div>
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={value || ""}
+                                onChange={(e) => handleInputChange(key, e.target.value, index)}
+                                className="w-full px-2 py-1 text-sm border border-green-200 rounded focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                              />
+                            ) : (
+                              <div className="text-sm text-green-800 font-medium">{formatValue(key, value)}</div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </td>
-                  {weekDays.map((day, dayIndex) => {
-                    const dateKey = formatDateKey(day.date)
-                    const isToday = dateKey === todayFormatted
-                    const isFutureDate = day.date > today
-                    const hasActivity =
-                      currentCalendarData.activities[entity.id] && currentCalendarData.activities[entity.id][dateKey]
-                    const hasJustificativa =
-                      currentCalendarData.justificativas[entity.id] &&
-                      currentCalendarData.justificativas[entity.id][dateKey]
-                    const justificativaText = hasJustificativa
-                      ? currentCalendarData.justificativas[entity.id][dateKey]
-                      : ""
-
-                    return (
-                      <td key={dayIndex} className={`activity-cell ${isToday ? "today-cell" : ""}`}>
-                        {isFutureDate ? (
-                          <div className="activity-indicator future" title="Data Futura">
-                            <Clock size={16} />
-                            <span className="indicator-label">Futuro</span>
-                          </div>
-                        ) : hasActivity ? (
-                          <div className="activity-indicator active" title="Apontamento Realizado">
-                            <Check size={16} />
-                            <span className="indicator-label">Realizado</span>
-                          </div>
-                        ) : hasJustificativa ? (
-                          <div className="activity-indicator justified" title={`Justificado: ${justificativaText}`}>
-                            <FileText size={16} />
-                            <span className="indicator-label">Justificado</span>
-                          </div>
-                        ) : (
-                          <div
-                            className="activity-indicator inactive"
-                            onClick={() =>
-                              openJustificativaModal(
-                                entity.id,
-                                dateKey,
-                                currentViewMode === "operadores" ? "userId" : "maquinaId",
-                              )
-                            }
-                            title="Sem Apontamento - Clique para justificar"
-                          >
-                            <X size={16} />
-                            <span className="indicator-label">Sem Registro</span>
-                          </div>
-                        )}
-                      </td>
-                    )
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+
+        {showSaveConfirmation && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-60 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 mb-2">Confirmar Alterações</h3>
+                <p className="text-slate-600 mb-6 leading-relaxed">
+                  Tem certeza que deseja salvar as alterações feitas neste registro?
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowSaveConfirmation(false)}
+                    className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveChanges}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/30 transition-all duration-300"
+                  >
+                    Salvar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
 
   if (loading || isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50 flex items-center justify-center">
+      <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/25">
             <Loader2 className="w-8 h-8 text-white animate-spin" />
           </div>
-          <h3 className="text-lg font-medium text-slate-700 mb-2">Carregando Dashboard</h3>
-          <p className="text-slate-500">Aguarde enquanto preparamos tudo para você...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return (
-      <div className="dashboard-unauthorized">
-        <div className="unauthorized-content">
-          <div className="unauthorized-icon">
-            <Activity size={64} />
-          </div>
-          <h3>Acesso Restrito</h3>
-          <p>Faça login para acessar o dashboard de atividades</p>
+          <h3 className="text-lg font-medium text-slate-700 mb-2">Carregando registros</h3>
+          <p className="text-slate-500">Aguarde enquanto buscamos os dados...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="dashboard-container">
-      {/* Sistema de Notificações */}
-      {notification && (
-        <div className={`notification ${notification.type} notification-enter`}>
-          <div className="notification-content">
-            <div className="notification-icon">
-              {notification.type === "success" ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-            </div>
-            <div className="notification-text">
-              <span>{notification.message}</span>
-            </div>
-          </div>
-          <button className="notification-close" onClick={() => setNotification(null)}>
-            <X size={16} />
-          </button>
-        </div>
-      )}
+    <ProtectedRoute requiredRole="manager">
+      <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {currentStep === "categories" && renderCategories()}
+          {currentStep === "types" && renderTypes()}
+          {currentStep === "items" && renderItems()}
+        </main>
 
-      <div className="dashboard-wrapper">
-        <div className="dashboard-content">
-          {/* Header Principal */}
-          <div className="dashboard-header">
-            <div className="header-content">
-              <div className="header-title">
-                <div className="title-icon">
-                  <Calendar size={32} />
-                </div>
-                <div className="title-text">
-                  <h1>Dashboard de Atividades</h1>
-                  <p>Acompanhe o desempenho semanal da sua equipe</p>
-                </div>
-              </div>
-              <div className="header-actions">
-                <div className="stats-summary">
-                  <div className="stat-item">
-                    <Activity size={16} />
-                    <span>
-                      {currentCalendarData.entities.length} {currentViewMode}
-                    </span>
-                  </div>
-                </div>
-                <button
-                  onClick={generatePDF}
-                  className={`pdf-button ${isGeneratingPDF ? "generating" : ""}`}
-                  disabled={isGeneratingPDF}
-                  title="Gerar Relatório PDF"
-                >
-                  <div className="button-content">
-                    {isGeneratingPDF ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
-                    <span>{isGeneratingPDF ? "Gerando..." : "Gerar PDF"}</span>
-                  </div>
-                </button>
-              </div>
-            </div>
-          </div>
+        {renderModal()}
 
-          {/* Legenda */}
-          <div className="legend-container">
-            <div className="legend-content">
-              <h3>Legenda</h3>
-              <div className="legend-items">
-                <div className="legend-item">
-                  <div className="legend-dot active"></div>
-                  <span>Apontamento Realizado</span>
-                </div>
-                <div className="legend-item">
-                  <div className="legend-dot justified"></div>
-                  <span>Justificado</span>
-                </div>
-                <div className="legend-item">
-                  <div className="legend-dot inactive"></div>
-                  <span>Sem Apontamento</span>
-                </div>
-                <div className="legend-item">
-                  <div className="legend-dot future"></div>
-                  <span>Data Futura</span>
-                </div>
-              </div>
-            </div>
-          </div>
+        {notification && (
+          <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
+            <div
+              className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-sm border max-w-md ${
+                notification.type === "success"
+                  ? "bg-emerald-50/90 border-emerald-200 text-emerald-800"
+                  : notification.type === "error"
+                    ? "bg-red-50/90 border-red-200 text-red-800"
+                    : "bg-amber-50/90 border-amber-200 text-amber-800"
+              }`}
+            >
+              {notification.type === "success" && <CheckCircle className="w-5 h-5 text-emerald-600" />}
+              {notification.type === "error" && <XCircle className="w-5 h-5 text-red-600" />}
+              {notification.type === "warning" && <AlertTriangle className="w-5 h-5 text-amber-600" />}
 
-          {/* Tabs de Visualização */}
-          <div className="view-mode-container">
-            <div className="view-mode-tabs">
+              <div className="flex-1">
+                <p className="font-medium text-sm leading-relaxed">{notification.message}</p>
+              </div>
+
               <button
-                className={`view-mode-tab ${currentViewMode === "operadores" ? "active" : ""}`}
-                onClick={() => switchViewMode("operadores")}
+                onClick={() => setNotification(null)}
+                className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-black/5 transition-colors duration-200"
               >
-                <Users size={20} />
-                <span>Operadores</span>
-                <div className="tab-indicator"></div>
-              </button>
-              <button
-                className={`view-mode-tab ${currentViewMode === "maquinas" ? "active" : ""}`}
-                onClick={() => switchViewMode("maquinas")}
-              >
-                <Tractor size={20} />
-                <span>Máquinas</span>
-                <div className="tab-indicator"></div>
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
+        )}
 
-          {/* Navegação do Calendário */}
-          <div className="calendar-navigation">
-            <button className="nav-button prev" onClick={() => navigateToWeek(-1)}>
-              <ChevronLeft size={18} />
-              <span>Semana Anterior</span>
-            </button>
-            <button className="nav-button current" onClick={navigateToCurrentWeek}>
-              <CalendarDays size={18} />
-              <span>Semana Atual</span>
-            </button>
-            <button className="nav-button next" onClick={() => navigateToWeek(1)}>
-              <span>Próxima Semana</span>
-              <ChevronRight size={18} />
-            </button>
+        {deleteConfirmation && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle className="w-8 h-8 text-red-600" />
+                </div>
+
+                <h3 className="text-xl font-bold text-slate-800 mb-2">{deleteConfirmation.title}</h3>
+                <p className="text-slate-600 mb-6 leading-relaxed">{deleteConfirmation.message}</p>
+                <p className="text-sm text-red-600 mb-6">Esta ação não pode ser desfeita.</p>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirmation(null)}
+                    className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteItem(selectedItem.type, deleteConfirmation.item.id)}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/30 transition-all duration-300"
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-
-          {/* Calendário */}
-          <div className="calendar-container">{renderCalendar()}</div>
-        </div>
+        )}
       </div>
-
-      {/* Modal de Justificativa */}
-      {showJustificativaModal && (
-        <div className="modal-overlay">
-          <div className="modal-backdrop" onClick={() => setShowJustificativaModal(false)}></div>
-          <div className="modal-content">
-            <div className="modal-header">
-              <div className="modal-title">
-                <FileText size={24} />
-                <h3>
-                  {currentViewMode === "operadores"
-                    ? "Justificar Ausência do Operador"
-                    : "Justificar Inatividade da Máquina"}
-                </h3>
-              </div>
-              <button className="modal-close" onClick={() => setShowJustificativaModal(false)}>
-                <X size={20} />
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label htmlFor="justificativa">Motivo da ausência/inatividade:</label>
-                <textarea
-                  id="justificativa"
-                  value={justificativaText}
-                  onChange={(e) => setJustificativaText(e.target.value)}
-                  rows="4"
-                  placeholder="Descreva o motivo da ausência ou inatividade nesta data..."
-                  className="form-textarea"
-                />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="button-secondary" onClick={() => setShowJustificativaModal(false)}>
-                Cancelar
-              </button>
-              <button className="button-primary" onClick={salvarJustificativa}>
-                <Check size={16} />
-                Salvar Justificativa
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </ProtectedRoute>
   )
 }
 
-export default Dashboard
+export default Apontamentos
