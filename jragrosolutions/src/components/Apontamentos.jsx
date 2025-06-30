@@ -254,6 +254,95 @@ const Apontamentos = () => {
     setSelectedType(null)
   }
 
+  // Função para formatar valores complexos
+  const formatValue = (key, value) => {
+    if (!value) return "N/A"
+
+    // Tratar especificamente o campo direcionadores
+    if (key.toLowerCase() === "direcionadores" || key.toLowerCase() === "direcionador") {
+      if (Array.isArray(value)) {
+        return value.map((item, index) => (
+          <div key={index} className="mb-2 p-2 bg-white rounded-lg border border-green-100">
+            <div className="font-medium text-green-800">{item.name || "Nome não disponível"}</div>
+            <div className="text-sm text-green-600">Cultura: {item.culturaAssociada || "N/A"}</div>
+            <div className="text-xs text-slate-500">ID: {item.id || "N/A"}</div>
+          </div>
+        ))
+      }
+      // Se for string que parece JSON, tentar fazer parse
+      if (typeof value === "string" && value.startsWith("[")) {
+        try {
+          const parsed = JSON.parse(value)
+          if (Array.isArray(parsed)) {
+            return parsed.map((item, index) => (
+              <div key={index} className="mb-2 p-2 bg-white rounded-lg border border-green-100">
+                <div className="font-medium text-green-800">{item.name || "Nome não disponível"}</div>
+                <div className="text-sm text-green-600">Cultura: {item.culturaAssociada || "N/A"}</div>
+                <div className="text-xs text-slate-500">ID: {item.id || "N/A"}</div>
+              </div>
+            ))
+          }
+        } catch (e) {
+          // Se não conseguir fazer parse, retorna o valor original
+          return value
+        }
+      }
+    }
+
+    // Tratar especificamente o campo implementos
+    if (key.toLowerCase() === "implementos" || key.toLowerCase() === "implemento") {
+      if (Array.isArray(value)) {
+        return value.map((item, index) => (
+          <div key={index} className="mb-2 p-2 bg-white rounded-lg border border-green-100">
+            <div className="font-medium text-green-800">{item.name || "Nome não disponível"}</div>
+            <div className="text-xs text-slate-500">ID: {item.id || "N/A"}</div>
+          </div>
+        ))
+      }
+      // Se for string que parece JSON, tentar fazer parse
+      if (typeof value === "string" && (value.startsWith("[") || value.startsWith("{"))) {
+        try {
+          const parsed = JSON.parse(value)
+          if (Array.isArray(parsed)) {
+            return parsed.map((item, index) => (
+              <div key={index} className="mb-2 p-2 bg-white rounded-lg border border-green-100">
+                <div className="font-medium text-green-800">{item.name || "Nome não disponível"}</div>
+                <div className="text-xs text-slate-500">ID: {item.id || "N/A"}</div>
+              </div>
+            ))
+          } else if (typeof parsed === "object" && parsed.name) {
+            // Se for um único objeto
+            return (
+              <div className="p-2 bg-white rounded-lg border border-green-100">
+                <div className="font-medium text-green-800">{parsed.name || "Nome não disponível"}</div>
+                <div className="text-xs text-slate-500">ID: {parsed.id || "N/A"}</div>
+              </div>
+            )
+          }
+        } catch (e) {
+          // Se não conseguir fazer parse, retorna o valor original
+          return value
+        }
+      }
+    }
+
+    // Para outros arrays de objetos
+    if (Array.isArray(value)) {
+      return value.map((item, index) => (
+        <div key={index} className="mb-1 text-sm">
+          {typeof item === "object" ? JSON.stringify(item) : item}
+        </div>
+      ))
+    }
+
+    // Para objetos simples
+    if (typeof value === "object") {
+      return JSON.stringify(value)
+    }
+
+    return value
+  }
+
   // Obter dados filtrados
   const getFilteredData = () => {
     if (!selectedType) return []
@@ -844,9 +933,9 @@ const Apontamentos = () => {
                 {Object.entries(mainInfo).map(([key, value]) => (
                   <div key={key} className="bg-slate-50 rounded-xl p-4">
                     <div className="text-sm font-medium text-slate-600 mb-2 capitalize">
-                      {key === "responsavel" ? "Responsável" : key}:
+                      {key === "responsavel" ? "Responsável" : key === "direcionadores" ? "Direcionadores" : key}:
                     </div>
-                    {isEditing && key !== "responsavel" ? (
+                    {isEditing && key !== "responsavel" && key !== "direcionadores" ? (
                       <input
                         type="text"
                         value={value || ""}
@@ -855,7 +944,11 @@ const Apontamentos = () => {
                       />
                     ) : (
                       <div className="text-slate-800 font-medium">
-                        {typeof value === "object" ? JSON.stringify(value) : value || "N/A"}
+                        {key === "direcionadores" || key === "direcionador" ? (
+                          <div className="space-y-2">{formatValue(key, value)}</div>
+                        ) : (
+                          formatValue(key, value)
+                        )}
                       </div>
                     )}
                   </div>
@@ -890,9 +983,7 @@ const Apontamentos = () => {
                                 className="w-full px-2 py-1 text-sm border border-green-200 rounded focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
                               />
                             ) : (
-                              <div className="text-sm text-green-800 font-medium">
-                                {typeof value === "object" ? JSON.stringify(value) : value || "N/A"}
-                              </div>
+                              <div className="text-sm text-green-800 font-medium">{formatValue(key, value)}</div>
                             )}
                           </div>
                         ))}
