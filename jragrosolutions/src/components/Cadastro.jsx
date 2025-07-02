@@ -3,23 +3,7 @@
 import { useState, useEffect } from "react"
 import { database } from "../firebase/firebase"
 import { ref, set, onValue, off, remove } from "firebase/database"
-import {
-  Search,
-  Plus,
-  X,
-  Users,
-  Settings,
-  Wrench,
-  Star,
-  Car,
-  FileText,
-  Database,
-  UserPlus,
-  Trash2,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-} from "lucide-react"
+import { Search, Plus, X, Users, Settings, Wrench, Star, Car, FileText, Database, UserPlus, Trash2, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
 
 const Cadastro = () => {
   // Estados para controlar qual seção está ativa
@@ -89,6 +73,40 @@ const Cadastro = () => {
   // Estados para notificações e confirmação
   const [notification, setNotification] = useState(null)
   const [deleteConfirmation, setDeleteConfirmation] = useState(null)
+
+  // Lista de culturas disponíveis
+  const culturas = [
+    "Cebola",
+    "Cenoura", 
+    "Alho",
+    "Sorgo",
+    "Soja",
+    "Milho",
+    "Feijão",
+    "Arroz",
+    "Trigo",
+    "Algodão",
+    "Cana-de-açúcar",
+    "Café",
+    "Tomate",
+    "Batata",
+    "Mandioca",
+    "Abóbora",
+    "Abobrinha",
+    "Brócolis",
+    "Couve-flor",
+    "Repolho",
+    "Alface",
+    "Espinafre",
+    "Rúcula",
+    "Pepino",
+    "Pimentão",
+    "Berinjela",
+    "Quiabo",
+    "Girassol",
+    "Amendoim",
+    "Eucalipto"
+  ]
 
   // Configuração das seções
   const sections = {
@@ -760,13 +778,19 @@ const Cadastro = () => {
 
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-slate-700">Cultura Associada</label>
-                  <input
-                    type="text"
+                  <select
                     value={direcionadorData.culturaAssociada}
                     onChange={(e) => setDirecionadorData({ ...direcionadorData, culturaAssociada: e.target.value })}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
                     required
-                  />
+                  >
+                    <option value="">Selecione uma cultura</option>
+                    {culturas.map((cultura) => (
+                      <option key={cultura} value={cultura}>
+                        {cultura}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="flex gap-3 pt-4">
