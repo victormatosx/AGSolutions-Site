@@ -62,7 +62,7 @@ const About = () => {
             ))}
           </div>
 
-          {/* Story Section */}
+          {/* Story Section */} 
           <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-3xl p-8 md:p-12 text-white">
             <div className="max-w-4xl mx-auto text-center">
               <h3 className="text-3xl md:text-4xl font-bold mb-6">Nossa História</h3>
