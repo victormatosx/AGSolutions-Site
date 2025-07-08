@@ -26,6 +26,7 @@ import {
   CheckCircle,
   XCircle,
   UserPlus,
+  ArrowUpDown,
 } from "lucide-react"
 
 const Apontamentos = () => {
@@ -39,9 +40,9 @@ const Apontamentos = () => {
 
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({
-    dateFrom: "",
-    dateTo: "",
     searchTerm: "",
+    machineFilter: "", // Filtro para máquinas
+    sortOrder: "newest", // "newest" ou "oldest"
   })
 
   // Estados para os dados
@@ -55,6 +56,7 @@ const Apontamentos = () => {
 
   // Adicionar após os outros estados
   const [usuarios, setUsuarios] = useState({})
+  const [maquinarios, setMaquinarios] = useState([]) // Estado para maquinários
   const [isEditing, setIsEditing] = useState(false)
   const [editedItem, setEditedItem] = useState(null)
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
@@ -83,6 +85,19 @@ const Apontamentos = () => {
           const usersData = snapshot.val()
           if (usersData) {
             setUsuarios(usersData)
+          }
+        })
+
+        // Carregar maquinários da estrutura correta
+        const maquinariosRef = ref(database, "propriedades/Matrice/maquinarios")
+        onValue(maquinariosRef, (snapshot) => {
+          const maquinariosData = snapshot.val()
+          if (maquinariosData) {
+            const maquinariosList = Object.keys(maquinariosData).map((key) => ({
+              id: key,
+              ...maquinariosData[key],
+            }))
+            setMaquinarios(maquinariosList)
           }
         })
 
@@ -343,7 +358,106 @@ const Apontamentos = () => {
     return value
   }
 
-  // Obter dados filtrados
+  // Função melhorada para extrair timestamp para ordenação
+  const getDateTimestamp = (item) => {
+    // Tentar diferentes campos de data que podem existir no registro
+    const possibleDateFields = [item.data, item.dataHora, item.timestamp, item.createdAt, item.dateTime, item.date]
+
+    for (const dateField of possibleDateFields) {
+      if (!dateField) continue
+
+      try {
+        // Se é um número (timestamp)
+        if (typeof dateField === "number") {
+          // Verificar se é timestamp em segundos ou milissegundos
+          const timestamp = dateField < 10000000000 ? dateField * 1000 : dateField
+          return timestamp
+        }
+
+        // Se é uma string
+        if (typeof dateField === "string") {
+          // Tentar diferentes formatos de string
+
+          // Formato brasileiro DD/MM/YYYY ou DD/MM/YYYY HH:mm
+          if (dateField.match(/^\d{2}\/\d{2}\/\d{4}/)) {
+            const [datePart, timePart] = dateField.split(" ")
+            const [day, month, year] = datePart.split("/")
+            const timeStr = timePart || "00:00"
+            const dateStr = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${timeStr}:00`
+            const date = new Date(dateStr)
+            if (!isNaN(date.getTime())) {
+              return date.getTime()
+            }
+          }
+
+          // Formato YYYY-MM-DD ou YYYY-MM-DD HH:mm
+          if (dateField.match(/^\d{4}-\d{2}-\d{2}/)) {
+            const date = new Date(dateField)
+            if (!isNaN(date.getTime())) {
+              return date.getTime()
+            }
+          }
+
+          // Tentar parse direto da string
+          const date = new Date(dateField)
+          if (!isNaN(date.getTime())) {
+            return date.getTime()
+          }
+
+          // Se é um número em string
+          const numericValue = Number.parseFloat(dateField)
+          if (!isNaN(numericValue)) {
+            const timestamp = numericValue < 10000000000 ? numericValue * 1000 : numericValue
+            return timestamp
+          }
+        }
+
+        // Se é um objeto Date
+        if (dateField instanceof Date) {
+          return dateField.getTime()
+        }
+      } catch (error) {
+        console.log(`Erro ao processar data ${dateField}:`, error)
+        continue
+      }
+    }
+
+    // Se não conseguiu extrair nenhuma data, retornar 0 (mais antigo)
+    return 0
+  }
+
+  // Função para verificar se um item contém a máquina filtrada nas operações mecanizadas
+  const itemContainsMachine = (item, machineFilter) => {
+    if (!machineFilter) return true
+
+    // Verificar no campo 'bem' direto (para compatibilidade)
+    if (item.bem && item.bem.toLowerCase().includes(machineFilter.toLowerCase())) {
+      return true
+    }
+
+    // Verificar nas operações mecanizadas
+    if (item.operacoesMecanizadas && Array.isArray(item.operacoesMecanizadas)) {
+      return item.operacoesMecanizadas.some((operacao) => {
+        return operacao.bem && operacao.bem.toLowerCase().includes(machineFilter.toLowerCase())
+      })
+    }
+
+    // Se operacoesMecanizadas for um objeto único (não array)
+    if (
+      item.operacoesMecanizadas &&
+      typeof item.operacoesMecanizadas === "object" &&
+      !Array.isArray(item.operacoesMecanizadas)
+    ) {
+      return (
+        item.operacoesMecanizadas.bem &&
+        item.operacoesMecanizadas.bem.toLowerCase().includes(machineFilter.toLowerCase())
+      )
+    }
+
+    return false
+  }
+
+  // Obter dados filtrados e ordenados
   const getFilteredData = () => {
     if (!selectedType) return []
 
@@ -366,28 +480,27 @@ const Apontamentos = () => {
           item.userId ? usuarios[item.userId]?.nome : null,
         ].filter(Boolean)
 
-        return searchFields.some((field) => field.toLowerCase().includes(filters.searchTerm.toLowerCase()))
+        return searchFields.some((field) => field.toString().toLowerCase().includes(filters.searchTerm.toLowerCase()))
       })
     }
 
-    // Filtrar por data
-    if (filters.dateFrom || filters.dateTo) {
-      currentData = currentData.filter((item) => {
-        const itemDate = new Date(item.data || item.dataHora || item.timestamp)
-        const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : null
-        const toDate = filters.dateTo ? new Date(filters.dateTo) : null
-
-        if (fromDate && itemDate < fromDate) return false
-        if (toDate && itemDate > toDate) return false
-        return true
-      })
+    // Filtrar por máquina (para apontamentos e abastecimentos)
+    if (filters.machineFilter && (selectedType === "apontamentos" || selectedType === "abastecimentos")) {
+      currentData = currentData.filter((item) => itemContainsMachine(item, filters.machineFilter))
     }
 
-    // Ordenar por mais recente
+    // Ordenar por data usando timestamps
     currentData.sort((a, b) => {
-      const dateA = new Date(a.data || a.dataHora || a.timestamp || 0)
-      const dateB = new Date(b.data || b.dataHora || b.timestamp || 0)
-      return dateB - dateA
+      const timestampA = getDateTimestamp(a)
+      const timestampB = getDateTimestamp(b)
+
+      if (filters.sortOrder === "oldest") {
+        // Mais antigo primeiro
+        return timestampA - timestampB
+      } else {
+        // Mais recente primeiro (padrão)
+        return timestampB - timestampA
+      }
     })
 
     return currentData
@@ -758,69 +871,86 @@ const Apontamentos = () => {
             </button>
           </div>
 
-          <div className="relative">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 bg-white/80 border border-white/20 rounded-xl text-slate-600 hover:text-green-600 hover:border-green-200 transition-all duration-300"
-            >
-              <Filter className="w-5 h-5" />
-              <span>Filtros</span>
-              <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showFilters ? "rotate-180" : ""}`} />
-            </button>
+          <div className="flex items-center gap-4">
+            {/* Ordenação */}
+            <div className="relative">
+              <select
+                value={filters.sortOrder}
+                onChange={(e) => setFilters((prev) => ({ ...prev, sortOrder: e.target.value }))}
+                className="flex items-center gap-2 px-4 py-2 bg-white/80 border border-white/20 rounded-xl text-slate-600 hover:text-green-600 hover:border-green-200 transition-all duration-300 appearance-none pr-10"
+              >
+                <option value="newest">Mais recente</option>
+                <option value="oldest">Mais antigo</option>
+              </select>
+              <ArrowUpDown className="w-4 h-4 absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
 
-            {showFilters && (
-              <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-white/20 p-6 z-50">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">Filtros</h3>
+            {/* Filtros */}
+            <div className="relative">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2 px-4 py-2 bg-white/80 border border-white/20 rounded-xl text-slate-600 hover:text-green-600 hover:border-green-200 transition-all duration-300"
+              >
+                <Filter className="w-5 h-5" />
+                <span>Filtros</span>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform duration-300 ${showFilters ? "rotate-180" : ""}`}
+                />
+              </button>
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Buscar</label>
-                    <input
-                      type="text"
-                      value={filters.searchTerm}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, searchTerm: e.target.value }))}
-                      placeholder="Buscar por equipamento, cultura, etc..."
-                      className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
-                    />
-                  </div>
+              {showFilters && (
+                <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-white/20 p-6 z-50">
+                  <h3 className="text-lg font-semibold text-slate-800 mb-4">Filtros</h3>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Data inicial</label>
-                    <input
-                      type="date"
-                      value={filters.dateFrom}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, dateFrom: e.target.value }))}
-                      className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
-                    />
-                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Buscar</label>
+                      <input
+                        type="text"
+                        value={filters.searchTerm}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, searchTerm: e.target.value }))}
+                        placeholder="Buscar por equipamento, cultura, etc..."
+                        className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Data final</label>
-                    <input
-                      type="date"
-                      value={filters.dateTo}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, dateTo: e.target.value }))}
-                      className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
-                    />
-                  </div>
+                    {/* Filtro por máquina - apenas para apontamentos e abastecimentos */}
+                    {(selectedType === "apontamentos" || selectedType === "abastecimentos") && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Filtrar por Máquina</label>
+                        <select
+                          value={filters.machineFilter}
+                          onChange={(e) => setFilters((prev) => ({ ...prev, machineFilter: e.target.value }))}
+                          className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                        >
+                          <option value="">Todas as máquinas</option>
+                          {maquinarios.map((maquinario) => (
+                            <option key={maquinario.id} value={maquinario.nome}>
+                              {maquinario.nome || `Máquina ${maquinario.id}`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
 
-                  <div className="flex gap-2 pt-2">
-                    <button
-                      onClick={() => setFilters({ dateFrom: "", dateTo: "", searchTerm: "" })}
-                      className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
-                    >
-                      Limpar
-                    </button>
-                    <button
-                      onClick={() => setShowFilters(false)}
-                      className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/30 transition-all duration-300"
-                    >
-                      Aplicar
-                    </button>
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        onClick={() => setFilters({ searchTerm: "", machineFilter: "", sortOrder: "newest" })}
+                        className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
+                      >
+                        Limpar
+                      </button>
+                      <button
+                        onClick={() => setShowFilters(false)}
+                        className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/30 transition-all duration-300"
+                      >
+                        Aplicar
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
@@ -1109,7 +1239,7 @@ const Apontamentos = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDeleteItem(selectedItem.type, deleteConfirmation.item.id)}
+                    onClick={() => handleDeleteItem(selectedItem.type, selectedItem.id)}
                     className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/30 transition-all duration-300"
                   >
                     Excluir
