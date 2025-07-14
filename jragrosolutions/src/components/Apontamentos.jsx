@@ -65,6 +65,164 @@ const Apontamentos = () => {
   const [notification, setNotification] = useState(null)
   const [deleteConfirmation, setDeleteConfirmation] = useState(null)
 
+  // Função para formatar data a partir de timestamp ou localId
+  const formatDate = (item) => {
+    // Tentar diferentes campos de data que podem existir no registro
+    const possibleDateFields = [
+      item.timestamp,
+      item.localId,
+      item.data,
+      item.dataHora,
+      item.createdAt,
+      item.dateTime,
+      item.date,
+    ]
+
+    for (const dateField of possibleDateFields) {
+      if (!dateField) continue
+
+      try {
+        let timestamp = null
+
+        // Se é um número (timestamp)
+        if (typeof dateField === "number") {
+          timestamp = dateField < 10000000000 ? dateField * 1000 : dateField
+        }
+        // Se é uma string que representa um número (como localId)
+        else if (typeof dateField === "string" && /^\d+$/.test(dateField)) {
+          const numericValue = Number.parseFloat(dateField)
+          if (!isNaN(numericValue)) {
+            timestamp = numericValue < 10000000000 ? numericValue * 1000 : numericValue
+          }
+        }
+        // Se é uma string de data
+        else if (typeof dateField === "string") {
+          // Formato brasileiro DD/MM/YYYY ou DD/MM/YYYY HH:mm
+          if (dateField.match(/^\d{2}\/\d{2}\/\d{4}/)) {
+            const [datePart, timePart] = dateField.split(" ")
+            const [day, month, year] = datePart.split("/")
+            const timeStr = timePart || "00:00"
+            const dateStr = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${timeStr}:00`
+            const date = new Date(dateStr)
+            if (!isNaN(date.getTime())) {
+              timestamp = date.getTime()
+            }
+          }
+          // Formato YYYY-MM-DD ou YYYY-MM-DD HH:mm
+          else if (dateField.match(/^\d{4}-\d{2}-\d{2}/)) {
+            const date = new Date(dateField)
+            if (!isNaN(date.getTime())) {
+              timestamp = date.getTime()
+            }
+          }
+          // Tentar parse direto da string
+          else {
+            const date = new Date(dateField)
+            if (!isNaN(date.getTime())) {
+              timestamp = date.getTime()
+            }
+          }
+        }
+
+        // Se conseguiu obter um timestamp válido, formatar a data
+        if (timestamp && !isNaN(timestamp)) {
+          const date = new Date(timestamp)
+          if (!isNaN(date.getTime())) {
+            return date.toLocaleString("pt-BR", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              timeZone: "America/Sao_Paulo",
+            })
+          }
+        }
+      } catch (error) {
+        console.log(`Erro ao processar data ${dateField}:`, error)
+        continue
+      }
+    }
+
+    // Se não conseguiu formatar nenhuma data, retornar "Data não disponível"
+    return "Data não disponível"
+  }
+
+  // Função para obter timestamp para ordenação
+  const getDateTimestamp = (item) => {
+    // Tentar diferentes campos de data que podem existir no registro
+    const possibleDateFields = [
+      item.timestamp,
+      item.localId,
+      item.data,
+      item.dataHora,
+      item.createdAt,
+      item.dateTime,
+      item.date,
+    ]
+
+    for (const dateField of possibleDateFields) {
+      if (!dateField) continue
+
+      try {
+        // Se é um número (timestamp)
+        if (typeof dateField === "number") {
+          const timestamp = dateField < 10000000000 ? dateField * 1000 : dateField
+          return timestamp
+        }
+
+        // Se é uma string que representa um número (como localId)
+        if (typeof dateField === "string" && /^\d+$/.test(dateField)) {
+          const numericValue = Number.parseFloat(dateField)
+          if (!isNaN(numericValue)) {
+            const timestamp = numericValue < 10000000000 ? numericValue * 1000 : numericValue
+            return timestamp
+          }
+        }
+
+        // Se é uma string de data
+        if (typeof dateField === "string") {
+          // Formato brasileiro DD/MM/YYYY ou DD/MM/YYYY HH:mm
+          if (dateField.match(/^\d{2}\/\d{2}\/\d{4}/)) {
+            const [datePart, timePart] = dateField.split(" ")
+            const [day, month, year] = datePart.split("/")
+            const timeStr = timePart || "00:00"
+            const dateStr = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${timeStr}:00`
+            const date = new Date(dateStr)
+            if (!isNaN(date.getTime())) {
+              return date.getTime()
+            }
+          }
+
+          // Formato YYYY-MM-DD ou YYYY-MM-DD HH:mm
+          if (dateField.match(/^\d{4}-\d{2}-\d{2}/)) {
+            const date = new Date(dateField)
+            if (!isNaN(date.getTime())) {
+              return date.getTime()
+            }
+          }
+
+          // Tentar parse direto da string
+          const date = new Date(dateField)
+          if (!isNaN(date.getTime())) {
+            return date.getTime()
+          }
+        }
+
+        // Se é um objeto Date
+        if (dateField instanceof Date) {
+          return dateField.getTime()
+        }
+      } catch (error) {
+        console.log(`Erro ao processar data ${dateField}:`, error)
+        continue
+      }
+    }
+
+    // Se não conseguiu extrair nenhuma data, retornar 0 (mais antigo)
+    return 0
+  }
+
   // Verificar se usuário está autenticado antes de carregar dados
   useEffect(() => {
     if (loading) return // Ainda carregando estado de auth
@@ -356,74 +514,6 @@ const Apontamentos = () => {
     }
 
     return value
-  }
-
-  // Função melhorada para extrair timestamp para ordenação
-  const getDateTimestamp = (item) => {
-    // Tentar diferentes campos de data que podem existir no registro
-    const possibleDateFields = [item.data, item.dataHora, item.timestamp, item.createdAt, item.dateTime, item.date]
-
-    for (const dateField of possibleDateFields) {
-      if (!dateField) continue
-
-      try {
-        // Se é um número (timestamp)
-        if (typeof dateField === "number") {
-          // Verificar se é timestamp em segundos ou milissegundos
-          const timestamp = dateField < 10000000000 ? dateField * 1000 : dateField
-          return timestamp
-        }
-
-        // Se é uma string
-        if (typeof dateField === "string") {
-          // Tentar diferentes formatos de string
-
-          // Formato brasileiro DD/MM/YYYY ou DD/MM/YYYY HH:mm
-          if (dateField.match(/^\d{2}\/\d{2}\/\d{4}/)) {
-            const [datePart, timePart] = dateField.split(" ")
-            const [day, month, year] = datePart.split("/")
-            const timeStr = timePart || "00:00"
-            const dateStr = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${timeStr}:00`
-            const date = new Date(dateStr)
-            if (!isNaN(date.getTime())) {
-              return date.getTime()
-            }
-          }
-
-          // Formato YYYY-MM-DD ou YYYY-MM-DD HH:mm
-          if (dateField.match(/^\d{4}-\d{2}-\d{2}/)) {
-            const date = new Date(dateField)
-            if (!isNaN(date.getTime())) {
-              return date.getTime()
-            }
-          }
-
-          // Tentar parse direto da string
-          const date = new Date(dateField)
-          if (!isNaN(date.getTime())) {
-            return date.getTime()
-          }
-
-          // Se é um número em string
-          const numericValue = Number.parseFloat(dateField)
-          if (!isNaN(numericValue)) {
-            const timestamp = numericValue < 10000000000 ? numericValue * 1000 : numericValue
-            return timestamp
-          }
-        }
-
-        // Se é um objeto Date
-        if (dateField instanceof Date) {
-          return dateField.getTime()
-        }
-      } catch (error) {
-        console.log(`Erro ao processar data ${dateField}:`, error)
-        continue
-      }
-    }
-
-    // Se não conseguiu extrair nenhuma data, retornar 0 (mais antigo)
-    return 0
   }
 
   // Função para verificar se um item contém a máquina filtrada nas operações mecanizadas
@@ -742,7 +832,7 @@ const Apontamentos = () => {
         {
           icon: <Calendar className="w-4 h-4" />,
           label: "Data",
-          value: item.data || item.dataHora || item.timestamp || "N/A",
+          value: formatDate(item), // Usar a nova função formatDate
         },
       ]
 
@@ -996,6 +1086,9 @@ const Apontamentos = () => {
       mainInfo.responsavel = getResponsavelName(currentItem.userId)
     }
 
+    // Adicionar data formatada nas informações principais
+    mainInfo.dataFormatada = formatDate(currentItem)
+
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
@@ -1063,9 +1156,16 @@ const Apontamentos = () => {
                 {Object.entries(mainInfo).map(([key, value]) => (
                   <div key={key} className="bg-slate-50 rounded-xl p-4">
                     <div className="text-sm font-medium text-slate-600 mb-2 capitalize">
-                      {key === "responsavel" ? "Responsável" : key === "direcionadores" ? "Direcionadores" : key}:
+                      {key === "responsavel"
+                        ? "Responsável"
+                        : key === "dataFormatada"
+                          ? "Data/Hora"
+                          : key === "direcionadores"
+                            ? "Direcionadores"
+                            : key}
+                      :
                     </div>
-                    {isEditing && key !== "responsavel" && key !== "direcionadores" ? (
+                    {isEditing && key !== "responsavel" && key !== "direcionadores" && key !== "dataFormatada" ? (
                       <input
                         type="text"
                         value={value || ""}
