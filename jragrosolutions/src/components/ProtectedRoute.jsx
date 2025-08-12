@@ -42,7 +42,6 @@ const ProtectedRoute = ({ children, requiredRole = "manager" }) => {
           if (userData && userData.role) {
             setUserRole(userData.role)
 
-            // Verificar se o usuário tem a role necessária
             if (userData.role !== requiredRole) {
               setAccessDenied(true)
               // Fazer logout do usuário
@@ -114,8 +113,8 @@ const ProtectedRoute = ({ children, requiredRole = "manager" }) => {
           </div>
           <h2 className="text-2xl font-bold text-red-800 mb-4">Acesso Negado</h2>
           <p className="text-red-600 mb-6 leading-relaxed">
-            Você não tem permissão para acessar esta página. Apenas usuários com nível "manager" podem acessar o
-            sistema.
+            Você não tem permissão para acessar esta página. Verifique se você está tentando acessar a página correta
+            para seu nível de usuário.
           </p>
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
             <p className="text-sm text-red-700">Você será redirecionado para a página de login em alguns segundos...</p>

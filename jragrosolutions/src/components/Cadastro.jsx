@@ -3,7 +3,23 @@
 import { useState, useEffect } from "react"
 import { database } from "../firebase/firebase"
 import { ref, set, onValue, off, remove } from "firebase/database"
-import { Search, Plus, X, Users, Settings, Wrench, Star, Car, FileText, Database, UserPlus, Trash2, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
+import {
+  Search,
+  Plus,
+  X,
+  Users,
+  Settings,
+  Wrench,
+  Star,
+  Car,
+  FileText,
+  Database,
+  UserPlus,
+  Trash2,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+} from "lucide-react"
 
 const Cadastro = () => {
   // Estados para controlar qual seção está ativa
@@ -77,7 +93,7 @@ const Cadastro = () => {
   // Lista de culturas disponíveis
   const culturas = [
     "Cebola",
-    "Cenoura", 
+    "Cenoura",
     "Alho",
     "Sorgo",
     "Soja",
@@ -105,7 +121,7 @@ const Cadastro = () => {
     "Quiabo",
     "Girassol",
     "Amendoim",
-    "Eucalipto"
+    "Eucalipto",
   ]
 
   // Configuração das seções

@@ -63,14 +63,16 @@ const Login = () => {
           console.log("Role do usuário:", userRole)
           console.log("Propriedade do usuário:", userProperty)
 
-          // Verificar se o usuário tem role "manager"
           if (userRole === "manager") {
-            // Redirecionar para dashboard apenas se for manager
+            // Redirecionar para dashboard se for manager
             navigate("/dashboard")
+          } else if (userRole === "user") {
+            // Redirecionar para lançamentos se for user
+            navigate("/lancamentos")
           } else {
-            // Fazer logout do usuário e mostrar erro para roles diferentes de manager
+            // Fazer logout do usuário e mostrar erro para roles não reconhecidas
             await auth.signOut()
-            setError("Seu nível de usuário não permite acesso a esta página.")
+            setError("Seu nível de usuário não permite acesso ao sistema.")
           }
         } else {
           // Caso não encontre o usuário em nenhuma propriedade
