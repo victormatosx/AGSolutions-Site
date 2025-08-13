@@ -5,13 +5,12 @@ import { useAuthState } from "react-firebase-hooks/auth"
 import { useNavigate } from "react-router-dom"
 import { ref, get, push } from "firebase/database"
 import { auth, database } from "../firebase/firebase"
-import { Settings, Car, Fuel, ArrowLeft, CheckCircle, AlertCircle, FileText } from "lucide-react"
+import { Settings, Fuel, ArrowLeft, CheckCircle, AlertCircle, FileText, Truck } from "lucide-react"
 import ProtectedRoute from "../components/ProtectedRoute"
 import HeaderLancamento from "../components/HeaderLancamento"
 import FormAbastecimentoMaquina from "../components/FormAbastecimentoMaquina"
 import FormApontamentoMaquina from "../components/FormApontamentoMaquina"
 import FormAbastecimentoVeiculo from "../components/FormAbastecimentoVeiculo"
-import "../../styles/lancamento.css"
 
 const Lancamento = () => {
   const [user] = useAuthState(auth)
@@ -111,79 +110,112 @@ const Lancamento = () => {
     setSelectedType(null)
   }
 
-  const getBreadcrumb = () => {
-    const items = ["Apontamentos"]
-
-    if (selectedCategory) {
-      items.push(selectedCategory === "maquinas" ? "Máquinas" : "Veículos")
-    }
-
-    if (selectedType) {
-      if (selectedType === "abastecimento") {
-        items.push("Abastecimento")
-      } else if (selectedType === "apontamento") {
-        items.push("Apontamento")
-      }
-    }
-
-    return items
-  }
-
   const renderCategories = () => (
-    <div className="categories-container">
-      <div className="category-card" onClick={() => handleCategorySelect("maquinas")}>
-        <div className="category-icon">
-          <Settings className="w-10 h-10" />
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div
+          className="group bg-white/80 backdrop-blur-sm rounded-3xl p-8 text-center cursor-pointer transition-all duration-500 border border-white/20 shadow-lg hover:shadow-2xl hover:shadow-green-500/10 hover:-translate-y-2 hover:border-green-200"
+          onClick={() => handleCategorySelect("maquinas")}
+        >
+          <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-500/25 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+            <Settings className="w-10 h-10 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-3 group-hover:text-green-600 transition-colors duration-300">
+            Máquinas
+          </h2>
+          <p className="text-slate-600 leading-relaxed">Registre apontamentos e abastecimentos de máquinas agrícolas</p>
+          <div className="mt-6 w-full h-1 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
         </div>
-        <h2>Máquinas</h2>
-        <p>Registre apontamentos e abastecimentos de máquinas agrícolas</p>
-      </div>
 
-      <div className="category-card" onClick={() => handleCategorySelect("veiculos")}>
-        <div className="category-icon">
-          <Car className="w-10 h-10" />
+        <div
+          className="group bg-white/80 backdrop-blur-sm rounded-3xl p-8 text-center cursor-pointer transition-all duration-500 border border-white/20 shadow-lg hover:shadow-2xl hover:shadow-green-500/10 hover:-translate-y-2 hover:border-green-200"
+          onClick={() => handleCategorySelect("veiculos")}
+        >
+          <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-500/25 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+            <Truck className="w-10 h-10 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-3 group-hover:text-green-600 transition-colors duration-300">
+            Veículos
+          </h2>
+          <p className="text-slate-600 leading-relaxed">Registre abastecimentos de veículos da propriedade</p>
+          <div className="mt-6 w-full h-1 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
         </div>
-        <h2>Veículos</h2>
-        <p>Registre abastecimentos de veículos da propriedade</p>
       </div>
     </div>
   )
 
-  const renderTypes = () => {
-    if (selectedCategory === "maquinas") {
-      return (
-        <div className="types-grid">
-          <div className="type-card" onClick={() => handleTypeSelect("abastecimento")}>
-            <div className="type-icon">
-              <Fuel className="w-8 h-8" />
-            </div>
-            <h3>Abastecimento</h3>
-            <p>Registrar abastecimento de máquina</p>
-          </div>
+  const renderTypes = () => (
+    <div className="max-w-4xl mx-auto">
+      <button
+        className="flex items-center gap-3 mb-8 px-4 py-2 text-slate-600 hover:text-green-600 transition-colors duration-300 group"
+        onClick={handleBack}
+      >
+        <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-300" />
+        <span className="font-medium">Voltar para categorias</span>
+      </button>
 
-          <div className="type-card" onClick={() => handleTypeSelect("apontamento")}>
-            <div className="type-icon">
-              <FileText className="w-8 h-8" />
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
+          {selectedCategory === "maquinas" ? (
+            <>
+              <div
+                className={`group bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 border-2 shadow-lg hover:shadow-xl hover:-translate-y-1 ${
+                  selectedType === "apontamento"
+                    ? "border-green-500 bg-green-50/50 shadow-green-500/20"
+                    : "border-white/20 hover:border-green-200"
+                }`}
+                onClick={() => handleTypeSelect("apontamento")}
+              >
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/25 group-hover:scale-110 transition-transform duration-300">
+                  <FileText className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 group-hover:text-green-600 transition-colors duration-300">
+                  Apontamento
+                </h3>
+                <p className="text-slate-600 mt-2">Registrar horas trabalhadas</p>
+              </div>
+
+              <div
+                className={`group bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 border-2 shadow-lg hover:shadow-xl hover:-translate-y-1 ${
+                  selectedType === "abastecimento"
+                    ? "border-green-500 bg-green-50/50 shadow-green-500/20"
+                    : "border-white/20 hover:border-green-200"
+                }`}
+                onClick={() => handleTypeSelect("abastecimento")}
+              >
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/25 group-hover:scale-110 transition-transform duration-300">
+                  <Fuel className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 group-hover:text-green-600 transition-colors duration-300">
+                  Abastecimento
+                </h3>
+                <p className="text-slate-600 mt-2">Registrar abastecimento de máquina</p>
+              </div>
+            </>
+          ) : (
+            <div className="col-span-full flex justify-center">
+              <div
+                className={`group bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 border-2 shadow-lg hover:shadow-xl hover:-translate-y-1 max-w-md ${
+                  selectedType === "abastecimento"
+                    ? "border-green-500 bg-green-50/50 shadow-green-500/20"
+                    : "border-white/20 hover:border-green-200"
+                }`}
+                onClick={() => handleTypeSelect("abastecimento")}
+              >
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/25 group-hover:scale-110 transition-transform duration-300">
+                  <Fuel className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 group-hover:text-green-600 transition-colors duration-300">
+                  Abastecimento
+                </h3>
+                <p className="text-slate-600 mt-2">Registrar abastecimento de veículo</p>
+              </div>
             </div>
-            <h3>Apontamento</h3>
-            <p>Registrar horas trabalhadas</p>
-          </div>
+          )}
         </div>
-      )
-    } else if (selectedCategory === "veiculos") {
-      return (
-        <div className="types-grid">
-          <div className="type-card" onClick={() => handleTypeSelect("abastecimento")}>
-            <div className="type-icon">
-              <Fuel className="w-8 h-8" />
-            </div>
-            <h3>Abastecimento</h3>
-            <p>Registrar abastecimento de veículo</p>
-          </div>
-        </div>
-      )
-    }
-  }
+      </div>
+    </div>
+  )
 
   const renderForm = () => {
     if (selectedCategory === "maquinas" && selectedType === "abastecimento") {
@@ -197,44 +229,47 @@ const Lancamento = () => {
 
   return (
     <ProtectedRoute requiredRole="user">
-      <div className="lancamento-container">
+      <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50">
         <HeaderLancamento onNavigate={handleNavigation} currentPage="apontamentos" />
 
-        <main className="main-content">
-          {/* Breadcrumb */}
-          <div className="breadcrumb">
-            {getBreadcrumb().map((item, index) => (
-              <div key={index} className="breadcrumb-item">
-                {index > 0 && <span className="breadcrumb-separator">/</span>}
-                <span>{item}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Back Button */}
-          {currentView !== "categories" && (
-            <button onClick={handleBack} className="back-button">
-              <ArrowLeft className="w-4 h-4" />
-              Voltar
-            </button>
-          )}
-
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Success/Error Messages */}
           {message.text && (
-            <div className={`${message.type}-message`}>
-              {message.type === "success" ? (
-                <CheckCircle className={`${message.type}-icon w-5 h-5`} />
-              ) : (
-                <AlertCircle className={`${message.type}-icon w-5 h-5`} />
-              )}
-              <span>{message.text}</span>
+            <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
+              <div
+                className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-sm border max-w-md ${
+                  message.type === "success"
+                    ? "bg-emerald-50/90 border-emerald-200 text-emerald-800"
+                    : "bg-red-50/90 border-red-200 text-red-800"
+                }`}
+              >
+                {message.type === "success" ? (
+                  <CheckCircle className="w-5 h-5 text-emerald-600" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                )}
+                <div className="flex-1">
+                  <p className="font-medium text-sm leading-relaxed">{message.text}</p>
+                </div>
+              </div>
             </div>
           )}
 
           {/* Content */}
           {currentView === "categories" && renderCategories()}
-          {currentView === "types" && <div className="types-container">{renderTypes()}</div>}
-          {currentView === "form" && renderForm()}
+          {currentView === "types" && renderTypes()}
+          {currentView === "form" && (
+            <div className="max-w-4xl mx-auto">
+              <button
+                className="flex items-center gap-3 mb-8 px-4 py-2 text-slate-600 hover:text-green-600 transition-colors duration-300 group"
+                onClick={handleBack}
+              >
+                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-300" />
+                <span className="font-medium">Voltar</span>
+              </button>
+              {renderForm()}
+            </div>
+          )}
         </main>
       </div>
     </ProtectedRoute>
