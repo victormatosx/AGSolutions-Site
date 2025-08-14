@@ -3,9 +3,8 @@
 import { useState } from "react"
 import { useAuthState } from "react-firebase-hooks/auth"
 import { useNavigate } from "react-router-dom"
-import { ref, get, push } from "firebase/database"
-import { auth, database } from "../firebase/firebase"
-import { Settings, Fuel, ArrowLeft, CheckCircle, AlertCircle, FileText, Truck } from "lucide-react"
+import { auth } from "../firebase/firebase"
+import { Settings, Fuel, ArrowLeft, CheckCircle, AlertCircle, FileText, Truck, X } from "lucide-react"
 import ProtectedRoute from "../components/ProtectedRoute"
 import HeaderLancamento from "../components/HeaderLancamento"
 import FormAbastecimentoMaquina from "../components/FormAbastecimentoMaquina"
@@ -54,55 +53,18 @@ const Lancamento = () => {
   }
 
   const handleFormSubmit = async (formData) => {
-    if (!user) return
+    // The actual saving is done in FormApontamentoMaquina.jsx
+    setMessage({
+      type: "success",
+      text: "Apontamento enviado com sucesso!",
+    })
 
-    setIsLoading(true)
-    try {
-      const propriedadesRef = ref(database, "propriedades")
-      const propriedadesSnapshot = await get(propriedadesRef)
-
-      if (propriedadesSnapshot.exists()) {
-        const propriedades = propriedadesSnapshot.val()
-        let userProperty = null
-
-        for (const [propriedadeName, propriedadeData] of Object.entries(propriedades)) {
-          if (propriedadeData.users && propriedadeData.users[user.uid]) {
-            userProperty = propriedadeName
-            break
-          }
-        }
-
-        if (userProperty) {
-          const apontamentosRef = ref(database, `propriedades/${userProperty}/apontamentos/${user.uid}`)
-          await push(apontamentosRef, {
-            ...formData,
-            createdAt: new Date().toISOString(),
-            userId: user.uid,
-          })
-
-          setMessage({
-            type: "success",
-            text: "Apontamento salvo com sucesso!",
-          })
-
-          // Reset form after 2 seconds
-          setTimeout(() => {
-            setCurrentView("categories")
-            setSelectedCategory(null)
-            setSelectedType(null)
-            setMessage({ type: "", text: "" })
-          }, 2000)
-        }
-      }
-    } catch (error) {
-      console.error("Erro ao salvar apontamento:", error)
-      setMessage({
-        type: "error",
-        text: "Erro ao salvar apontamento. Tente novamente.",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+    setTimeout(() => {
+      setCurrentView("categories")
+      setSelectedCategory(null)
+      setSelectedType(null)
+      setMessage({ type: "", text: "" })
+    }, 3000) // Aumentado tempo para 3 segundos
   }
 
   const handleFormCancel = () => {
@@ -233,29 +195,40 @@ const Lancamento = () => {
         <HeaderLancamento onNavigate={handleNavigation} currentPage="apontamentos" />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Success/Error Messages */}
           {message.text && (
             <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
               <div
                 className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-sm border max-w-md ${
                   message.type === "success"
-                    ? "bg-emerald-50/90 border-emerald-200 text-emerald-800"
-                    : "bg-red-50/90 border-red-200 text-red-800"
+                    ? "bg-emerald-50/95 border-emerald-200 text-emerald-800"
+                    : "bg-red-50/95 border-red-200 text-red-800"
                 }`}
               >
                 {message.type === "success" ? (
-                  <CheckCircle className="w-5 h-5 text-emerald-600" />
+                  <div className="flex-shrink-0">
+                    <CheckCircle className="w-6 h-6 text-emerald-600" />
+                  </div>
                 ) : (
-                  <AlertCircle className="w-5 h-5 text-red-600" />
+                  <div className="flex-shrink-0">
+                    <AlertCircle className="w-6 h-6 text-red-600" />
+                  </div>
                 )}
                 <div className="flex-1">
-                  <p className="font-medium text-sm leading-relaxed">{message.text}</p>
+                  <p className="font-semibold text-sm leading-relaxed">{message.text}</p>
+                  {message.type === "success" && (
+                    <p className="text-xs text-emerald-600 mt-1">Redirecionando automaticamente...</p>
+                  )}
                 </div>
+                <button
+                  onClick={() => setMessage({ type: "", text: "" })}
+                  className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             </div>
           )}
 
-          {/* Content */}
           {currentView === "categories" && renderCategories()}
           {currentView === "types" && renderTypes()}
           {currentView === "form" && (
