@@ -106,7 +106,7 @@ const CustomAlert = ({ type, title, message, onClose }) => {
 }
 
 const initialFormData = {
-  numeroMaquina: "", // Alterado de fichaControle para numeroMaquina
+  fichaControle: "", // Alterado de numeroMaquina para fichaControle
   data: "",
   direcionador: "",
   direcionadores: [],
@@ -152,7 +152,7 @@ const FormApontamentoMaquina = ({ onSubmit, onCancel, isLoading }) => {
   }
 
   const isFormValid = useCallback(() => {
-    const requiredFields = ["numeroMaquina", "data", "atividade"]
+    const requiredFields = ["fichaControle", "data", "atividade"] // Alterado numeroMaquina para fichaControle
     const basicFieldsValid = requiredFields.every((field) => formData[field] && formData[field].trim() !== "")
 
     const direcionadorValid = Array.isArray(selectedDirecionadores) && selectedDirecionadores.length > 0
@@ -507,8 +507,9 @@ const FormApontamentoMaquina = ({ onSubmit, onCancel, isLoading }) => {
 
       const missingFields = []
 
-      if (!formData.numeroMaquina || formData.numeroMaquina.trim() === "") {
-        missingFields.push("Número da Máquina")
+      if (!formData.fichaControle || formData.fichaControle.trim() === "") {
+        // Alterado numeroMaquina para fichaControle
+        missingFields.push("Ficha de Controle") // Alterado texto do campo
       }
 
       if (!formData.data || formData.data.trim() === "") {
@@ -572,7 +573,7 @@ const FormApontamentoMaquina = ({ onSubmit, onCancel, isLoading }) => {
             id: d.id,
             name: d.name,
           })),
-          numeroMaquina: formData.numeroMaquina, // Alterado de fichaControle para numeroMaquina
+          fichaControle: formData.fichaControle, // Alterado de numeroMaquina para fichaControle
           observacao: formData.observacao || "",
           operacoesMecanizadas: selectedOperacoesMecanizadas.map((op, index) => ({
             bem: op.maquina || "",
@@ -721,13 +722,13 @@ const FormApontamentoMaquina = ({ onSubmit, onCancel, isLoading }) => {
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
                   <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  Número da Máquina *
+                  Ficha de Controle *
                 </label>
                 <input
                   type="text"
-                  value={formData.numeroMaquina}
-                  onChange={(e) => handleChange("numeroMaquina", e.target.value)}
-                  placeholder="Digite o número da máquina"
+                  value={formData.fichaControle}
+                  onChange={(e) => handleChange("fichaControle", e.target.value)}
+                  placeholder="Digite a ficha de controle"
                   className="w-full px-4 py-3 bg-white/70 border-2 border-gray-200 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-green-500/20 focus:border-green-500 hover:border-green-300"
                 />
               </div>
