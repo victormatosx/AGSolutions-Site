@@ -106,6 +106,14 @@ const Header = ({ onNavigate, currentPage }) => {
             >
               Cadastros
             </button>
+            <button
+              onClick={() => handleNavigation("horimetros")}
+              className={`transition-colors ${
+                currentPage === "horimetros" ? "text-green-600 font-semibold" : "text-gray-700 hover:text-green-600"
+              }`}
+            >
+              Horímetros
+            </button>
             {/* Styled Home Link moved to the end */}
             <button
               onClick={() => handleNavigation("home")}
@@ -165,6 +173,14 @@ const Header = ({ onNavigate, currentPage }) => {
                 }`}
               >
                 Cadastros
+              </button>
+              <button
+                onClick={() => handleNavigation("horimetros")}
+                className={`text-left transition-colors ${
+                  currentPage === "horimetros" ? "text-green-600 font-semibold" : "text-gray-700 hover:text-green-600"
+                }`}
+              >
+                Horímetros
               </button>
               <hr className="border-gray-200" />
               <button

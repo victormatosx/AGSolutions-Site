@@ -6,6 +6,7 @@ import DashboardComponent from "../components/DashboardComponent"
 import Cadastro from "../components/Cadastro"
 import Header from "../components/HeaderDashboard"
 import Apontamentos from "../components/Apontamentos"
+import Horimetro from "../components/Horimetro"
 import ProtectedRoute from "../components/ProtectedRoute"
 import "../../styles/dashboard.css"
 
@@ -29,6 +30,8 @@ export default function Dashboard() {
         return <Cadastro />
       case "apontamentos":
         return <Apontamentos />
+      case "horimetros":
+        return <Horimetro />
       default:
         return <DashboardComponent />
     }
