@@ -361,7 +361,7 @@ const FormApontamentoMaquina = ({ onSubmit, onCancel, isLoading }) => {
             op.id === id
               ? {
                   ...op,
-                  maquina: maquinaSelecionada.nome,
+                  maquina: maquinaSelecionada.name,
                   maquinaId: value,
                   horimetroAnterior: horimetroAtual.toString(),
                   horimetroAtual: "",
@@ -529,7 +529,7 @@ const FormApontamentoMaquina = ({ onSubmit, onCancel, isLoading }) => {
       }
 
       const operacoesIncompletas = selectedOperacoesMecanizadas.filter((op) => {
-        if (!op.maquinaId || !op.horimetroAtual) return true
+        if (!op.maquina || !op.horimetroAtual) return true
 
         const horimetroAtual = Number.parseFloat(op.horimetroAtual)
         const horimetroAnterior = Number.parseFloat(op.horimetroAnterior)
