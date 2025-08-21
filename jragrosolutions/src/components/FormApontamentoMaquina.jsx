@@ -165,7 +165,7 @@ const FormApontamentoMaquina = ({ onSubmit, onCancel, isLoading }) => {
   const resetForm = useCallback(() => {
     setFormData({
       ...initialFormData,
-      data: new Date().toISOString().split("T")[0],
+      data: formatDateToBrazilian(new Date().toISOString().split("T")[0]),
     })
     setSelectedDirecionadores([])
     setSelectedImplementos([])
@@ -698,6 +698,18 @@ const FormApontamentoMaquina = ({ onSubmit, onCancel, isLoading }) => {
     return ""
   }
 
+  const formatDateToBrazilian = (isoDate) => {
+    if (!isoDate) return ""
+    const [year, month, day] = isoDate.split("-")
+    return `${day}/${month}/${year}`
+  }
+
+  const formatDateToISO = (brazilianDate) => {
+    if (!brazilianDate) return ""
+    const [day, month, year] = brazilianDate.split("/")
+    return `${year}-${month}-${day}`
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50 p-4">
       <div className="max-w-4xl mx-auto">
@@ -741,8 +753,8 @@ const FormApontamentoMaquina = ({ onSubmit, onCancel, isLoading }) => {
                 </label>
                 <input
                   type="date"
-                  value={formData.data}
-                  onChange={(e) => handleChange("data", e.target.value)}
+                  value={formatDateToISO(formData.data)}
+                  onChange={(e) => handleChange("data", formatDateToBrazilian(e.target.value))}
                   className="w-full px-4 py-3 bg-white/70 border-2 border-gray-200 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-green-500/20 focus:border-green-500 hover:border-green-300"
                 />
               </div>

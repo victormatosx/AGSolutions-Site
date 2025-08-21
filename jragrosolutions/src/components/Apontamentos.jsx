@@ -427,17 +427,13 @@ const Apontamentos = () => {
     setSelectedType(null)
   }
 
-  // Função para formatar valores complexos
   const formatValue = (key, value) => {
-    if (!value) return "N/A"
-
-    // Tratar especificamente o campo direcionadores
-    if (key.toLowerCase() === "direcionadores" || key.toLowerCase() === "direcionador") {
+    // Tratar especificamente o campo implementos
+    if (key.toLowerCase() === "implementos" || key.toLowerCase() === "implemento") {
       if (Array.isArray(value)) {
         return value.map((item, index) => (
-          <div key={index} className="mb-2 p-2 bg-white rounded-lg border border-green-100">
-            <div className="font-medium text-green-800">{item.name || "Nome não disponível"}</div>
-            <div className="text-sm text-green-600">Cultura: {item.culturaAssociada || "N/A"}</div>
+          <div key={index} className="mb-2 p-2 bg-white rounded-lg border border-blue-100">
+            <div className="font-medium text-blue-800">{item.name || "Nome não disponível"}</div>
             <div className="text-xs text-slate-500">ID: {item.id || "N/A"}</div>
           </div>
         ))
@@ -448,69 +444,45 @@ const Apontamentos = () => {
           const parsed = JSON.parse(value)
           if (Array.isArray(parsed)) {
             return parsed.map((item, index) => (
-              <div key={index} className="mb-2 p-2 bg-white rounded-lg border border-green-100">
-                <div className="font-medium text-green-800">{item.name || "Nome não disponível"}</div>
-                <div className="text-sm text-green-600">Cultura: {item.culturaAssociada || "N/A"}</div>
+              <div key={index} className="mb-2 p-2 bg-white rounded-lg border border-blue-100">
+                <div className="font-medium text-blue-800">{item.name || "Nome não disponível"}</div>
                 <div className="text-xs text-slate-500">ID: {item.id || "N/A"}</div>
               </div>
             ))
           }
         } catch (e) {
-          // Se não conseguir fazer parse, retorna o valor original
-          return value
+          // Se não conseguir fazer parse, mostrar como string
         }
       }
+      // Fallback para outros formatos
+      return value || "Sem implementos"
     }
 
-    // Tratar especificamente o campo implementos
-    if (key.toLowerCase() === "implementos" || key.toLowerCase() === "implemento") {
-      if (Array.isArray(value)) {
-        return value.map((item, index) => (
-          <div key={index} className="mb-2 p-2 bg-white rounded-lg border border-green-100">
-            <div className="font-medium text-green-800">{item.name || "Nome não disponível"}</div>
-            <div className="text-xs text-slate-500">ID: {item.id || "N/A"}</div>
-          </div>
-        ))
+    if (value === null || value === undefined || value === "") {
+      if (key.toLowerCase() === "observacao" || key.toLowerCase() === "observação") {
+        return "Sem observação"
       }
-      // Se for string que parece JSON, tentar fazer parse
-      if (typeof value === "string" && (value.startsWith("[") || value.startsWith("{"))) {
-        try {
-          const parsed = JSON.parse(value)
-          if (Array.isArray(parsed)) {
-            return parsed.map((item, index) => (
-              <div key={index} className="mb-2 p-2 bg-white rounded-lg border border-green-100">
-                <div className="font-medium text-green-800">{item.name || "Nome não disponível"}</div>
-                <div className="text-xs text-slate-500">ID: {item.id || "N/A"}</div>
-              </div>
-            ))
-          } else if (typeof parsed === "object" && parsed.name) {
-            // Se for um único objeto
-            return (
-              <div className="p-2 bg-white rounded-lg border border-green-100">
-                <div className="font-medium text-green-800">{parsed.name || "Nome não disponível"}</div>
-                <div className="text-xs text-slate-500">ID: {parsed.id || "N/A"}</div>
-              </div>
-            )
-          }
-        } catch (e) {
-          // Se não conseguir fazer parse, retorna o valor original
-          return value
-        }
-      }
+      return "N/A"
     }
 
-    // Para outros arrays de objetos
+    if (key.toLowerCase() === "status") {
+      if (value === "pending") {
+        return "Pendente"
+      }
+      if (value === "validated") {
+        return "Validado"
+      }
+      return value
+    }
+
+    // Tratar arrays genéricos
     if (Array.isArray(value)) {
-      return value.map((item, index) => (
-        <div key={index} className="mb-1 text-sm">
-          {typeof item === "object" ? JSON.stringify(item) : item}
-        </div>
-      ))
+      return value.join(", ")
     }
 
-    // Para objetos simples
+    // Tratar objetos
     if (typeof value === "object") {
-      return JSON.stringify(value)
+      return JSON.stringify(value, null, 2)
     }
 
     return value
@@ -1075,9 +1047,23 @@ const Apontamentos = () => {
     const currentItem = isEditing ? editedItem : selectedItem
     const mainInfo = {}
     const operacoesMecanizadas = currentItem.operacoesMecanizadas || []
+    const direcionadores = currentItem.direcionadores || []
 
     Object.entries(currentItem)
-      .filter(([key]) => !["id", "type", "userId", "timestamp", "operacoesMecanizadas"].includes(key))
+      .filter(
+        ([key]) =>
+          ![
+            "id",
+            "type",
+            "userId",
+            "timestamp",
+            "operacoesMecanizadas",
+            "direcionadores",
+            "direcionador",
+            "dataFormatada",
+            "localeId",
+          ].includes(key),
+      )
       .forEach(([key, value]) => {
         mainInfo[key] = value
       })
@@ -1086,8 +1072,9 @@ const Apontamentos = () => {
       mainInfo.responsavel = getResponsavelName(currentItem.userId)
     }
 
-    // Adicionar data formatada nas informações principais
-    mainInfo.dataFormatada = formatDate(currentItem)
+    const mainInfoOrder = ["fichaControle", "atividade", "data", "cultura", "responsavel", "propriedade", "observacao"]
+
+    const operacoesOrder = ["bem", "horaInicial", "horaFinal", "totalHoras", "implementos"]
 
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1153,36 +1140,67 @@ const Apontamentos = () => {
                 Informações Principais
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(mainInfo).map(([key, value]) => (
-                  <div key={key} className="bg-slate-50 rounded-xl p-4">
-                    <div className="text-sm font-medium text-slate-600 mb-2 capitalize">
-                      {key === "responsavel"
-                        ? "Responsável"
-                        : key === "dataFormatada"
-                          ? "Data/Hora"
-                          : key === "direcionadores"
-                            ? "Direcionadores"
-                            : key}
-                      :
-                    </div>
-                    {isEditing && key !== "responsavel" && key !== "direcionadores" && key !== "dataFormatada" ? (
-                      <input
-                        type="text"
-                        value={value || ""}
-                        onChange={(e) => handleInputChange(key, e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
-                      />
-                    ) : (
-                      <div className="text-slate-800 font-medium">
-                        {key === "direcionadores" || key === "direcionador" ? (
-                          <div className="space-y-2">{formatValue(key, value)}</div>
-                        ) : (
-                          formatValue(key, value)
-                        )}
+                {mainInfoOrder.map((key) => {
+                  const value = mainInfo[key]
+                  if (value === undefined || value === null) return null
+
+                  return (
+                    <div key={key} className="bg-slate-50 rounded-xl p-4">
+                      <div className="text-sm font-medium text-slate-600 mb-2">
+                        {key === "fichaControle"
+                          ? "Ficha de Controle"
+                          : key === "atividade"
+                            ? "Atividade"
+                            : key === "data"
+                              ? "Data"
+                              : key === "cultura"
+                                ? "Cultura"
+                                : key === "responsavel"
+                                  ? "Responsável"
+                                  : key === "propriedade"
+                                    ? "Propriedade"
+                                    : key === "observacao"
+                                      ? "Observação"
+                                      : key}
+                        :
                       </div>
-                    )}
+                      {isEditing && key !== "responsavel" ? (
+                        <input
+                          type="text"
+                          value={value || ""}
+                          onChange={(e) => handleInputChange(key, e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                        />
+                      ) : (
+                        <div className="text-slate-800 font-medium">{formatValue(key, value)}</div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {direcionadores.length > 0 && (
+                  <div className="bg-slate-50 rounded-xl p-4 md:col-span-2">
+                    <div className="text-sm font-medium text-slate-600 mb-2">Direcionadores:</div>
+                    <div className="space-y-2">
+                      {direcionadores.map((direcionador, index) => (
+                        <div key={index} className="bg-white rounded-lg p-3 border border-slate-200">
+                          <div className="flex flex-wrap gap-4 text-sm">
+                            <div>
+                              <span className="font-medium text-slate-600">Nome:</span>
+                              <span className="ml-1 text-slate-800">{direcionador.name}</span>
+                            </div>
+                            {direcionador.culturaAssociada && (
+                              <div>
+                                <span className="font-medium text-slate-600">Cultura:</span>
+                                <span className="ml-1 text-slate-800">{direcionador.culturaAssociada}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
@@ -1202,21 +1220,62 @@ const Apontamentos = () => {
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {Object.entries(operacao).map(([key, value]) => (
-                          <div key={key} className="bg-white rounded-lg p-3 border border-green-100">
-                            <div className="text-xs font-medium text-green-600 mb-1 uppercase tracking-wide">{key}</div>
-                            {isEditing ? (
-                              <input
-                                type="text"
-                                value={value || ""}
-                                onChange={(e) => handleInputChange(key, e.target.value, index)}
-                                className="w-full px-2 py-1 text-sm border border-green-200 rounded focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
-                              />
-                            ) : (
-                              <div className="text-sm text-green-800 font-medium">{formatValue(key, value)}</div>
-                            )}
-                          </div>
-                        ))}
+                        {operacoesOrder.map((key) => {
+                          const value = operacao[key]
+                          if (value === undefined || value === null) return null
+
+                          return (
+                            <div key={key} className="bg-white rounded-lg p-3 border border-green-100">
+                              <div className="text-xs font-medium text-green-600 mb-1 uppercase tracking-wide">
+                                {key === "bem"
+                                  ? "Bem"
+                                  : key === "horaInicial"
+                                    ? "Hora Inicial"
+                                    : key === "horaFinal"
+                                      ? "Hora Final"
+                                      : key === "totalHoras"
+                                        ? "Total de Horas"
+                                        : key === "implementos"
+                                          ? "Implementos"
+                                          : key}
+                              </div>
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={value || ""}
+                                  onChange={(e) => handleInputChange(key, e.target.value, index)}
+                                  className="w-full px-2 py-1 text-sm border border-green-200 rounded focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                                />
+                              ) : (
+                                <div className="text-sm text-green-800 font-medium">
+                                  {key.toLowerCase() === "implementos" ? (
+                                    Array.isArray(value) && value.length > 0 ? (
+                                      <div className="space-y-1">
+                                        {value.map((implemento, idx) => (
+                                          <div
+                                            key={idx}
+                                            className="flex items-center gap-2 bg-green-50 px-2 py-1 rounded text-xs"
+                                          >
+                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                            <span className="font-medium">
+                                              {typeof implemento === "object"
+                                                ? implemento.name || implemento.nome || `ID: ${implemento.id}`
+                                                : implemento}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <span className="text-slate-400 italic">Nenhum implemento selecionado</span>
+                                    )
+                                  ) : (
+                                    formatValue(key, value)
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
                   ))}
