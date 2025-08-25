@@ -69,6 +69,8 @@ const Login = () => {
           } else if (userRole === "user") {
             // Redirecionar para lançamentos se for user
             navigate("/lancamentos")
+          } else if (userRole === "seller") {
+            navigate("/vendas")
           } else {
             // Fazer logout do usuário e mostrar erro para roles não reconhecidas
             await auth.signOut()
