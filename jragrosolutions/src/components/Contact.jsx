@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { Mail, Phone, MapPin, Send, CheckCircle, AlertCircle } from "lucide-react"
-import emailjs from '@emailjs/browser'
+import emailjs from "@emailjs/browser"
+import topoFooter from "../assets/topo-footer.png"
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -16,9 +17,9 @@ const Contact = () => {
   const [error, setError] = useState("")
 
   // Configurações do EmailJS
-  const SERVICE_ID = 'service_7rqbq31'
-  const TEMPLATE_ID = 'template_o8n9htt'
-  const PUBLIC_KEY = '_UNyHJ1bG0EjrVdl3'
+  const SERVICE_ID = "service_7rqbq31"
+  const TEMPLATE_ID = "template_o8n9htt"
+  const PUBLIC_KEY = "_UNyHJ1bG0EjrVdl3"
 
   const handleChange = (e) => {
     setFormData({
@@ -41,39 +42,34 @@ const Contact = () => {
         from_email: formData.email,
         phone: formData.phone,
         message: formData.message,
-        to_name: 'JR Agro Solutions', // Nome da empresa que receberá o email
-        date: new Date().toLocaleString('pt-BR'),
+        to_name: "JR Agro Solutions", // Nome da empresa que receberá o email
+        date: new Date().toLocaleString("pt-BR"),
       }
 
       // Enviar email através do EmailJS
-      const result = await emailjs.send(
-        SERVICE_ID,
-        TEMPLATE_ID,
-        templateParams,
-        PUBLIC_KEY
-      )
+      const result = await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, PUBLIC_KEY)
 
-      console.log('Email enviado com sucesso:', result.text)
-      
+      console.log("Email enviado com sucesso:", result.text)
+
       // Mostrar mensagem de sucesso
       setIsSubmitted(true)
-      
+
       // Resetar formulário após 5 segundos
       setTimeout(() => {
         setIsSubmitted(false)
         setFormData({ name: "", email: "", phone: "", message: "" })
       }, 5000)
-
     } catch (error) {
-      console.error('Erro ao enviar email:', error)
-      setError('Erro ao enviar mensagem. Tente novamente ou entre em contato diretamente.')
+      console.error("Erro ao enviar email:", error)
+      setError("Erro ao enviar mensagem. Tente novamente ou entre em contato diretamente.")
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <section id="contact" className="py-20 bg-gradient-to-br from-green-50 to-white relative overflow-hidden">
+    <section id="contact" className="pt-20 pb-0 bg-gradient-to-br from-green-50 to-white relative overflow-hidden">
+
       {/* Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-20 left-20 w-72 h-72 bg-green-200/20 rounded-full blur-3xl"></div>
@@ -145,7 +141,6 @@ const Contact = () => {
                     <div className="text-gray-600">Minas Gerais - Brasil</div>
                   </div>
                 </div>
-
               </div>
 
               {/* Business Hours */}
@@ -225,7 +220,7 @@ const Contact = () => {
                       value={formData.phone}
                       onChange={handleChange}
                       disabled={isLoading}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
                       placeholder="(11) 9 9999-9999"
                     />
                   </div>
@@ -275,6 +270,10 @@ const Contact = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="w-full">
+        <img src={topoFooter} alt="Footer decoration" className="w-full h-auto block" />
       </div>
     </section>
   )
