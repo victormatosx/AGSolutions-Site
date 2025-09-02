@@ -63,6 +63,8 @@ const Apontamentos = () => {
 
   // Estados para notificações e confirmação
   const [notification, setNotification] = useState(null)
+  // const [alertas, setAlertas] = useState([]) // REMOVED
+
   const [deleteConfirmation, setDeleteConfirmation] = useState(null)
 
   // Função para formatar data a partir de timestamp ou localId
@@ -232,94 +234,165 @@ const Apontamentos = () => {
       return // ProtectedRoute vai lidar com o redirecionamento
     }
 
-    // Usuário autenticado, carregar dados
-    const loadData = async () => {
-      setIsLoading(true)
-
-      try {
-        // Carregar usuários
-        const usersRef = ref(database, "propriedades/Matrice/users")
-        onValue(usersRef, (snapshot) => {
-          const usersData = snapshot.val()
-          if (usersData) {
-            setUsuarios(usersData)
-          }
-        })
-
-        // Carregar maquinários da estrutura correta
-        const maquinariosRef = ref(database, "propriedades/Matrice/maquinarios")
-        onValue(maquinariosRef, (snapshot) => {
-          const maquinariosData = snapshot.val()
-          if (maquinariosData) {
-            const maquinariosList = Object.keys(maquinariosData).map((key) => ({
-              id: key,
-              ...maquinariosData[key],
-            }))
-            setMaquinarios(maquinariosList)
-          }
-        })
-
-        // Carregar apontamentos
-        const apontamentosRef = ref(database, "propriedades/Matrice/apontamentos")
-        onValue(apontamentosRef, (snapshot) => {
-          const apontamentosData = snapshot.val()
-          const apontamentosList = apontamentosData
-            ? Object.keys(apontamentosData).map((key) => ({
-                id: key,
-                ...apontamentosData[key],
-              }))
-            : []
-          setData((prev) => ({ ...prev, apontamentos: apontamentosList }))
-        })
-
-        // Carregar abastecimentos
-        const abastecimentosRef = ref(database, "propriedades/Matrice/abastecimentos")
-        onValue(abastecimentosRef, (snapshot) => {
-          const abastecimentosData = snapshot.val()
-          const abastecimentosList = abastecimentosData
-            ? Object.keys(abastecimentosData).map((key) => ({
-                id: key,
-                ...abastecimentosData[key],
-              }))
-            : []
-          setData((prev) => ({ ...prev, abastecimentos: abastecimentosList }))
-        })
-
-        // Carregar percursos
-        const percursosRef = ref(database, "propriedades/Matrice/percursos")
-        onValue(percursosRef, (snapshot) => {
-          const percursosData = snapshot.val()
-          const percursosList = percursosData
-            ? Object.keys(percursosData).map((key) => ({
-                id: key,
-                ...percursosData[key],
-              }))
-            : []
-          setData((prev) => ({ ...prev, percursos: percursosList }))
-        })
-
-        // Carregar abastecimento de veículos
-        const abastecimentoVeiculosRef = ref(database, "propriedades/Matrice/abastecimentoVeiculos")
-        onValue(abastecimentoVeiculosRef, (snapshot) => {
-          const abastecimentoVeiculosData = snapshot.val()
-          const abastecimentoVeiculosList = abastecimentoVeiculosData
-            ? Object.keys(abastecimentoVeiculosData).map((key) => ({
-                id: key,
-                ...abastecimentoVeiculosData[key],
-              }))
-            : []
-          setData((prev) => ({ ...prev, abastecimentoVeiculos: abastecimentoVeiculosList }))
-          setIsLoading(false)
-        })
-      } catch (err) {
-        console.error("Erro ao carregar dados:", err)
-        setIsLoading(false)
-        showNotification("Erro ao carregar dados.", "error")
-      }
+    if (user) {
+      loadData()
+      // checkHourAlerts()
     }
-
-    loadData()
   }, [user, loading])
+
+  // const checkHourAlerts = () => {
+  //   if (!user) return
+
+  //   try {
+  //     const apontamentosRef = ref(database, "propriedades/Matrice/apontamentos")
+  //     onValue(apontamentosRef, (snapshot) => {
+  //       const apontamentosData = snapshot.val()
+  //       if (!apontamentosData) return
+
+  //       const alertasEncontrados = []
+  //       const existingAlertIds = new Set(alertas.map(alert => alert.id)) // já existentes
+
+  //       Object.keys(apontamentosData).forEach((key) => {
+  //         const apontamento = apontamentosData[key]
+
+  //         if (apontamento.alertaEnviado) return
+
+  //         if (apontamento.operacoesMecanizadas) {
+  //           apontamento.operacoesMecanizadas.forEach((operacao, index) => {
+  //             const totalHoras = Number.parseFloat(operacao.totalHoras) || 0
+  //             const alertId = `${key}-${index}` // 🔥 id único por apontamento+operação
+
+  //             if (totalHoras > 10.0 && !existingAlertIds.has(alertId)) {
+  //               alertasEncontrados.push({
+  //                 id: alertId,
+  //                 apontamentoId: key,
+  //                 operacaoIndex: index,
+  //                 totalHoras: totalHoras,
+  //                 bem: operacao.bem || "Não informado",
+  //                 data: apontamento.data || "Data não informada",
+  //                 responsavel: getResponsavelName(apontamento.userId),
+  //                 timestamp: Date.now(),
+  //               })
+
+  //               existingAlertIds.add(alertId)
+
+  //               // Marca no BD que o alerta já foi enviado
+  //               const apontamentoRef = ref(database, `propriedades/Matrice/apontamentos/${key}`)
+  //               update(apontamentoRef, { alertaEnviado: true })
+  //             }
+  //           })
+  //         }
+  //       })
+
+  //       if (alertasEncontrados.length > 0) {
+  //         setAlertas((prev) => [...prev, ...alertasEncontrados])
+  //       }
+  //     })
+  //   } catch (error) {
+  //     console.error("Erro ao verificar alertas de horas:", error)
+  //   }
+  // }
+
+  const getResponsavelName = (userId) => {
+    if (!userId || !usuarios[userId]) {
+      return "Usuário não identificado"
+    }
+    return usuarios[userId].nome || "Nome não disponível"
+  }
+
+  // const clearAlert = (alertId) => {
+  //   setAlertas((prev) => prev.filter((alert) => alert.id !== alertId))
+  // }
+
+  // const clearAllAlerts = () => {
+  //   setAlertas([])
+  // }
+
+  // Usuário autenticado, carregar dados
+  const loadData = async () => {
+    setIsLoading(true)
+
+    try {
+      // Carregar usuários
+      const usersRef = ref(database, "propriedades/Matrice/users")
+      onValue(usersRef, (snapshot) => {
+        const usersData = snapshot.val()
+        if (usersData) {
+          setUsuarios(usersData)
+        }
+      })
+
+      // Carregar maquinários da estrutura correta
+      const maquinariosRef = ref(database, "propriedades/Matrice/maquinarios")
+      onValue(maquinariosRef, (snapshot) => {
+        const maquinariosData = snapshot.val()
+        if (maquinariosData) {
+          const maquinariosList = Object.keys(maquinariosData).map((key) => ({
+            id: key,
+            ...maquinariosData[key],
+          }))
+          setMaquinarios(maquinariosList)
+        }
+      })
+
+      // Carregar apontamentos
+      const apontamentosRef = ref(database, "propriedades/Matrice/apontamentos")
+      onValue(apontamentosRef, (snapshot) => {
+        const apontamentosData = snapshot.val()
+        const apontamentosList = apontamentosData
+          ? Object.keys(apontamentosData).map((key) => ({
+              id: key,
+              ...apontamentosData[key],
+            }))
+          : []
+        setData((prev) => ({ ...prev, apontamentos: apontamentosList }))
+      })
+
+      // Carregar abastecimentos
+      const abastecimentosRef = ref(database, "propriedades/Matrice/abastecimentos")
+      onValue(abastecimentosRef, (snapshot) => {
+        const abastecimentosData = snapshot.val()
+        const abastecimentosList = abastecimentosData
+          ? Object.keys(abastecimentosData).map((key) => ({
+              id: key,
+              ...abastecimentosData[key],
+            }))
+          : []
+        setData((prev) => ({ ...prev, abastecimentos: abastecimentosList }))
+      })
+
+      // Carregar percursos
+      const percursosRef = ref(database, "propriedades/Matrice/percursos")
+      onValue(percursosRef, (snapshot) => {
+        const percursosData = snapshot.val()
+        const percursosList = percursosData
+          ? Object.keys(percursosData).map((key) => ({
+              id: key,
+              ...percursosData[key],
+            }))
+          : []
+        setData((prev) => ({ ...prev, percursos: percursosList }))
+      })
+
+      // Carregar abastecimento de veículos
+      const abastecimentoVeiculosRef = ref(database, "propriedades/Matrice/abastecimentoVeiculos")
+      onValue(abastecimentoVeiculosRef, (snapshot) => {
+        const abastecimentoVeiculosData = snapshot.val()
+        const abastecimentoVeiculosList = abastecimentoVeiculosData
+          ? Object.keys(abastecimentoVeiculosData).map((key) => ({
+              id: key,
+              ...abastecimentoVeiculosData[key],
+            }))
+          : []
+        setData((prev) => ({ ...prev, abastecimentoVeiculos: abastecimentoVeiculosList }))
+        setIsLoading(false)
+      })
+    } catch (err) {
+      console.error("Erro ao carregar dados:", err)
+      setIsLoading(false)
+      showNotification("Erro ao carregar dados.", "error")
+    }
+  }
 
   // Sistema de notificações
   const showNotification = (message, type = "success") => {

@@ -1,7 +1,6 @@
 /* Importar fontes modernas */
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap");
 
-
 /* Variáveis CSS para consistência */
 :root {
   /* Cores principais - Verde como nos outros componentes */
@@ -31,6 +30,10 @@
   --color-gray-700: #334155;
   --color-gray-800: #1e293b;
   --color-gray-900: #0f172a;
+  --color-border: #e2e8f0;
+  --color-background-secondary: #f1f5f9;
+  --color-text-primary: #1e293b;
+  --color-text-secondary: #64748b;
 
   /* Tipografia */
   --font-primary: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -242,6 +245,49 @@
   transform: scale(1.1);
 }
 
+.notification-btn {
+  position: relative;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-family: var(--font-secondary);
+  font-size: 0.875rem;
+}
+
+.notification-btn:hover {
+  background: var(--color-background-secondary);
+  border-color: var(--color-accent);
+}
+
+.notification-btn.active {
+  background: var(--color-accent);
+  color: var(--color-white);
+  border-color: var(--color-accent);
+}
+
+.notification-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: var(--color-error);
+  color: var(--color-white);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 @keyframes slideInRight {
   from {
     transform: translateX(100%);
@@ -250,6 +296,17 @@
   to {
     transform: translateX(0);
     opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -1119,6 +1176,119 @@
   transform: translateY(0);
 }
 
+/* Alert Panel Styles */
+.alert-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  min-width: 400px;
+  max-width: 500px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 1000;
+  animation: slideDown 0.3s ease-out;
+}
+
+.alert-panel-header {
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--color-background-secondary);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.alert-panel-title {
+  font-family: var(--font-primary);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-text-primary);
+}
+
+.alert-panel-content {
+  padding: var(--spacing-md);
+}
+
+.alert-item {
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-sm);
+  background: rgba(239, 68, 68, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+}
+
+.alert-item-content {
+  flex: 1;
+}
+
+.alert-item-title {
+  font-family: var(--font-primary);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--color-error);
+  margin-bottom: var(--spacing-xs);
+}
+
+.alert-item-details {
+  font-family: var(--font-secondary);
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.alert-item-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.alert-clear-btn {
+  background: none;
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.alert-clear-btn:hover {
+  background: var(--color-error);
+  color: var(--color-white);
+}
+
+.alert-clear-all-btn {
+  background: var(--color-error);
+  color: var(--color-white);
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.alert-clear-all-btn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.alert-empty {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--color-text-secondary);
+  font-family: var(--font-secondary);
+}
+
 /* Animações */
 @keyframes fadeIn {
   from {
@@ -1182,6 +1352,11 @@
   .entity-column,
   .entity-name {
     min-width: 200px;
+  }
+
+  .alert-panel {
+    min-width: 300px;
+    max-width: 400px;
   }
 }
 
@@ -1263,6 +1438,11 @@
   .modal-footer {
     padding: var(--spacing-lg);
   }
+
+  .alert-panel {
+    min-width: 250px;
+    max-width: 350px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1335,6 +1515,11 @@
 
   .modal-footer {
     flex-direction: column;
+  }
+
+  .alert-panel {
+    min-width: 200px;
+    max-width: 300px;
   }
 }
 

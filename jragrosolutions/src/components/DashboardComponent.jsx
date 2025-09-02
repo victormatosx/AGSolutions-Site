@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useAuthState } from "react-firebase-hooks/auth"
 import { auth, database } from "../firebase/firebase"
-import { ref, get, push, set } from "firebase/database"
+import { ref, get, push, set, onValue, update, off } from "firebase/database"
 import {
   Calendar,
   Users,
@@ -20,6 +20,8 @@ import {
   Clock,
   FileText,
   Loader2,
+  Bell,
+  BellRing,
 } from "lucide-react"
 import jsPDF from "jspdf"
 
@@ -38,6 +40,8 @@ const Dashboard = () => {
   // Estados para notificações
   const [notification, setNotification] = useState(null)
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [alertas, setAlertas] = useState([])
 
   // Função para mostrar notificação
   const showNotification = (type, message) => {
@@ -69,6 +73,97 @@ const Dashboard = () => {
 
     loadData()
   }, [user, loading, currentViewMode])
+
+  useEffect(() => {
+    if (user) {
+      // Add a small delay to prevent rapid successive calls
+      const timeoutId = setTimeout(() => {
+        checkHourAlerts()
+      }, 500)
+
+      return () => {
+        clearTimeout(timeoutId)
+        // Clean up Firebase listeners on unmount
+        const apontamentosRef = ref(database, "propriedades/Matrice/apontamentos")
+        off(apontamentosRef)
+      }
+    }
+  }, [user])
+
+  const checkHourAlerts = useCallback(() => {
+    if (!user) return
+
+    try {
+      const apontamentosRef = ref(database, "propriedades/Matrice/apontamentos")
+
+      // Use off() to remove any existing listeners before adding a new one
+      off(apontamentosRef)
+
+      onValue(apontamentosRef, (snapshot) => {
+        const apontamentosData = snapshot.val()
+        if (!apontamentosData) return
+
+        const alertasEncontrados = []
+        const existingAlertIds = new Set()
+
+        // First, collect all existing alert IDs to prevent duplicates
+        alertas.forEach((alert) => existingAlertIds.add(alert.id))
+
+        Object.keys(apontamentosData).forEach((key) => {
+          const apontamento = apontamentosData[key]
+
+          // Skip if alert is already marked as sent
+          if (apontamento.alertaEnviado === true) return
+
+          // Check if any operation has more than 10 hours
+          if (apontamento.operacoesMecanizadas) {
+            apontamento.operacoesMecanizadas.forEach((operacao, index) => {
+              const alertId = `${key}-${index}`
+              const totalHoras = Number.parseFloat(operacao.totalHoras) || 0
+
+              if (totalHoras > 10.0) {
+                // Skip if we already have this alert
+                if (existingAlertIds.has(alertId)) return
+
+                const newAlert = {
+                  id: alertId,
+                  apontamentoId: key,
+                  operacaoIndex: index,
+                  totalHoras: totalHoras,
+                  bem: operacao.bem || "Não informado",
+                  data: apontamento.data || "Data não informada",
+                  responsavel: getUserName(apontamento.userId),
+                  timestamp: Date.now(),
+                }
+
+                alertasEncontrados.push(newAlert)
+                existingAlertIds.add(alertId)
+
+                // Mark as waiting to prevent duplicate processing
+                if (!apontamento.alertaEnviado) {
+                  const apontamentoRef = ref(database, `propriedades/Matrice/apontamentos/${key}`)
+                  update(apontamentoRef, { alertaEnviado: "waiting" })
+                }
+              }
+            })
+          }
+        })
+
+        // Only update state if we have new alerts
+        if (alertasEncontrados.length > 0) {
+          setAlertas((prev) => {
+            // Double-check for duplicates before adding
+            const newAlerts = alertasEncontrados.filter(
+              (newAlert) => !prev.some((existingAlert) => existingAlert.id === newAlert.id),
+            )
+            return [...prev, ...newAlerts]
+          })
+        }
+      })
+    } catch (error) {
+      console.error("Erro ao verificar alertas de horas:", error)
+    }
+  }, [user, alertas]) // Enhanced useCallback with dependencies to prevent unnecessary re-executions
 
   // Função para gerar PDF com layout profissional
   const generatePDF = async () => {
@@ -783,6 +878,35 @@ const Dashboard = () => {
     }
   }
 
+  const getUserName = (userId) => {
+    // This would need to be implemented based on your user data structure
+    return "Usuário"
+  }
+
+  const clearAlert = (alertId) => {
+    setAlertas((prev) => {
+      const updatedAlerts = prev.filter((alert) => {
+        if (alert.id === alertId) {
+          // Update the alert status in Firebase when dismissed
+          const apontamentoRef = ref(database, `propriedades/Matrice/apontamentos/${alert.apontamentoId}`)
+          update(apontamentoRef, { alertaEnviado: true })
+          return false
+        }
+        return true
+      })
+      return updatedAlerts
+    })
+  }
+
+  const clearAllAlerts = () => {
+    // Update all alerts in Firebase when clearing all
+    alertas.forEach((alert) => {
+      const apontamentoRef = ref(database, `propriedades/Matrice/apontamentos/${alert.apontamentoId}`)
+      update(apontamentoRef, { alertaEnviado: true })
+    })
+    setAlertas([])
+  }
+
   // Renderizar calendário
   const renderCalendar = () => {
     if (isLoading) {
@@ -1000,6 +1124,51 @@ const Dashboard = () => {
                   </div>
                 </div>
                 <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "8px 16px",
+                    background: alertas.length > 0 ? "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)" : "#f1f5f9",
+                    border: alertas.length > 0 ? "1px solid #dc2626" : "1px solid #e2e8f0",
+                    borderRadius: "8px",
+                    color: alertas.length > 0 ? "white" : "#64748b",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    boxShadow: alertas.length > 0 ? "0 0 20px rgba(239, 68, 68, 0.3)" : "none",
+                    animation: alertas.length > 0 ? "pulse 2s infinite" : "none",
+                  }}
+                  title="Ver Notificações"
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    {alertas.length > 0 ? <BellRing size={16} /> : <Bell size={16} />}
+                    <span>Alertas</span>
+                    {alertas.length > 0 && (
+                      <div
+                        style={{
+                          background: "rgba(255, 255, 255, 0.9)",
+                          color: "#dc2626",
+                          fontSize: "12px",
+                          fontWeight: "700",
+                          padding: "2px 6px",
+                          borderRadius: "10px",
+                          minWidth: "18px",
+                          height: "18px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {alertas.length}
+                      </div>
+                    )}
+                  </div>
+                </button>
+                <button
                   onClick={generatePDF}
                   className={`pdf-button ${isGeneratingPDF ? "generating" : ""}`}
                   disabled={isGeneratingPDF}
@@ -1082,45 +1251,196 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Modal de Justificativa */}
-      {showJustificativaModal && (
-        <div className="modal-overlay">
-          <div className="modal-backdrop" onClick={() => setShowJustificativaModal(false)}></div>
-          <div className="modal-content">
-            <div className="modal-header">
-              <div className="modal-title">
-                <FileText size={24} />
-                <h3>
-                  {currentViewMode === "operadores"
-                    ? "Justificar Ausência do Operador"
-                    : "Justificar Inatividade da Máquina"}
-                </h3>
+      {showNotifications && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setShowNotifications(false)}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: "12px",
+              width: "90%",
+              maxWidth: "600px",
+              maxHeight: "80vh",
+              overflow: "hidden",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "20px 24px",
+                borderBottom: "1px solid #e2e8f0",
+                background: "#f8fafc",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "18px",
+                  fontWeight: "600",
+                  color: "#1e293b",
+                  margin: 0,
+                }}
+              >
+                Alertas de Horas Excedidas
+              </h3>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                }}
+              >
+                {alertas.length > 0 && (
+                  <button
+                    onClick={clearAllAlerts}
+                    style={{
+                      padding: "6px 12px",
+                      background: "#ef4444",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: "500",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Limpar Todos
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowNotifications(false)}
+                  style={{
+                    padding: "6px",
+                    background: "#f1f5f9",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <X size={16} />
+                </button>
               </div>
-              <button className="modal-close" onClick={() => setShowJustificativaModal(false)}>
-                <X size={20} />
-              </button>
             </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label htmlFor="justificativa">Motivo da ausência/inatividade:</label>
-                <textarea
-                  id="justificativa"
-                  value={justificativaText}
-                  onChange={(e) => setJustificativaText(e.target.value)}
-                  rows="4"
-                  placeholder="Descreva o motivo da ausência ou inatividade nesta data..."
-                  className="form-textarea"
-                />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="button-secondary" onClick={() => setShowJustificativaModal(false)}>
-                Cancelar
-              </button>
-              <button className="button-primary" onClick={salvarJustificativa}>
-                <Check size={16} />
-                Salvar Justificativa
-              </button>
+            <div
+              style={{
+                maxHeight: "calc(80vh - 80px)",
+                overflowY: "auto",
+              }}
+            >
+              {alertas.length === 0 ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "60px 24px",
+                    color: "#64748b",
+                  }}
+                >
+                  <Bell size={48} style={{ marginBottom: "16px", opacity: 0.5 }} />
+                  <p>Nenhum alerta de horas excedidas</p>
+                </div>
+              ) : (
+                <div style={{ padding: "16px" }}>
+                  {alertas
+                    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+                    .map((alerta) => (
+                      <div
+                        key={alerta.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: "12px",
+                          padding: "16px",
+                          background: "#fef2f2",
+                          border: "1px solid #fecaca",
+                          borderRadius: "8px",
+                          marginBottom: "12px",
+                        }}
+                      >
+                        <div style={{ flexShrink: 0, marginTop: "2px" }}>
+                          <AlertCircle size={20} style={{ color: "#dc2626" }} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div
+                            style={{
+                              fontWeight: "600",
+                              color: "#dc2626",
+                              marginBottom: "8px",
+                              fontSize: "14px",
+                            }}
+                          >
+                            Horas Excedidas: {alerta.totalHoras}h
+                          </div>
+                          <div
+                            style={{
+                              color: "#374151",
+                              fontSize: "13px",
+                              lineHeight: "1.4",
+                            }}
+                          >
+                            <p style={{ margin: "4px 0" }}>
+                              <strong>Bem:</strong> {alerta.bem}
+                            </p>
+                            <p style={{ margin: "4px 0" }}>
+                              <strong>Data:</strong> {alerta.data}
+                            </p>
+                            <p style={{ margin: "4px 0" }}>
+                              <strong>Responsável:</strong> {alerta.responsavel}
+                            </p>
+                          </div>
+                          {alerta.timestamp && (
+                            <div
+                              style={{
+                                fontSize: "11px",
+                                color: "#6b7280",
+                                marginTop: "8px",
+                                fontStyle: "italic",
+                              }}
+                            >
+                              {new Date(alerta.timestamp).toLocaleString("pt-BR")}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => clearAlert(alerta.id)}
+                          style={{
+                            flexShrink: 0,
+                            padding: "4px",
+                            background: "transparent",
+                            border: "none",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                            color: "#6b7280",
+                          }}
+                          title="Remover alerta"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
