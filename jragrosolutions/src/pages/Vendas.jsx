@@ -1,18 +1,41 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, lazy, Suspense } from "react"
 import { useAuthState } from "react-firebase-hooks/auth"
 import { auth, database } from "../firebase/firebase"
 import { ref, get } from "firebase/database"
 import { useNavigate } from "react-router-dom"
 import HeaderVendas from "../components/HeaderVendas"
-import { ShoppingCart, TrendingUp, Users, DollarSign, Package, BarChart3, Calendar, Target } from "lucide-react"
+import { ShoppingCart, Users, DollarSign, Package, BarChart3, Target, Plus, List, Home, UserPlus, Loader2, Menu } from "lucide-react"
+
+// Componentes para as diferentes seções
+const DASHBOARD = 'dashboard';
+const NEW_SALE = 'newSale';
+const SALES_LIST = 'salesList';
+const REPORTS = 'reports';
+const CLIENTS = 'clients';
 
 const Vendas = () => {
   const [user, loading, error] = useAuthState(auth)
   const [userData, setUserData] = useState(null)
   const [isLoadingData, setIsLoadingData] = useState(true)
+  const [activeSection, setActiveSection] = useState(DASHBOARD)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
   const navigate = useNavigate()
+  
+  // Dynamic imports with React.lazy
+  const DashboardVendas = lazy(() => import('../components/DashboardVendas'));
+  const SaleForm = lazy(() => import('../components/SaleForm'));
+  const SalesList = lazy(() => import('../components/SalesList'));
+  const ReportsSection = lazy(() => import('../components/ReportsSection'));
+  const ClientForm = lazy(() => import('../components/ClientForm'));
+  
+  // Loading component for Suspense
+  const LoadingFallback = () => (
+    <div className="flex justify-center items-center h-64">
+      <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+    </div>
+  );
 
   // Verificar se o usuário está logado e tem permissão
   useEffect(() => {
@@ -70,7 +93,16 @@ const Vendas = () => {
     }
   }, [user, loading, navigate])
 
-  // Dados mockados para demonstração
+  // Dados mockados 
+  // Navigation items
+  const navItems = [
+    { id: DASHBOARD, label: 'Dashboard', icon: Home },
+    { id: NEW_SALE, label: 'Nova Venda', icon: Plus },
+    { id: SALES_LIST, label: 'Vendas', icon: List },
+    { id: REPORTS, label: 'Relatórios', icon: BarChart3 },
+    { id: CLIENTS, label: 'Clientes', icon: UserPlus },
+  ]
+
   const salesStats = [
     {
       title: "Vendas do Mês",
@@ -106,6 +138,29 @@ const Vendas = () => {
     },
   ]
 
+  const renderSection = () => {
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        {(() => {
+          switch (activeSection) {
+            case DASHBOARD:
+              return <DashboardVendas userData={userData} />
+            case NEW_SALE:
+              return <SaleForm onSuccess={() => setActiveSection(SALES_LIST)} userData={userData} />
+            case SALES_LIST:
+              return <SalesList />
+            case REPORTS:
+              return <ReportsSection />
+            case CLIENTS:
+              return <ClientForm />
+            default:
+              return <DashboardVendas userData={userData} />
+          }
+        })()}
+      </Suspense>
+    )
+  }
+
   if (loading || isLoadingData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center">
@@ -122,107 +177,103 @@ const Vendas = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
-      <HeaderVendas />
+      <HeaderVendas 
+        onSectionChange={setActiveSection}
+        activeSection={activeSection}
+        onMenuToggle={() => setShowMobileMenu(!showMobileMenu)}
+        showMobileMenu={showMobileMenu}
+        onCloseMenu={() => setShowMobileMenu(false)}
+      />
+      
+      {/* Mobile menu button */}
+      <button 
+        onClick={() => setShowMobileMenu(true)}
+        className="md:hidden fixed bottom-6 right-6 bg-blue-600 text-white p-3 rounded-full shadow-lg z-40"
+      >
+        <Menu className="w-6 h-6" />
+      </button>
 
       {/* Main Content */}
-      <main className="pt-24 pb-12">
-        <div className="container mx-auto px-4 max-w-6xl">
-          {/* Welcome Section */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Painel de Vendas</h1>
-            <p className="text-gray-600">
-              Bem-vindo, {userData?.name || user?.email}! Gerencie suas vendas e acompanhe seu desempenho.
-            </p>
+      <main className="pt-24 pb-20 md:pb-12 px-4">
+        <div className="container mx-auto max-w-6xl">
+          {/* Header Section */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">
+                {activeSection === DASHBOARD && 'Visão Geral'}
+                {activeSection === NEW_SALE && 'Nova Venda'}
+                {activeSection === SALES_LIST && 'Lista de Vendas'}
+                {activeSection === REPORTS && 'Relatórios'}
+                {activeSection === CLIENTS && 'Clientes'}
+              </h1>
+              <p className="text-gray-600">
+                Bem-vindo, {userData?.name || user?.email?.split('@')[0]}!
+              </p>
+            </div>
+            
+            {activeSection !== DASHBOARD && (
+              <button
+                onClick={() => setActiveSection(DASHBOARD)}
+                className="mt-4 md:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              >
+                Voltar para o Dashboard
+              </button>
+            )}
           </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {salesStats.map((stat, index) => {
-              const IconComponent = stat.icon
-              return (
-                <div key={index} className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`w-12 h-12 ${stat.bgColor} rounded-lg flex items-center justify-center`}>
-                      <IconComponent className={`w-6 h-6 ${stat.color}`} />
-                    </div>
-                    <span className="text-sm font-medium text-green-600">{stat.change}</span>
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</h3>
-                  <p className="text-gray-600 text-sm">{stat.title}</p>
+          {/* Render the active section */}
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 mb-8">
+            {renderSection()}
+          </div>
+          
+          {/* Quick Actions - Only show on dashboard */}
+          {activeSection === DASHBOARD && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <button 
+                onClick={() => setActiveSection(NEW_SALE)}
+                className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow text-left"
+              >
+                <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center mb-4">
+                  <Plus className="w-6 h-6 text-green-600" />
                 </div>
-              )
-            })}
-          </div>
-
-          {/* Action Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {/* Nova Venda */}
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow">
-              <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center mb-4">
-                <ShoppingCart className="w-6 h-6 text-green-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Nova Venda</h3>
-              <p className="text-gray-600 mb-4">Registre uma nova venda e acompanhe o progresso.</p>
-              <button className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
-                Iniciar Venda
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Nova Venda</h3>
+                <p className="text-gray-600">Registre uma nova venda</p>
+              </button>
+              
+              <button 
+                onClick={() => setActiveSection(SALES_LIST)}
+                className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow text-left"
+              >
+                <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center mb-4">
+                  <List className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Vendas</h3>
+                <p className="text-gray-600">Visualize todas as vendas</p>
+              </button>
+              
+              <button 
+                onClick={() => setActiveSection(REPORTS)}
+                className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow text-left"
+              >
+                <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center mb-4">
+                  <BarChart3 className="w-6 h-6 text-purple-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Relatórios</h3>
+                <p className="text-gray-600">Acesse relatórios detalhados</p>
+              </button>
+              
+              <button 
+                onClick={() => setActiveSection(CLIENTS)}
+                className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow text-left"
+              >
+                <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center mb-4">
+                  <Users className="w-6 h-6 text-orange-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Clientes</h3>
+                <p className="text-gray-600">Gerencie seus clientes</p>
               </button>
             </div>
-
-            {/* Relatórios */}
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow">
-              <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center mb-4">
-                <BarChart3 className="w-6 h-6 text-blue-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Relatórios</h3>
-              <p className="text-gray-600 mb-4">Visualize relatórios detalhados de suas vendas.</p>
-              <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
-                Ver Relatórios
-              </button>
-            </div>
-
-            {/* Agenda */}
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow">
-              <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center mb-4">
-                <Calendar className="w-6 h-6 text-purple-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Agenda</h3>
-              <p className="text-gray-600 mb-4">Gerencie seus compromissos e visitas.</p>
-              <button className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">
-                Ver Agenda
-              </button>
-            </div>
-          </div>
-
-          {/* Recent Activity */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-green-600" />
-              Atividade Recente
-            </h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                <div>
-                  <p className="font-medium text-gray-900">Venda para João Silva</p>
-                  <p className="text-sm text-gray-600">Produto: Fertilizante Premium - R$ 1.250,00</p>
-                </div>
-                <span className="text-sm text-gray-500">Hoje, 14:30</span>
-              </div>
-              <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                <div>
-                  <p className="font-medium text-gray-900">Reunião com Maria Santos</p>
-                  <p className="text-sm text-gray-600">Apresentação de novos produtos</p>
-                </div>
-                <span className="text-sm text-gray-500">Ontem, 16:00</span>
-              </div>
-              <div className="flex items-center justify-between py-3">
-                <div>
-                  <p className="font-medium text-gray-900">Venda para Fazenda Esperança</p>
-                  <p className="text-sm text-gray-600">Produto: Sementes Híbridas - R$ 3.500,00</p>
-                </div>
-                <span className="text-sm text-gray-500">2 dias atrás</span>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </main>
     </div>
