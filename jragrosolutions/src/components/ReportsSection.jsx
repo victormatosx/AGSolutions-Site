@@ -154,21 +154,42 @@ const ReportsSection = ({ sales = [], clients = [] }) => {
     setSelectAll(!selectAll);
   };
   
-  // Format date
-  const formatDate = (dateString) => {
-    try {
-      return new Date(dateString).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch (e) {
-      return dateString || 'Data inválida';
-    }
-  };
-  
+  // --- Helpers de data (baseado em SalesList.jsx) ---
+const parseDateToMs = (value) => {
+  if (value == null || value === "") return null
+  if (typeof value === "number") {
+    const s = value.toString()
+    if (s.length <= 10) return value * 1000
+    return value
+  }
+  if (/^\d+$/.test(value.trim())) {
+    const n = Number(value)
+    const s = value.trim().length
+    return s <= 10 ? n * 1000 : n
+  }
+  const str = value.trim()
+  const brMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(.*))?$/)
+  if (brMatch) {
+    const [, day, month, year, timePart] = brMatch
+    const iso = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}${timePart ? "T" + timePart : "T00:00:00"}`
+    const ms = Date.parse(iso)
+    return isNaN(ms) ? null : ms
+  }
+  let ms = Date.parse(str)
+  if (!isNaN(ms)) return ms
+  ms = Date.parse(str.replace(" ", "T"))
+  if (!isNaN(ms)) return ms
+  return null
+}
+
+const formatDate = (dateString) => {
+  const ms = parseDateToMs(dateString)
+  if (!ms && ms !== 0) return "Data não informada"
+  const d = new Date(ms)
+  if (isNaN(d)) return dateString || "Data inválida"
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+}
+
   // Get date range text
   const getDateRangeText = () => {
     const now = new Date();
