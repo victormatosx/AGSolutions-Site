@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Users, Plus, List, Edit2, Trash2, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Users, Plus, List, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 import { ref, onValue, set, remove } from "firebase/database"
 import { database } from "../firebase/firebase"
 
@@ -145,31 +145,6 @@ const ClientForm = () => {
     }
   }
 
-  const handleEdit = (client) => {
-    setClientData({ code: client.code, name: client.name })
-    setEditingClient(client)
-    setShowForm(true)
-    // Scroll to form when editing
-    window.scrollTo({ top: 0, behavior: "smooth" })
-  }
-
-  const handleDelete = async (id) => {
-    if (window.confirm("Tem certeza que deseja excluir este cliente?")) {
-      setIsLoading(true) // Set loading state during deletion
-      try {
-        const clientToDelete = allClients.find((client) => client.id === id)
-        if (clientToDelete) {
-          await removeClientFromFirebase(id, clientToDelete.propriedadeId || "default")
-          // The onValue listener will update the clients state automatically
-        }
-      } catch (error) {
-        console.error("Error deleting client:", error)
-        // You might want to show an error message to the user here
-      } finally {
-        setIsLoading(false) // Reset loading state
-      }
-    }
-  }
 
   const handleChange = (field, value) => {
     setClientData({ ...clientData, [field]: value })
@@ -445,9 +420,6 @@ const ClientForm = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Nome
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ações
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -455,24 +427,6 @@ const ClientForm = () => {
                       <tr key={client.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{client.code}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{client.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() => handleEdit(client)}
-                            className="inline-flex items-center gap-1 text-green-600 hover:text-green-900 mr-4 px-2 py-1 rounded transition-colors"
-                            disabled={isLoading}
-                          >
-                            <Edit2 className="w-4 h-4" />
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => handleDelete(client.id)}
-                            className="inline-flex items-center gap-1 text-red-600 hover:text-red-900 px-2 py-1 rounded transition-colors"
-                            disabled={isLoading}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Excluir
-                          </button>
-                        </td>
                       </tr>
                     ))}
                   </tbody>

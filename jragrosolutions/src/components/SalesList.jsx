@@ -16,10 +16,70 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
   const [editForm, setEditForm] = useState({})
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    console.log("[v0] Property name received:", propertyName)
-    console.log("[v0] Connecting to Firebase path:", `propriedades/${propertyName}/vendas`)
+  // --- Helpers de data (robustos) ---
+  const parseDateToMs = (value) => {
+    if (value == null || value === "") return null
 
+    // Número: pode ser timestamp em s (10 dígitos) ou ms (13 dígitos)
+    if (typeof value === "number") {
+      const s = value.toString()
+      if (s.length <= 10) return value * 1000 // segundos -> ms
+      return value // já em ms
+    }
+
+    // String contendo apenas dígitos (timestamp em seg ou ms)
+    if (/^\d+$/.test(value.trim())) {
+      const n = Number(value)
+      const s = value.trim().length
+      return s <= 10 ? n * 1000 : n
+    }
+
+    const str = value.trim()
+
+    // Formato DD/MM/YYYY (ou DD/MM/YYYY hh:mm)
+    const brMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(.*))?$/)
+    if (brMatch) {
+      const [, day, month, year, timePart] = brMatch
+      const iso = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}${timePart ? "T" + timePart : "T00:00:00"}`
+      const ms = Date.parse(iso)
+      return isNaN(ms) ? null : ms
+    }
+
+    // Tenta parse direto (ISO, "YYYY-MM-DD", "YYYY-MM-DD HH:MM:SS", etc.)
+    let ms = Date.parse(str)
+    if (!isNaN(ms)) return ms
+
+    // Tenta trocar espaço por 'T' (algumas strings ficam 'YYYY-MM-DD HH:MM:SS')
+    ms = Date.parse(str.replace(" ", "T"))
+    if (!isNaN(ms)) return ms
+
+    return null
+  }
+
+  const formatDateFromMs = (ms) => {
+    if (!ms && ms !== 0) return "Data não informada"
+    const d = new Date(ms)
+    if (isNaN(d)) return "Data inválida"
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+  }
+
+  // Para inputs tipo date (YYYY-MM-DD)
+  const formatForInput = (ms) => {
+    if (!ms && ms !== 0) return ""
+    const d = new Date(ms)
+    if (isNaN(d)) return ""
+    const yyyy = d.getFullYear()
+    const mm = String(d.getMonth() + 1).padStart(2, "0")
+    const dd = String(d.getDate()).padStart(2, "0")
+    return `${yyyy}-${mm}-${dd}`
+  }
+
+  // Aceita qualquer valor bruto (timestamp/string) e retorna DD/MM/YYYY ou fallback
+  const formatAnyDate = (raw) => formatDateFromMs(parseDateToMs(raw))
+
+  // --- Fim helpers ---
+
+  useEffect(() => {
     const salesRef = ref(database, `propriedades/${propertyName}/vendas`)
 
     const unsubscribe = onValue(
@@ -27,56 +87,47 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
       (snapshot) => {
         try {
           const data = snapshot.val()
-          console.log("[v0] Firebase data received:", data)
-
           if (data) {
-            // Convert Firebase object to array with IDs
             const salesArray = Object.keys(data).map((key) => {
-              console.log("[v0] Processing sale:", key, data[key])
+              const raw = data[key].dataCarregamento ?? data[key].date ?? data[key].dataPedido ?? null
+              const parsedMs = parseDateToMs(raw)
               return {
                 id: key,
                 ...data[key],
                 clientId: data[key].clienteId || data[key].clientId,
-                date: data[key].dataCarregamento || data[key].date,
-                total: Number.parseFloat(data[key].valorTotal) || Number.parseFloat(data[key].total) || 0,
+                // mantemos o valor bruto para compatibilidade, mas adicionamos parsedDateMs
+                date: raw,
+                parsedDateMs: parsedMs,
+                total: Number.parseFloat(data[key].valorTotal || data[key].total || 0) || 0,
                 paymentMethod: data[key].formaPagamento || data[key].paymentMethod || "Não informado",
                 client: data[key].cliente || data[key].client,
-                items: data[key].itens || data[key].items || [],
+                itens: data[key].itens || data[key].items || [],
               }
             })
-            console.log("[v0] Processed sales array:", salesArray)
             setSales(salesArray)
           } else {
-            console.log("[v0] No sales data found")
             setSales([])
           }
           setLoading(false)
         } catch (err) {
-          console.error("[v0] Erro ao carregar vendas:", err)
           setError("Erro ao carregar vendas")
           setLoading(false)
         }
       },
       (error) => {
-        console.error("[v0] Erro na conexão com Firebase:", error)
         setError("Erro na conexão com o banco de dados")
         setLoading(false)
       },
     )
 
-    // Cleanup subscription on unmount
     return () => off(salesRef, "value", unsubscribe)
   }, [propertyName])
 
   const getClientName = (clientId) => {
-    // First try to get from clients prop
     const client = clients?.find((c) => c.id === clientId)
     if (client) return client.name
-
-    // If not found in clients prop, try to get from sale data itself
     const sale = sales.find((s) => s.clientId === clientId)
     if (sale?.client) return sale.client
-
     return "Cliente não encontrado"
   }
 
@@ -84,19 +135,21 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
     sales?.filter((sale) => {
       const clientName = getClientName(sale.clientId).toLowerCase()
       const saleId = sale.id || ""
-      const paymentMethod = sale.paymentMethod || ""
-
+      const paymentMethod = (sale.paymentMethod || "").toLowerCase()
       return (
         clientName.includes(searchTerm.toLowerCase()) ||
         saleId.includes(searchTerm) ||
-        paymentMethod.toLowerCase().includes(searchTerm.toLowerCase())
+        paymentMethod.includes(searchTerm.toLowerCase())
       )
     }) || []
 
   const sortedSales = [...filteredSales].sort((a, b) => {
     switch (sortBy) {
-      case "date":
-        return new Date(b.date) - new Date(a.date)
+      case "date": {
+        const aMs = a.parsedDateMs ?? -Infinity
+        const bMs = b.parsedDateMs ?? -Infinity
+        return bMs - aMs // desc
+      }
       case "total":
         return (b.total || 0) - (a.total || 0)
       case "client":
@@ -109,14 +162,17 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
   const handleViewSale = (sale) => {
     setSelectedSale(sale)
     setIsEditing(false)
+
+    // Prepara valores para o formulário de edição (formatados para input type="date")
     setEditForm({
       cliente: sale.cliente || "",
-      dataCarregamento: sale.dataCarregamento || sale.date || "",
+      // preferimos usar parsedDateMs para transformar em YYYY-MM-DD
+      dataCarregamento: formatForInput(sale.parsedDateMs ?? parseDateToMs(sale.dataCarregamento ?? sale.date ?? "")),
       formaPagamento: sale.formaPagamento || sale.paymentMethod || "",
       observacao: sale.observacao || "",
       observacaoPagamento: sale.observacaoPagamento || "",
       status: sale.status || "pendente",
-      dataPedido: sale.dataPedido || "",
+      dataPedido: formatForInput(parseDateToMs(sale.dataPedido ?? "")) || "",
       prazoDias: sale.prazoDias || "",
     })
   }
@@ -131,6 +187,8 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
     setSaving(true)
     try {
       const saleRef = ref(database, `propriedades/${propertyName}/vendas/${selectedSale.id}`)
+      // Aqui salvamos os valores como estão no formulário.
+      // Se você quiser salvar timestamp em ms, converta editForm.dataCarregamento -> timestamp antes de salvar.
       await update(saleRef, {
         cliente: editForm.cliente,
         dataCarregamento: editForm.dataCarregamento,
@@ -144,9 +202,7 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
 
       setIsEditing(false)
       setSelectedSale(null)
-      console.log("[v0] Sale updated successfully")
     } catch (error) {
-      console.error("[v0] Error updating sale:", error)
       alert("Erro ao salvar alterações")
     } finally {
       setSaving(false)
@@ -234,7 +290,7 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
                 <td className="py-3 px-4 text-sm text-gray-600">#{sale.id.slice(-6)}</td>
                 <td className="py-3 px-4 font-medium">{getClientName(sale.clientId)}</td>
                 <td className="py-3 px-4 text-sm text-gray-600">
-                  {sale.date ? new Date(sale.date).toLocaleDateString("pt-BR") : "Data não informada"}
+                  {sale.parsedDateMs ? formatDateFromMs(sale.parsedDateMs) : formatAnyDate(sale.date)}
                 </td>
                 <td className="py-3 px-4 font-medium text-green-600">
                   R$ {(sale.total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
@@ -354,15 +410,13 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
                       {isEditing ? (
                         <input
                           type="date"
-                          value={editForm.dataPedido || selectedSale.dataPedido || ""}
+                          value={editForm.dataPedido || ""}
                           onChange={(e) => setEditForm({ ...editForm, dataPedido: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
                       ) : (
                         <p className="text-gray-900">
-                          {selectedSale.dataPedido
-                            ? new Date(selectedSale.dataPedido).toLocaleDateString("pt-BR")
-                            : "Data não informada"}
+                          {formatAnyDate(selectedSale.dataPedido)}
                         </p>
                       )}
                     </div>
@@ -430,15 +484,13 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
                         {isEditing ? (
                           <input
                             type="date"
-                            value={editForm.dataCarregamento}
+                            value={editForm.dataCarregamento || ""}
                             onChange={(e) => setEditForm({ ...editForm, dataCarregamento: e.target.value })}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                           />
                         ) : (
                           <p className="text-lg font-semibold text-gray-900">
-                            {selectedSale.dataCarregamento
-                              ? new Date(selectedSale.dataCarregamento).toLocaleDateString("pt-BR")
-                              : "Data não informada"}
+                            {selectedSale.parsedDateMs ? formatDateFromMs(selectedSale.parsedDateMs) : formatAnyDate(selectedSale.dataCarregamento ?? selectedSale.date)}
                           </p>
                         )}
                       </div>

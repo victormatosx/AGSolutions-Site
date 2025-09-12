@@ -1,22 +1,78 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { BarChart3, Download, Calendar, Filter, Check, X } from 'lucide-react'
 import { PDFDownloadLink } from '@react-pdf/renderer'
-// Importando o componente SalesReportPDF
+import { ref, onValue } from "firebase/database"
+import { database } from "../firebase/firebase"
 import SalesReportPDF from './SalesReportPDF'
 
 const ReportsSection = ({ sales = [], clients = [] }) => {
-  const [reportType, setReportType] = useState("sales")
   const [dateRange, setDateRange] = useState("month")
   const [selectedClient, setSelectedClient] = useState("")
+  const [selectedProductType, setSelectedProductType] = useState("")
+  const [productTypes, setProductTypes] = useState([])
+  const [searchTerm, setSearchTerm] = useState("")
   const [selectedSales, setSelectedSales] = useState([])
   const [selectAll, setSelectAll] = useState(false)
 
-  // Filter sales based on selected client
+  // Fetch product types from Firebase
+  useEffect(() => {
+    const productosRef = ref(database, "propriedades")
+
+    const unsubscribe = onValue(productosRef, (snapshot) => {
+      const culturas = new Set()
+      snapshot.forEach((property) => {
+        const propertyData = property.val()
+        if (propertyData.direcionadores) {
+          Object.values(propertyData.direcionadores).forEach((direcionador) => {
+            if (direcionador.culturaAssociada) {
+              culturas.add(direcionador.culturaAssociada)
+            }
+          })
+        }
+      })
+
+      const productosData = Array.from(culturas).map((cultura, index) => ({
+        id: `cultura-${index}`,
+        name: cultura,
+      }))
+
+      setProductTypes(productosData)
+    })
+
+    return () => unsubscribe()
+  }, [])
+
+  // Get client name by ID
+  const getClientName = (clientId) => {
+    if (!clientId) return 'Cliente não especificado';
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return `Cliente ${clientId}`; // Fallback to ID if client not found
+    return client.Nome || client.nome || client.name || `Cliente ${clientId}`;
+  };
+
+  // Format currency
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value || 0);
+  };
+
+  // Filter sales based on selected client and product type
   const filteredSales = useMemo(() => {
     let result = [...sales];
     
     if (selectedClient) {
       result = result.filter(sale => sale.clientId === selectedClient);
+    }
+    
+    if (selectedProductType) {
+      result = result.filter(sale => 
+        sale.items?.some(item => 
+          item.productType === selectedProductType || 
+          item.culturaAssociada === selectedProductType
+        )
+      );
     }
     
     // Apply date range filter
@@ -58,8 +114,26 @@ const ReportsSection = ({ sales = [], clients = [] }) => {
       });
     }
     
+    // Apply search filter
+    if (searchTerm.trim() !== '') {
+      const searchLower = searchTerm.toLowerCase();
+      result = result.filter(sale => {
+        const clientName = getClientName(sale.clientId).toLowerCase();
+        const saleId = sale.id?.toLowerCase() || '';
+        const total = formatCurrency(sale.total || 0).toLowerCase();
+        
+        return (
+          clientName.includes(searchLower) ||
+          saleId.includes(searchLower) ||
+          total.includes(searchLower) ||
+          sale.observations?.toLowerCase().includes(searchLower) ||
+          sale.status?.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+    
     return result;
-  }, [sales, selectedClient, dateRange]);
+  }, [sales, selectedClient, selectedProductType, dateRange, searchTerm]);
   
   // Toggle selection of a single sale
   const toggleSaleSelection = (saleId) => {
@@ -78,22 +152,6 @@ const ReportsSection = ({ sales = [], clients = [] }) => {
       setSelectedSales(filteredSales.map(sale => sale.id));
     }
     setSelectAll(!selectAll);
-  };
-  
-  // Get client name by ID
-  const getClientName = (clientId) => {
-    if (!clientId) return 'Cliente não especificado';
-    const client = clients.find(c => c.id === clientId);
-    if (!client) return `Cliente ${clientId}`; // Fallback to ID if client not found
-    return client.Nome || client.nome || client.name || `Cliente ${clientId}`;
-  };
-  
-  // Format currency
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value || 0);
   };
   
   // Format date
@@ -136,33 +194,45 @@ const ReportsSection = ({ sales = [], clients = [] }) => {
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <BarChart3 className="w-5 h-5 text-purple-600" />
+        <BarChart3 className="w-5 h-5 text-[#16A34A]" />
         Relatórios de Vendas
       </h3>
 
       <div className="space-y-6">
+        {/* Search */}
+        <div className="mb-6">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Pesquisar vendas por cliente, ID, valor, etc..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#16A34A] focus:border-transparent"
+            />
+            <svg
+              className="absolute left-3 top-3.5 h-5 w-5 text-gray-400"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </div>
+        </div>
+
         {/* Filters */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Relatório</label>
-            <select
-              value={reportType}
-              onChange={(e) => setReportType(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-            >
-              <option value="sales">Vendas</option>
-              <option value="clients">Clientes</option>
-              <option value="products">Produtos</option>
-              <option value="performance">Performance</option>
-            </select>
-          </div>
-
-          <div>
+<div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Período</label>
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#16A34A]"
             >
               <option value="today">Hoje</option>
               <option value="week">Esta Semana</option>
@@ -174,11 +244,11 @@ const ReportsSection = ({ sales = [], clients = [] }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Cliente (Opcional)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
             <select
               value={selectedClient}
               onChange={(e) => setSelectedClient(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#16A34A]"
             >
               <option value="">Todos os Clientes</option>
               {clients?.map(client => {
@@ -189,6 +259,22 @@ const ReportsSection = ({ sales = [], clients = [] }) => {
                   </option>
                 );
               })}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Produto</label>
+            <select
+              value={selectedProductType}
+              onChange={(e) => setSelectedProductType(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#16A34A]"
+            >
+              <option value="">Todos os Tipos</option>
+              {productTypes.map((product) => (
+                <option key={product.id} value={product.name}>
+                  {product.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -204,7 +290,7 @@ const ReportsSection = ({ sales = [], clients = [] }) => {
             {selectedSales.length > 0 && (
               <button 
                 onClick={() => setSelectedSales([])}
-                className="text-xs text-purple-600 hover:text-purple-800"
+                className="text-xs text-[#16A34A] hover:text-green-700"
               >
                 Limpar seleção
               </button>
@@ -226,33 +312,39 @@ const ReportsSection = ({ sales = [], clients = [] }) => {
               fileName={`relatorio-vendas-${new Date().toISOString().split('T')[0]}.pdf`}
               className="w-full sm:w-auto"
             >
-              {({ blob, url, loading, error }) => (
-                <button 
-                  disabled={loading || filteredSales.length === 0}
-                  className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    loading || filteredSales.length === 0
-                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                      : 'bg-purple-600 text-white hover:bg-purple-700'
-                  }`}
-                >
-                  {loading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Gerando...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4" />
-                      {selectedSales.length > 0 
-                        ? `Exportar ${selectedSales.length} venda(s) selecionada(s)`
-                        : 'Exportar todas as vendas'}
-                    </>
-                  )}
-                </button>
-              )}
+              {({ blob, url, loading, error }) => {
+                const hasSelectedSales = selectedSales.length > 0;
+                const isDisabled = loading || !hasSelectedSales;
+                
+                return (
+                  <button 
+                    disabled={isDisabled}
+                    className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isDisabled
+                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                          : 'bg-[#16A34A] text-white hover:bg-green-600'
+                    }`}
+                    title={!hasSelectedSales ? 'Selecione pelo menos uma venda para gerar o relatório' : ''}
+                  >
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Gerando...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        {hasSelectedSales 
+                          ? `Exportar ${selectedSales.length} venda(s) selecionada(s)`
+                          : 'Selecione vendas para exportar'}
+                      </>
+                    )}
+                  </button>
+                );
+              }}
             </PDFDownloadLink>
           </div>
         </div>
@@ -268,7 +360,7 @@ const ReportsSection = ({ sales = [], clients = [] }) => {
                       type="checkbox"
                       checked={selectAll && filteredSales.length > 0}
                       onChange={toggleSelectAll}
-                      className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-[#16A34A] focus:ring-[#16A34A] border-gray-300 rounded"
                     />
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -297,7 +389,7 @@ const ReportsSection = ({ sales = [], clients = [] }) => {
                           type="checkbox"
                           checked={selectedSales.includes(sale.id)}
                           onChange={() => toggleSaleSelection(sale.id)}
-                          className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                          className="h-4 w-4 text-[#16A34A] focus:ring-[#16A34A] border-gray-300 rounded"
                         />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -389,43 +481,8 @@ const ReportsSection = ({ sales = [], clients = [] }) => {
               </div>
             </div>
           </div>
-
-          {reportType === "clients" && (
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total de Clientes:</span>
-                <span className="font-medium">89</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Novos Clientes:</span>
-                <span className="font-medium">12</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Clientes Ativos:</span>
-                <span className="font-medium">67</span>
-              </div>
-            </div>
-          )}
-
-          {reportType === "products" && (
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Produtos Vendidos:</span>
-                <span className="font-medium">234</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Produto Mais Vendido:</span>
-                <span className="font-medium">Fertilizante Premium</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Categoria Top:</span>
-                <span className="font-medium">Fertilizantes</span>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* PDF Export is handled by the PDFDownloadLink component above */}
       </div>
     </div>
   )
