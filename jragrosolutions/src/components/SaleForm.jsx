@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
+import useOutsideAlerter from "../../hooks/useOutsideAlerter"
 import {
   ShoppingCart,
   Plus,
@@ -221,6 +222,27 @@ const SaleForm = ({ products, onSaleSubmit, userData }) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitMessage, setSubmitMessage] = useState({ type: "", text: "" })
 
+  const clientModalRef = useRef(null)
+  const itemsModalRef = useRef(null)
+  const productModalRef = useRef(null)
+  const talhaoModalRef = useRef(null)
+  const classificationModalRef = useRef(null)
+  const packagingModalRef = useRef(null)
+
+  useOutsideAlerter(clientModalRef, () => setShowClientModal(false))
+  useOutsideAlerter(itemsModalRef, () => {
+    // Use a timeout to allow other click events to process first (like opening a sub-modal)
+    setTimeout(() => {
+      if (!showProductModal && !showTalhaoModal && !showClassificationModal && !showPackagingModal) {
+        setShowItemsModal(false)
+      }
+    }, 0)
+  })
+  useOutsideAlerter(productModalRef, () => setShowProductModal(false))
+  useOutsideAlerter(talhaoModalRef, () => setShowTalhaoModal(false))
+  useOutsideAlerter(classificationModalRef, () => setShowClassificationModal(false))
+  useOutsideAlerter(packagingModalRef, () => setShowPackagingModal(false))
+
   const openClientModal = () => {
     setSearchTerm("")
     setShowClientModal(true)
@@ -300,6 +322,7 @@ const SaleForm = ({ products, onSaleSubmit, userData }) => {
 
   const updateItem = (index, field, value) => {
     const newItems = [...saleData.items]
+
     newItems[index][field] = value
 
     // Auto-fill price when product is selected
@@ -458,7 +481,8 @@ const SaleForm = ({ products, onSaleSubmit, userData }) => {
             type="date"
             value={saleData.orderDate}
             onChange={(e) => setSaleData({ ...saleData, orderDate: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            onFocus={(e) => e.target.showPicker()}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent cursor-pointer"
             required
           />
         </div>
@@ -475,7 +499,7 @@ const SaleForm = ({ products, onSaleSubmit, userData }) => {
           >
             <span className={saleData.clientId ? "text-gray-900" : "text-gray-500"}>
               {saleData.clientId
-                ? `${clients.find((c) => c.id === saleData.clientId)?.name} - ${clients.find((c) => c.id === saleData.clientId)?.property}`
+                ? clients.find((c) => c.id === saleData.clientId)?.name
                 : "Selecione um cliente"}
             </span>
             <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -571,7 +595,8 @@ const SaleForm = ({ products, onSaleSubmit, userData }) => {
             type="date"
             value={saleData.loadingDate}
             onChange={(e) => setSaleData({ ...saleData, loadingDate: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+            onFocus={(e) => e.target.showPicker()}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 cursor-pointer"
             required
           />
         </div>
@@ -661,7 +686,7 @@ const SaleForm = ({ products, onSaleSubmit, userData }) => {
 
       {showClientModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
+          <div ref={clientModalRef} className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Selecionar Cliente</h3>
               <button onClick={() => setShowClientModal(false)} className="text-gray-400 hover:text-gray-600">
@@ -704,7 +729,7 @@ const SaleForm = ({ products, onSaleSubmit, userData }) => {
       {/* Modal para Itens da Venda */}
       {showItemsModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div ref={itemsModalRef} className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <Package className="w-5 h-5 text-green-600" />
@@ -813,8 +838,9 @@ const SaleForm = ({ products, onSaleSubmit, userData }) => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade</label>
                       <input
                         type="number"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(index, "quantity", Number.parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                        value={item.quantity === 0 ? "" : item.quantity}
+                        onChange={(e) => updateItem(index, "quantity", parseFloat(e.target.value) || 0)}
                         className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500"
                         min="0"
                         required
@@ -825,12 +851,16 @@ const SaleForm = ({ products, onSaleSubmit, userData }) => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Preço Unitário</label>
                       <input
-                        type="number"
-                        value={item.unitPrice}
-                        onChange={(e) => updateItem(index, "unitPrice", Number.parseFloat(e.target.value) || 0)}
+                        type="text"
+                        placeholder="0.00"
+                        value={item.unitPrice === 0 ? "" : item.unitPrice}
+                        onChange={(e) => updateItem(index, "unitPrice", parseFloat(e.target.value) || 0)}
+                        onKeyPress={(event) => {
+                          if (!/[0-9.]/.test(event.key)) {
+                            event.preventDefault()
+                          }
+                        }}
                         className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500"
-                        min="0"
-                        step="0.01"
                         required
                       />
                     </div>
@@ -867,7 +897,7 @@ const SaleForm = ({ products, onSaleSubmit, userData }) => {
 
       {showProductModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
+          <div ref={productModalRef} className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Selecionar Produto</h3>
               <button onClick={() => setShowProductModal(false)} className="text-gray-400 hover:text-gray-600">
@@ -909,7 +939,7 @@ const SaleForm = ({ products, onSaleSubmit, userData }) => {
 
       {showTalhaoModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
+          <div ref={talhaoModalRef} className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Selecionar Talhão</h3>
               <button onClick={() => setShowTalhaoModal(false)} className="text-gray-400 hover:text-gray-600">
@@ -951,7 +981,7 @@ const SaleForm = ({ products, onSaleSubmit, userData }) => {
 
       {showClassificationModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
+          <div ref={classificationModalRef} className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Selecionar Classificação</h3>
               <button onClick={() => setShowClassificationModal(false)} className="text-gray-400 hover:text-gray-600">
@@ -993,7 +1023,7 @@ const SaleForm = ({ products, onSaleSubmit, userData }) => {
 
       {showPackagingModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
+          <div ref={packagingModalRef} className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Selecionar Embalagem</h3>
               <button onClick={() => setShowPackagingModal(false)} className="text-gray-400 hover:text-gray-600">

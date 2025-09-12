@@ -21,7 +21,79 @@ const Vendas = () => {
   const [isLoadingData, setIsLoadingData] = useState(true)
   const [activeSection, setActiveSection] = useState(DASHBOARD)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [sales, setSales] = useState([])
+  const [clients, setClients] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
   const navigate = useNavigate()
+
+  // Fetch sales and clients data
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!userData?.propriedade) return
+      
+      try {
+        // Fetch sales
+        const salesRef = ref(database, `propriedades/${userData.propriedade}/vendas`)
+        const salesSnapshot = await get(salesRef)
+        if (salesSnapshot.exists()) {
+          const salesData = Object.entries(salesSnapshot.val()).map(([id, sale]) => ({
+            id,
+            ...sale,
+            clientId: sale.clienteId || sale.clientId,
+            date: sale.dataCarregamento || sale.date,
+            total: Number(sale.valorTotal) || Number(sale.total) || 0,
+            paymentMethod: sale.formaPagamento || sale.paymentMethod || 'Não informado'
+          }))
+          setSales(salesData)
+        }
+
+        // Fetch clients
+        const clientsRef = ref(database, `propriedades/${userData.propriedade}/clientes`)
+        const clientsSnapshot = await get(clientsRef)
+        console.log('Clients snapshot:', clientsSnapshot.val()) // Debug log
+        
+        if (clientsSnapshot.exists()) {
+          const clientsData = []
+          const clientsObj = clientsSnapshot.val()
+          
+          // Handle both array and object formats
+          if (Array.isArray(clientsObj)) {
+            clientsObj.forEach((client, index) => {
+              if (client) {
+                clientsData.push({
+                  id: index.toString(),
+                  name: client.Nome || client.nome || client.name || `Cliente ${index}`,
+                  ...client
+                })
+              }
+            })
+          } else {
+            // Handle object format
+            Object.entries(clientsObj).forEach(([id, client]) => {
+              if (client) {
+                clientsData.push({
+                  id,
+                  name: client.Nome || client.nome || client.name || `Cliente ${id}`,
+                  ...client
+                })
+              }
+            })
+          }
+          
+          console.log('Processed clients:', clientsData) // Debug log
+          setClients(clientsData)
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (userData?.propriedade) {
+      fetchData()
+    }
+  }, [userData])
   
   // Dynamic imports with React.lazy
   const DashboardVendas = lazy(() => import('../components/DashboardVendas'));
@@ -150,7 +222,17 @@ const Vendas = () => {
             case SALES_LIST:
               return <SalesList />
             case REPORTS:
-              return <ReportsSection />
+              return isLoading ? (
+                <div className="flex justify-center items-center h-64">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                </div>
+              ) : (
+                <ReportsSection 
+                  sales={sales} 
+                  clients={clients}
+                  propertyName={userData?.propriedade}
+                />
+              )
             case CLIENTS:
               return <ClientForm />
             default:
