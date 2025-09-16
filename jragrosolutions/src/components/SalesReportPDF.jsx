@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   }
 });
 
-const SalesReportPDF = ({ sales, selectedSales, clientName = 'Todos os Clientes' }) => {
+const SalesReportPDF = ({ sales, selectedSales, clientName = 'Todos os Clientes', hideMonetaryValues = false }) => {
   // Safe date formatter with better error handling
   const safeFormatDate = (dateInput) => {
     try {
@@ -278,10 +278,13 @@ const SalesReportPDF = ({ sales, selectedSales, clientName = 'Todos os Clientes'
       : sales
   );
 
-  const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', {
-    style: 'currency', 
-    currency: 'BRL'
-  }).format(value || 0);
+  const formatCurrency = (value) => {
+    if (hideMonetaryValues) return '******';
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency', 
+      currency: 'BRL'
+    }).format(value || 0);
+  };
 
   // Cálculos de resumo
   const totals = salesToShow.reduce((acc, sale) => ({
@@ -344,7 +347,7 @@ const SalesReportPDF = ({ sales, selectedSales, clientName = 'Todos os Clientes'
               <Text style={[styles.cell, { flex: 1.5 }]}>{sale.client}</Text>
               <Text style={[styles.cell, { flex: 0.8 }]}>{sale.paymentMethod}</Text>
               <Text style={[styles.cell, { flex: 0.7, textAlign: 'right' }]}>
-                {formatCurrency(sale.total)}
+                {hideMonetaryValues ? '******' : formatCurrency(sale.total)}
               </Text>
             </View>
           ))}
