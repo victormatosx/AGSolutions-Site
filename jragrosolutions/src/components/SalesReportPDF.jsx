@@ -2,7 +2,7 @@
 // Este é o componente atualizado com o novo design
 
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
-import { format } from 'date-fns';
+import { format, parseISO, isValid, isDate } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 // Definindo cores mais profissionais
@@ -70,10 +70,6 @@ const styles = StyleSheet.create({
     marginBottom: 5
   },
   
-  periodText: {
-    color: colors.text.secondary,
-    fontSize: 12
-  },
 
   // Stats cards
   statsGrid: {
@@ -155,11 +151,132 @@ const styles = StyleSheet.create({
   }
 });
 
-const SalesReportPDF = ({ sales, selectedSales, clientName = 'Todos os Clientes', dateRange = 'Período não especificado' }) => {
-  // Filtra as vendas se específicas forem selecionadas
-  const salesToShow = selectedSales && selectedSales.length > 0 
-    ? sales.filter(sale => selectedSales.includes(sale.id))
-    : sales;
+const SalesReportPDF = ({ sales, selectedSales, clientName = 'Todos os Clientes' }) => {
+  // Safe date formatter with better error handling
+  const safeFormatDate = (dateInput) => {
+    try {
+      // Handle null/undefined
+      if (!dateInput) return 'Data não informada';
+      
+      let date;
+      
+      // Handle string dates
+      if (typeof dateInput === 'string') {
+        // Try to parse ISO format
+        date = parseISO(dateInput);
+        if (isValid(date)) {
+          return format(date, 'dd/MM/yyyy');
+        }
+        
+        // Try to parse as timestamp (number as string)
+        if (/^\d+$/.test(dateInput)) {
+          const timestamp = dateInput.length === 10 ? Number(dateInput) * 1000 : Number(dateInput);
+          date = new Date(timestamp);
+          if (isValid(date)) {
+            return format(date, 'dd/MM/yyyy');
+          }
+        }
+      }
+      
+      // Handle timestamps (number)
+      if (typeof dateInput === 'number') {
+        // Check if it's in seconds (10 digits) or milliseconds (13 digits)
+        const timestamp = dateInput.toString().length === 10 ? dateInput * 1000 : dateInput;
+        date = new Date(timestamp);
+        if (isValid(date)) {
+          return format(date, 'dd/MM/yyyy');
+        }
+      }
+      
+      // Handle Date objects
+      if (isDate(dateInput) && isValid(dateInput)) {
+        return format(dateInput, 'dd/MM/yyyy');
+      }
+      
+      // If we have a date object from earlier parsing attempts
+      if (date && isValid(date)) {
+        return format(date, 'dd/MM/yyyy');
+      }
+      
+      return 'Data inválida';
+    } catch (error) {
+      console.error('Error formatting date:', error, 'Input:', dateInput);
+      return 'Data inválida';
+    }
+  };
+
+  // Process sales data with proper error handling
+  const processSalesData = (salesData) => {
+    if (!Array.isArray(salesData)) {
+      console.error('Invalid sales data:', salesData);
+      return [];
+    }
+    
+    return salesData.map(sale => {
+      try {
+        // Ensure we have a valid sale object
+        if (!sale || typeof sale !== 'object') {
+          console.warn('Invalid sale item:', sale);
+          return null;
+        }
+        
+        // Create a safe copy of the sale
+        const safeSale = { ...sale };
+        
+        // Ensure required fields have defaults
+        safeSale.id = safeSale.id || `sale-${Math.random().toString(36).substr(2, 9)}`;
+        safeSale.client = safeSale.client || safeSale.clientName || 'Cliente não informado';
+        safeSale.paymentMethod = safeSale.paymentMethod || 'Não especificado';
+        safeSale.total = typeof safeSale.total === 'number' ? safeSale.total : 0;
+        
+        // Ensure items is an array
+        if (!Array.isArray(safeSale.items)) {
+          safeSale.items = [];
+        }
+        
+        // Handle date safely - ensure it's a valid date string
+        if (!safeSale.date) {
+          safeSale.date = new Date().toISOString();
+        } else {
+          // Try to convert to a valid date string if it's not already
+          try {
+            const date = new Date(safeSale.date);
+            if (isValid(date)) {
+              safeSale.date = date.toISOString();
+            } else {
+              // Fallback to current date if invalid
+              safeSale.date = new Date().toISOString();
+            }
+          } catch (e) {
+            safeSale.date = new Date().toISOString();
+          }
+        }
+        
+        // Ensure all items have required fields
+        safeSale.items = safeSale.items.map(item => ({
+          ...item,
+          name: item.name || 'Item sem nome',
+          quantity: typeof item.quantity === 'number' ? item.quantity : 0,
+          price: typeof item.price === 'number' ? item.price : 0,
+          total: (typeof item.quantity === 'number' && typeof item.price === 'number') 
+            ? item.quantity * item.price 
+            : 0
+        }));
+        
+        return safeSale;
+      } catch (error) {
+        console.error('Error processing sale:', error, 'Sale data:', sale);
+        return null;
+      }
+    }).filter(Boolean); // Remove any null entries from invalid sales
+  };
+
+  // Filter and process sales
+  const salesToShow = processSalesData(
+    selectedSales?.length > 0 
+      ? sales.filter(sale => selectedSales.includes(sale?.id))
+      : sales
+  );
 
   const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', {
     style: 'currency', 
@@ -185,15 +302,12 @@ const SalesReportPDF = ({ sales, selectedSales, clientName = 'Todos os Clientes'
           </View>
           <View style={styles.reportInfo}>
             <Text>Gerado em: {format(new Date(), "dd/MM/yyyy")}</Text>
-            <Text>Hora: {format(new Date(), "HH:mm")}</Text>
           </View>
         </View>
 
         {/* Title Section */}
-        <View style={styles.titleSection}>
-          <Text style={styles.reportTitle}>Relatório de Vendas</Text>
-          <Text style={styles.periodText}>{dateRange}</Text>
-          <Text style={styles.periodText}>Cliente: {clientName}</Text>
+        <View style={{marginBottom: 10}}>
+          <Text style={{color: colors.text.secondary, fontSize: 12}}><Text style={{fontWeight: 'bold'}}>Cliente:</Text> {clientName}</Text>
         </View>
 
         {/* Stats Cards */}
@@ -226,8 +340,8 @@ const SalesReportPDF = ({ sales, selectedSales, clientName = 'Todos os Clientes'
               styles.tableRow,
               index % 2 === 0 && styles.tableRowEven
             ]}>
-              <Text style={[styles.cell, { flex: 0.5 }]}>{format(new Date(sale.date), "dd/MM/yyyy")}</Text>
-              <Text style={[styles.cell, { flex: 1.5 }]}>{sale.client || sale.clientName}</Text>
+              <Text style={[styles.cell, { flex: 0.5 }]}>{safeFormatDate(sale.date)}</Text>
+              <Text style={[styles.cell, { flex: 1.5 }]}>{sale.client}</Text>
               <Text style={[styles.cell, { flex: 0.8 }]}>{sale.paymentMethod}</Text>
               <Text style={[styles.cell, { flex: 0.7, textAlign: 'right' }]}>
                 {formatCurrency(sale.total)}

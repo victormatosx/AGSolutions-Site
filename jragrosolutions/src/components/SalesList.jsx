@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Eye, Edit, Trash2, Search, Loader2, X, Save, Calendar, User, CreditCard, Package } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { Eye, Trash2, Search, Loader2, X, Save, Calendar, User, CreditCard, Package } from "lucide-react"
+import useOutsideAlerter from "../../hooks/useOutsideAlerter"
 import { database } from "../firebase/firebase"
 import { ref, onValue, off, update } from "firebase/database"
 
@@ -12,9 +13,9 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedSale, setSelectedSale] = useState(null)
-  const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({})
   const [saving, setSaving] = useState(false)
+  const modalRef = useRef(null)
 
   // --- Helpers de data (robustos) ---
   const parseDateToMs = (value) => {
@@ -123,6 +124,13 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
     return () => off(salesRef, "value", unsubscribe)
   }, [propertyName])
 
+  // Fechar o modal ao clicar fora
+  useOutsideAlerter(modalRef, () => {
+    if (selectedSale) {
+      handleCloseModal()
+    }
+  })
+
   const getClientName = (clientId) => {
     const client = clients?.find((c) => c.id === clientId)
     if (client) return client.name
@@ -161,9 +169,8 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
 
   const handleViewSale = (sale) => {
     setSelectedSale(sale)
-    setIsEditing(false)
 
-    // Prepara valores para o formulário de edição (formatados para input type="date")
+    // Prepara valores para o formulário (formatados para input type="date")
     setEditForm({
       cliente: sale.cliente || "",
       // preferimos usar parsedDateMs para transformar em YYYY-MM-DD
@@ -177,8 +184,34 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
     })
   }
 
-  const handleEditSale = () => {
-    setIsEditing(true)
+  const handleCancelSale = async () => {
+    if (!selectedSale || !window.confirm('Tem certeza que deseja cancelar esta venda?')) return
+
+    setSaving(true)
+    try {
+      const saleRef = ref(database, `propriedades/${propertyName}/vendas/${selectedSale.id}`)
+      await update(saleRef, {
+        status: 'cancelada',
+        dataCancelamento: new Date().toISOString()
+      })
+      
+      // Atualiza o estado local
+      setSelectedSale({
+        ...selectedSale,
+        status: 'cancelada'
+      })
+      
+      // Atualiza o formulário de edição
+      setEditForm({
+        ...editForm,
+        status: 'cancelada'
+      })
+    } catch (error) {
+      console.error('Erro ao cancelar venda:', error)
+      alert('Erro ao cancelar venda. Tente novamente.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleSaveSale = async () => {
@@ -211,7 +244,6 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
 
   const handleCloseModal = () => {
     setSelectedSale(null)
-    setIsEditing(false)
     setEditForm({})
   }
 
@@ -277,53 +309,33 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
               <th className="text-left py-3 px-4 font-medium text-gray-700">Data</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Total</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Pagamento</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">Ações</th>
             </tr>
           </thead>
           <tbody>
             {sortedSales.map((sale) => (
               <tr
                 key={sale.id}
-                className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                className={`border-b ${sale.status === 'cancelada' ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'hover:bg-gray-50'} cursor-pointer`}
                 onClick={() => handleViewSale(sale)}
               >
                 <td className="py-3 px-4 text-sm text-gray-600">#{sale.id.slice(-6)}</td>
                 <td className="py-3 px-4 font-medium">{getClientName(sale.clientId)}</td>
                 <td className="py-3 px-4 text-sm text-gray-600">
-                  {sale.parsedDateMs ? formatDateFromMs(sale.parsedDateMs) : formatAnyDate(sale.date)}
+                  {sale.dataPedido ? formatAnyDate(sale.dataPedido) : (sale.parsedDateMs ? formatDateFromMs(sale.parsedDateMs) : formatAnyDate(sale.date))}
                 </td>
-                <td className="py-3 px-4 font-medium text-green-600">
+                <td className={`py-3 px-4 font-medium ${sale.status === 'cancelada' ? 'text-red-600' : 'text-green-600'}`}>
                   R$ {(sale.total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                 </td>
                 <td className="py-3 px-4">
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                    {sale.paymentMethod || "Não informado"}
-                  </span>
-                </td>
-                <td className="py-3 px-4">
-                  <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => handleViewSale(sale)}
-                      className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                      title="Ver detalhes"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => onEditSale && onEditSale(sale)}
-                      className="p-1 text-yellow-600 hover:bg-yellow-50 rounded"
-                      title="Editar"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => onDeleteSale && onDeleteSale(sale.id)}
-                      className="p-1 text-red-600 hover:bg-red-50 rounded"
-                      title="Excluir"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  {sale.status === 'cancelada' ? (
+                    <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                      Cancelada
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                      {sale.paymentMethod || "Não informado"}
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -339,28 +351,19 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
 
       {selectedSale && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+          <div ref={modalRef} className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900">Detalhes da Venda #{selectedSale.id.slice(-6)}</h2>
               <div className="flex items-center gap-2">
-                {!isEditing && (
+                {selectedSale.status !== 'cancelada' && (
                   <button
-                    onClick={handleEditSale}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Editar
-                  </button>
-                )}
-                {isEditing && (
-                  <button
-                    onClick={handleSaveSale}
+                    onClick={handleCancelSale}
                     disabled={saving}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
                   >
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    Salvar
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                    Cancelar Venda
                   </button>
                 )}
                 <button onClick={handleCloseModal} className="p-2 text-gray-400 hover:text-gray-600">
@@ -382,18 +385,9 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
 
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editForm.cliente}
-                        onChange={(e) => setEditForm({ ...editForm, cliente: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    ) : (
-                      <p className="text-gray-900 font-medium">
-                        {selectedSale.cliente || getClientName(selectedSale.clientId)}
-                      </p>
-                    )}
+                    <p className="text-gray-900 font-medium">
+                      {selectedSale.cliente || getClientName(selectedSale.clientId)}
+                    </p>
                   </div>
                 </div>
 
@@ -407,18 +401,9 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
                   <div className="bg-gray-50 p-4 rounded-lg space-y-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Data do Pedido</label>
-                      {isEditing ? (
-                        <input
-                          type="date"
-                          value={editForm.dataPedido || ""}
-                          onChange={(e) => setEditForm({ ...editForm, dataPedido: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        />
-                      ) : (
-                        <p className="text-gray-900">
-                          {formatAnyDate(selectedSale.dataPedido)}
-                        </p>
-                      )}
+                      <p className="text-gray-900">
+                        {selectedSale.dataPedido ? formatAnyDate(selectedSale.dataPedido) : "Não informado"}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -481,18 +466,11 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
 
                       <div className="bg-white p-4 rounded-lg border">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Data de Carregamento</label>
-                        {isEditing ? (
-                          <input
-                            type="date"
-                            value={editForm.dataCarregamento || ""}
-                            onChange={(e) => setEditForm({ ...editForm, dataCarregamento: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                          />
-                        ) : (
-                          <p className="text-lg font-semibold text-gray-900">
-                            {selectedSale.parsedDateMs ? formatDateFromMs(selectedSale.parsedDateMs) : formatAnyDate(selectedSale.dataCarregamento ?? selectedSale.date)}
-                          </p>
-                        )}
+                        <p className="text-gray-900">
+                          {selectedSale.parsedDateMs
+                            ? formatDateFromMs(selectedSale.parsedDateMs)
+                            : formatAnyDate(selectedSale.dataCarregamento || selectedSale.date) || "Não informado"}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -510,77 +488,34 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Forma de Pagamento</label>
-                      {isEditing ? (
-                        <select
-                          value={editForm.formaPagamento}
-                          onChange={(e) => setEditForm({ ...editForm, formaPagamento: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Selecione...</option>
-                          <option value="A Prazo">A Prazo</option>
-                          <option value="À Vista">À Vista</option>
-                          <option value="Cartão">Cartão</option>
-                          <option value="PIX">PIX</option>
-                          <option value="Dinheiro">Dinheiro</option>
-                        </select>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                            {selectedSale.formaPagamento || selectedSale.paymentMethod || "Não informado"}
-                          </span>
-                          {(selectedSale.formaPagamento === "A Prazo" || selectedSale.paymentMethod === "A Prazo") &&
-                            selectedSale.prazoDias && (
-                              <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded text-xs">
-                                {selectedSale.prazoDias} dias
-                              </span>
-                            )}
-                        </div>
-                      )}
+                      <p className="text-gray-900">{selectedSale.formaPagamento || selectedSale.paymentMethod || "Não informado"}</p>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                      {isEditing ? (
-                        <select
-                          value={editForm.status}
-                          onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="pendente">Pendente</option>
-                          <option value="pago">Pago</option>
-                          <option value="cancelado">Cancelado</option>
-                        </select>
-                      ) : (
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            selectedSale.status === "pago"
-                              ? "bg-green-100 text-green-800"
-                              : selectedSale.status === "cancelado"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-yellow-100 text-yellow-800"
-                          }`}
-                        >
-                          {selectedSale.status || "Pendente"}
-                        </span>
-                      )}
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          selectedSale.status === "pago"
+                            ? "bg-green-100 text-green-800"
+                            : selectedSale.status === "cancelada"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {selectedSale.status === "pago"
+                          ? "Pago"
+                          : selectedSale.status === "cancelada"
+                          ? "Cancelada"
+                          : "Pendente"}
+                      </span>
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Observações do Pagamento</label>
-                    {isEditing ? (
-                      <textarea
-                        value={editForm.observacaoPagamento}
-                        onChange={(e) => setEditForm({ ...editForm, observacaoPagamento: e.target.value })}
-                        rows={2}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        placeholder="Observações sobre o pagamento..."
-                      />
-                    ) : (
-                      <p className="text-gray-900 text-sm bg-white p-2 rounded border">
-                        {selectedSale.observacaoPagamento || "Nenhuma observação sobre o pagamento"}
-                      </p>
-                    )}
+                    <p className="text-gray-900 bg-white p-2 rounded border">
+                      {selectedSale.observacaoPagamento || "Nenhuma observação sobre o pagamento"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -591,23 +526,13 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, propertyName = "Matrice"
                   <div className="w-5 h-5 bg-gray-600 rounded-full flex items-center justify-center">
                     <span className="text-white text-xs">📝</span>
                   </div>
-                  Observações Gerais
+                  Observações
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  {isEditing ? (
-                    <textarea
-                      value={editForm.observacao}
-                      onChange={(e) => setEditForm({ ...editForm, observacao: e.target.value })}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder="Observações gerais sobre a venda..."
-                    />
-                  ) : (
-                    <p className="text-gray-900 bg-white p-3 rounded border">
-                      {selectedSale.observacao || "Nenhuma observação geral"}
-                    </p>
-                  )}
+                  <p className="text-gray-900 whitespace-pre-line">
+                    {selectedSale.observacao || "Nenhuma observação adicionada."}
+                  </p>
                 </div>
               </div>
             </div>

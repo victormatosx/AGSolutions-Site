@@ -599,7 +599,13 @@ const Apontamentos = () => {
     let currentData = data[selectedType] || []
 
     // Filtrar por status
-    currentData = currentData.filter((item) => item.status === selectedStatus)
+    if (selectedStatus === 'pending') {
+      // Incluir tanto 'pending' quanto 'synced' na seção 'Para Validar'
+      currentData = currentData.filter((item) => item.status === 'pending' || item.status === 'synced')
+    } else {
+      // Para outros status (como 'validated'), manter a lógica original
+      currentData = currentData.filter((item) => item.status === selectedStatus)
+    }
 
     // Filtrar por termo de busca
     if (filters.searchTerm) {
@@ -646,7 +652,8 @@ const Apontamentos = () => {
     if (!selectedType) return { pending: 0, validated: 0 }
 
     const currentData = data[selectedType] || []
-    const pending = currentData.filter((item) => item.status === "pending").length
+    // Contar 'pending' e 'synced' juntos como 'pending' para a contagem
+    const pending = currentData.filter((item) => item.status === "pending" || item.status === "synced").length
     const validated = currentData.filter((item) => item.status === "validated").length
 
     return { pending, validated }

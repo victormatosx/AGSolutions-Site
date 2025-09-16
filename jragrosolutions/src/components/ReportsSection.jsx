@@ -6,7 +6,6 @@ import { database } from "../firebase/firebase"
 import SalesReportPDF from './SalesReportPDF'
 
 const ReportsSection = ({ sales = [], clients = [] }) => {
-  const [dateRange, setDateRange] = useState("month")
   const [selectedClient, setSelectedClient] = useState("")
   const [selectedProductType, setSelectedProductType] = useState("")
   const [productTypes, setProductTypes] = useState([])
@@ -75,45 +74,7 @@ const ReportsSection = ({ sales = [], clients = [] }) => {
       );
     }
     
-    // Apply date range filter
-    const now = new Date();
-    const startDate = new Date();
-    
-    switch (dateRange) {
-      case 'today':
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case 'week':
-        startDate.setDate(now.getDate() - now.getDay());
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case 'month':
-        startDate.setDate(1);
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case 'quarter':
-        startDate.setMonth(Math.floor(now.getMonth() / 3) * 3, 1);
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case 'year':
-        startDate.setMonth(0, 1);
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      default:
-        break;
-    }
-    
-    if (dateRange !== 'all') {
-      result = result.filter(sale => {
-        try {
-          const saleDate = new Date(sale.date);
-          return saleDate >= startDate;
-        } catch (e) {
-          return false;
-        }
-      });
-    }
-    
+      
     // Apply search filter
     if (searchTerm.trim() !== '') {
       const searchLower = searchTerm.toLowerCase();
@@ -133,7 +94,7 @@ const ReportsSection = ({ sales = [], clients = [] }) => {
     }
     
     return result;
-  }, [sales, selectedClient, selectedProductType, dateRange, searchTerm]);
+  }, [sales, selectedClient, selectedProductType, searchTerm]);
   
   // Toggle selection of a single sale
   const toggleSaleSelection = (saleId) => {
@@ -190,27 +151,6 @@ const formatDate = (dateString) => {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
 
-  // Get date range text
-  const getDateRangeText = () => {
-    const now = new Date();
-    switch (dateRange) {
-      case 'today':
-        return `Hoje (${now.toLocaleDateString('pt-BR')})`;
-      case 'week':
-        return `Esta Semana (${now.toLocaleDateString('pt-BR', {weekday: 'long'})} ${now.getDate()}/${now.getMonth() + 1})`;
-      case 'month':
-        return `Este Mês (${now.toLocaleDateString('pt-BR', {month: 'long'})} ${now.getFullYear()})`;
-      case 'quarter':
-        const quarter = Math.floor(now.getMonth() / 3) + 1;
-        return `${quarter}º Trimestre de ${now.getFullYear()}`;
-      case 'year':
-        return `Ano de ${now.getFullYear()}`;
-      case 'all':
-        return 'Todo o Período';
-      default:
-        return 'Período não especificado';
-    }
-  };
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
@@ -247,22 +187,7 @@ const formatDate = (dateString) => {
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-<div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Período</label>
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#16A34A]"
-            >
-              <option value="today">Hoje</option>
-              <option value="week">Esta Semana</option>
-              <option value="month">Este Mês</option>
-              <option value="quarter">Este Trimestre</option>
-              <option value="year">Este Ano</option>
-              <option value="all">Todo o Período</option>
-            </select>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
@@ -327,7 +252,6 @@ const formatDate = (dateString) => {
                     : filteredSales}
                   selectedSales={selectedSales}
                   clientName={selectedClient ? getClientName(selectedClient) : 'Todos os Clientes'}
-                  dateRange={getDateRangeText()}
                 />
               }
               fileName={`relatorio-vendas-${new Date().toISOString().split('T')[0]}.pdf`}
@@ -414,7 +338,7 @@ const formatDate = (dateString) => {
                         />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(sale.date)}
+                        {sale.dataPedido ? formatDate(sale.dataPedido) : formatDate(sale.date)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {getClientName(sale.clientId)}
