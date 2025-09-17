@@ -235,7 +235,7 @@ const Vendas = () => {
         {(() => {
           switch (activeSection) {
             case DASHBOARD:
-              return <DashboardVendas userData={userData} />
+              return <DashboardVendas userData={userData} salesData={sales} />
             case NEW_SALE:
               return <SaleForm onSuccess={() => setActiveSection(SALES_LIST)} userData={userData} />
             case SALES_LIST:
@@ -256,7 +256,7 @@ const Vendas = () => {
             case CLIENTS:
               return <ClientForm />
             default:
-              return <DashboardVendas userData={userData} />
+              return <DashboardVendas userData={userData} salesData={sales} />
           }
         })()}
       </Suspense>

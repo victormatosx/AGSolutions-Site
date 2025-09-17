@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react"
-import { DollarSign, Users, Package, Target, TrendingUp, Calendar } from 'lucide-react'
+import { DollarSign, Users } from 'lucide-react'
+import { ref, onValue } from "firebase/database"
+import { database } from "../firebase/firebase"
 
 const DashboardVendas = ({ salesData }) => {
+  const [totalClients, setTotalClients] = useState(0);
   const [stats, setStats] = useState([
     {
       title: "Vendas do Mês",
@@ -20,56 +23,142 @@ const DashboardVendas = ({ salesData }) => {
       bgColor: "bg-blue-50",
     },
     {
-      title: "Produtos Vendidos",
+      title: "Clientes Totais",
       value: "0",
       change: "0%",
-      icon: Package,
+      icon: Users,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
-    },
-    {
-      title: "Meta do Mês",
-      value: "0%",
-      change: "0%",
-      icon: Target,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-    },
+    }
   ])
 
+  // Load total clients from Firebase on component mount
   useEffect(() => {
-    if (salesData) {
-      // Calcular estatísticas baseadas nos dados reais
-      const totalSales = salesData.reduce((sum, sale) => sum + sale.total, 0)
-      const uniqueClients = new Set(salesData.map(sale => sale.clientId)).size
-      const totalProducts = salesData.reduce((sum, sale) => sum + sale.quantity, 0)
-      const monthGoal = 50000 // Meta mensal exemplo
-      const goalPercentage = Math.round((totalSales / monthGoal) * 100)
-
-      setStats([
-        {
-          ...stats[0],
-          value: `R$ ${totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-          change: "+12%"
-        },
-        {
-          ...stats[1],
-          value: uniqueClients.toString(),
-          change: "+8%"
-        },
-        {
-          ...stats[2],
-          value: totalProducts.toString(),
-          change: "+15%"
-        },
-        {
-          ...stats[3],
-          value: `${goalPercentage}%`,
-          change: "+5%"
+    const propriedadesRef = ref(database, "propriedades");
+    
+    const unsubscribe = onValue(propriedadesRef, (snapshot) => {
+      let clientCount = 0;
+      
+      snapshot.forEach((property) => {
+        const propertyData = property.val();
+        if (propertyData.clientes) {
+          clientCount += Object.keys(propertyData.clientes).length;
         }
-      ])
-    }
-  }, [salesData])
+      });
+      
+      setTotalClients(clientCount);
+    });
+    
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    console.log('Sales data received in DashboardVendas:', salesData);
+    
+    // Always update the stats when either salesData or totalClients changes
+    const updateStats = () => {
+      if (salesData && salesData.length > 0) {
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        
+        console.log(`Filtering sales for month: ${currentMonth + 1}/${currentYear}`);
+
+        // Filtrar vendas não canceladas
+        let validSales = salesData.filter(sale => {
+          if (!sale) return false;
+          
+          const status = sale.status?.toLowerCase();
+          if (status === 'cancelada') {
+            console.log('Skipping canceled sale:', sale.id);
+            return false;
+          }
+          
+          // Tenta obter a data da venda
+          const saleDate = new Date(sale.dataPedido || sale.date || sale.criadoEm || now);
+          const isValidDate = !isNaN(saleDate.getTime());
+          
+          if (!isValidDate) {
+            console.log(`Sale ${sale.id || 'unknown'} has an invalid date, including it`);
+            return true; // Inclui vendas com data inválida
+          }
+          
+          // Verifica se a data está no mês atual
+          const isCurrentMonth = saleDate.getMonth() === currentMonth && 
+                              saleDate.getFullYear() === currentYear;
+          
+          console.log(`Sale ${sale.id || 'unknown'} - Date: ${saleDate}, Is Current Month: ${isCurrentMonth}, Status: ${status}`);
+          
+          // Se não há vendas no mês atual, inclui todas as não canceladas
+          const hasCurrentMonthSales = salesData.some(s => {
+            if (!s || s.status?.toLowerCase() === 'cancelada') return false;
+            const d = new Date(s.dataPedido || s.date || s.criadoEm);
+            return !isNaN(d.getTime()) && 
+                  d.getMonth() === currentMonth && 
+                  d.getFullYear() === currentYear;
+          });
+          
+          return hasCurrentMonthSales ? isCurrentMonth : true;
+        });
+
+        console.log('Valid sales for current month:', validSales);
+
+        // Calcular estatísticas baseadas nos dados filtrados
+        const totalSales = validSales.reduce((sum, sale) => {
+          const saleValue = Number(sale.valorTotal) || Number(sale.total) || 0;
+          console.log(`Sale ${sale.id || 'unknown'} value:`, saleValue);
+          return sum + saleValue;
+        }, 0);
+        
+        console.log('Total sales value:', totalSales);
+
+        const uniqueClients = new Set(validSales
+          .map(sale => sale.clientId || sale.clienteId || '')
+          .filter(id => id !== '')
+        ).size;
+        
+        console.log('Unique clients:', uniqueClients);
+        console.log('Total clients from state:', totalClients);
+
+        const updatedStats = [
+          {
+            ...stats[0],
+            value: totalSales.toLocaleString('pt-BR', { 
+              style: 'currency', 
+              currency: 'BRL' 
+            }),
+            change: "+12%"
+          },
+          {
+            ...stats[1],
+            value: uniqueClients.toString(),
+            change: "+8%"
+          },
+          {
+            ...stats[2],
+            value: totalClients > 0 ? totalClients.toString() : '0',
+            change: "+15%"
+          }
+        ];
+        
+        console.log('Updated stats:', updatedStats);
+        return updatedStats;
+      } else {
+        console.log('No sales data available or empty array');
+        // Return default stats with the current totalClients
+        return [
+          stats[0],
+          stats[1],
+          {
+            ...stats[2],
+            value: totalClients > 0 ? totalClients.toString() : '0'
+          }
+        ];
+      }
+    };
+
+    setStats(updateStats());
+  }, [salesData, totalClients])
 
   return (
     <div className="mb-8">
@@ -79,7 +168,7 @@ const DashboardVendas = ({ salesData }) => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {stats.map((stat, index) => {
           const IconComponent = stat.icon
           return (
@@ -97,16 +186,6 @@ const DashboardVendas = ({ salesData }) => {
         })}
       </div>
 
-      {/* Recent Sales Chart Placeholder */}
-      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-green-600" />
-          Vendas dos Últimos 7 Dias
-        </h3>
-        <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-          <p className="text-gray-500">Gráfico de vendas será implementado aqui</p>
-        </div>
-      </div>
     </div>
   )
 }

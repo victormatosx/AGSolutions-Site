@@ -717,26 +717,38 @@ const ReportsSection = ({ propertyName = "Matrice", preselectedSaleId = null }) 
           <h4 className="font-medium text-gray-900 mb-4">Resumo do Relatório</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm font-medium text-gray-500">Total de Vendas</div>
-              <div className="mt-1 text-2xl font-semibold text-gray-900">{filteredSales.length}</div>
+              <div className="text-sm font-medium text-gray-500">Total de Vendas Válidas</div>
+              <div className="mt-1 text-2xl font-semibold text-gray-900">
+                {filteredSales.filter(sale => sale.status !== 'cancelada').length}
+              </div>
               <div className="mt-2 text-sm text-gray-500">
-                {selectedSales.length > 0 && <span>{selectedSales.length} selecionada(s)</span>}
+                {selectedSales.length > 0 && 
+                  <span>
+                    {filteredSales.filter(sale => 
+                      selectedSales.includes(sale.id) && sale.status !== 'cancelada'
+                    ).length} selecionada(s)
+                  </span>
+                }
               </div>
             </div>
 
             <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm font-medium text-gray-500">Valor Total</div>
+              <div className="text-sm font-medium text-gray-500">Valor Total Válido</div>
               <div className="mt-1 text-2xl font-semibold text-gray-900">
-                {formatCurrency(filteredSales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0))}
+                {formatCurrency(
+                  filteredSales
+                    .filter(sale => sale.status !== 'cancelada')
+                    .reduce((sum, sale) => sum + (Number(sale.total) || 0), 0)
+                )}
               </div>
               <div className="mt-2 text-sm text-gray-500">
                 {selectedSales.length > 0 && (
                   <span>
                     {formatCurrency(
                       filteredSales
-                        .filter((sale) => selectedSales.includes(sale.id))
-                        .reduce((sum, sale) => sum + (Number(sale.total) || 0), 0),
-                    )}{" "}
+                        .filter(sale => selectedSales.includes(sale.id) && sale.status !== 'cancelada')
+                        .reduce((sum, sale) => sum + (Number(sale.total) || 0), 0)
+                    )}{' '}
                     selecionado(s)
                   </span>
                 )}
@@ -746,23 +758,31 @@ const ReportsSection = ({ propertyName = "Matrice", preselectedSaleId = null }) 
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="text-sm font-medium text-gray-500">Ticket Médio</div>
               <div className="mt-1 text-2xl font-semibold text-gray-900">
-                {formatCurrency(
-                  filteredSales.length > 0
-                    ? filteredSales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0) / filteredSales.length
-                    : 0,
-                )}
+                {(() => {
+                  const activeSales = filteredSales.filter(sale => sale.status !== 'cancelada');
+                  return formatCurrency(
+                    activeSales.length > 0
+                      ? activeSales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0) / activeSales.length
+                      : 0
+                  );
+                })()}
               </div>
               <div className="mt-2 text-sm text-gray-500">
-                {selectedSales.length > 1 && (
-                  <span>
-                    {formatCurrency(
-                      filteredSales
-                        .filter((sale) => selectedSales.includes(sale.id))
-                        .reduce((sum, sale) => sum + (Number(sale.total) || 0), 0) / selectedSales.length,
-                    )}{" "}
-                    (selecionadas)
-                  </span>
-                )}
+                {(() => {
+                  const selectedActiveSales = filteredSales.filter(
+                    sale => selectedSales.includes(sale.id) && sale.status !== 'cancelada'
+                  );
+                  return selectedActiveSales.length > 1 && (
+                    <span>
+                      {formatCurrency(
+                        selectedActiveSales.reduce(
+                          (sum, sale) => sum + (Number(sale.total) || 0), 0
+                        ) / selectedActiveSales.length
+                      )}{' '}
+                      (selecionadas)
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           </div>
