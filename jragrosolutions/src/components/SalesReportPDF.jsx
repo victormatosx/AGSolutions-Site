@@ -1,15 +1,12 @@
-// VERSÃO ATUALIZADA - Estrutura completa do relatório
-// Este é o componente atualizado com o novo design detalhado por venda
-
 import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer"
 import { format, parseISO, isValid, isDate } from "date-fns"
 import matriceLogo from "../assets/matriceLogo.png"
 
 // Cores do tema
 const colors = {
-  primary: "#2E7D32", // Verde mais escuro
-  secondary: "#388E3C", // Verde médio
-  accent: "#81C784", // Verde claro
+  primary: "#2E7D32",
+  secondary: "#388E3C",
+  accent: "#81C784",
   text: {
     primary: "#212121",
     secondary: "#424242",
@@ -21,7 +18,7 @@ const colors = {
     highlight: "#E8F5E9",
   },
   border: "#BDBDBD",
-  headerBg: "#1B5E20", // Verde escuro para cabeçalho
+  headerBg: "#1B5E20",
 }
 
 const styles = StyleSheet.create({
@@ -33,7 +30,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica',
   },
 
-  // Header styles
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -216,7 +212,6 @@ const styles = StyleSheet.create({
 })
 
 const SalesReportPDF = ({ sales, selectedSales, clientName = "Todos os Clientes", hideMonetaryValues = false }) => {
-  // Safe date formatter with better error handling
   const safeFormatDate = (dateInput) => {
     try {
       if (!dateInput) return "Data não informada"
@@ -261,7 +256,6 @@ const SalesReportPDF = ({ sales, selectedSales, clientName = "Todos os Clientes"
     }
   }
 
-  // Process sales data with proper error handling
   const processSalesData = (salesData) => {
     if (!Array.isArray(salesData)) {
       console.error("Invalid sales data:", salesData)
