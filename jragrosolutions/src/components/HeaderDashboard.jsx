@@ -112,7 +112,7 @@ const Header = ({ onNavigate, currentPage }) => {
                 currentPage === "horimetros" ? "text-green-600 font-semibold" : "text-gray-700 hover:text-green-600"
               }`}
             >
-              Horímetros
+              Relatórios
             </button>
             {/* Styled Home Link moved to the end */}
             <button
