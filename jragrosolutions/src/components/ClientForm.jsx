@@ -247,7 +247,7 @@ const ClientForm = () => {
                     onClick={() => goToPage(page)}
                     className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                       currentPage === page
-                        ? "z-10 bg-green-50 border-green-500 text-green-600"
+                        ? "z-10 bg-[#16A34A] border-[#16A34A] text-white"
                         : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
                     }`}
                   >

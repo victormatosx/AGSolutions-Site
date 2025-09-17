@@ -577,7 +577,7 @@ const SaleForm = ({ products, onSaleSubmit, userData }) => {
               <h4 className="font-medium text-gray-700 mb-2">Resumo dos Itens:</h4>
               {saleData.items.map((item, index) => (
                 <div key={index} className="text-sm text-gray-600 mb-1">
-                  {products?.find((p) => p.id === item.productId)?.name || "Produto"} - Qtd: {item.quantity} - R${" "}
+                  {productos?.find((p) => p.id === item.productId)?.name || "Produto"} - Quantidade: {item.quantity} - R$ {" "}
                   {(item.quantity * item.unitPrice).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                 </div>
               ))}
