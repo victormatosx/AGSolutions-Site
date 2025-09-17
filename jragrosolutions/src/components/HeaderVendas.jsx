@@ -17,8 +17,24 @@ const HeaderVendas = ({
   const [user, loading, error] = useAuthState(auth)
   const [isScrolled, setIsScrolled] = useState(false)
   const [isVisible, setIsVisible] = useState(true)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const lastScrollY = useRef(0)
+  const dropdownRef = useRef(null)
   const navigate = useNavigate()
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   // Effect to handle scroll behavior
   useEffect(() => {
@@ -117,29 +133,46 @@ const HeaderVendas = ({
             ))}
 
             {/* User Dropdown */}
-            <div className="ml-2 relative group">
-              <button className="flex items-center space-x-2 text-gray-700 hover:text-green-600 p-2 rounded-lg hover:bg-gray-100">
+            <div className="ml-2 relative" ref={dropdownRef}>
+              <button 
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center space-x-2 text-gray-700 hover:text-green-600 p-2 rounded-lg hover:bg-gray-100"
+                aria-expanded={isDropdownOpen}
+                aria-haspopup="true"
+              >
                 <div className="w-9 h-9 rounded-full bg-gradient-to-r from-green-500 to-green-600 flex items-center justify-center text-white font-medium">
                   {user?.email?.charAt(0).toUpperCase()}
                 </div>
               </button>
               
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-1 hidden group-hover:block z-50 border border-gray-100">
-                <div className="px-4 py-2 border-b border-gray-100">
-                  <p className="text-sm font-medium text-gray-900">{user?.email}</p>
-                  <p className="text-xs text-gray-500">Área de Vendas</p>
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl py-1 z-50 border border-gray-100">
+                  <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{user?.email}</p>
+                      <p className="text-xs text-gray-500">Área de Vendas</p>
+                    </div>
+                    <button 
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="text-gray-400 hover:text-gray-500 p-1"
+                      aria-label="Fechar menu"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => {
+                      auth.signOut()
+                      navigate('/login')
+                      setIsDropdownOpen(false)
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sair
+                  </button>
                 </div>
-                <button
-                  onClick={() => {
-                    auth.signOut()
-                    navigate('/login')
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center"
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sair
-                </button>
-              </div>
+              )}
             </div>
           </nav>
 
