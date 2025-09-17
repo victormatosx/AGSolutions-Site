@@ -2,34 +2,34 @@ import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/render
 import { format, parseISO, isValid, isDate } from "date-fns"
 import matriceLogo from "../assets/matriceLogo.png"
 
-// Cores do tema
+// Cores do tema - simplificadas e discretas
 const colors = {
   primary: "#2E7D32",
-  secondary: "#388E3C",
-  accent: "#81C784",
+  secondary: "#4CAF50",
   text: {
     primary: "#212121",
-    secondary: "#424242",
-    light: "#757575",
+    secondary: "#666666",
+    light: "#999999",
   },
   background: {
     main: "#FFFFFF",
-    alt: "#FAFAFA",
-    highlight: "#E8F5E9",
+    alt: "#F8F8F8",
+    header: "#E8F5E9",
   },
-  border: "#BDBDBD",
-  headerBg: "#1B5E20",
+  border: "#E0E0E0",
 }
 
 const styles = StyleSheet.create({
   page: {
-    padding: 30,
+    padding: 40,
     backgroundColor: colors.background.main,
     color: colors.text.primary,
-    fontSize: 9,
+    fontSize: 10,
     fontFamily: 'Helvetica',
+    lineHeight: 1.4,
   },
 
+  // Cabeçalho principal do documento
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -56,179 +56,305 @@ const styles = StyleSheet.create({
 
   headerText: {
     flex: 1,
+    textAlign: 'left',
   },
 
   reportTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "bold",
     color: colors.primary,
     marginBottom: 4,
     textTransform: 'uppercase',
+    textAlign: 'left',
   },
 
-  subtitle: {
+  reportSubtitle: {
     fontSize: 10,
     color: colors.text.secondary,
     marginBottom: 8,
+    textAlign: 'left',
   },
 
+  // Seção de cada venda
   saleSection: {
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 2,
-    overflow: "hidden",
+    marginBottom: 25,
     pageBreakInside: 'avoid',
   },
 
+  // Cabeçalho da venda
   saleHeader: {
-    backgroundColor: colors.headerBg,
-    padding: '8 12',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    backgroundColor: colors.background.header,
+    padding: 10,
+    marginBottom: 0,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 
   saleTitle: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#FFFFFF',
-    textTransform: 'uppercase',
+    color: colors.primary,
+    marginBottom: 8,
   },
 
-  saleInfoGrid: {
+  // Layout das informações em duas linhas
+  saleInfoRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 15,
+    justifyContent: "space-between",
+    marginBottom: 3,
   },
 
-  saleInfoItem: {
-    marginBottom: 4,
+  saleInfoGroup: {
+    flexDirection: "row",
+    alignItems: "center",
   },
 
   saleInfoLabel: {
     fontSize: 9,
     color: colors.text.secondary,
-    fontWeight: "bold",
+    marginRight: 5,
   },
 
   saleInfoValue: {
-    fontSize: 10,
+    fontSize: 9,
     color: colors.text.primary,
+    fontWeight: "bold",
   },
 
+  saleInfoSeparator: {
+    marginLeft: 20,
+    marginRight: 20,
+    color: colors.text.light,
+    fontSize: 9,
+  },
+
+  // Tabela de itens
   itemsTable: {
-    marginTop: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderTopWidth: 0,
   },
 
   itemsTableHeader: {
     flexDirection: "row",
     backgroundColor: colors.primary,
-    padding: '6 8',
+    padding: 8,
     color: colors.background.main,
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: "bold",
   },
 
   itemsTableRow: {
     flexDirection: "row",
-    padding: '6 8',
+    padding: 8,
     borderBottomWidth: 0.5,
     borderBottomColor: colors.border,
+    fontSize: 9,
+    minHeight: 24,
+    alignItems: "stretch",
+    position: 'relative',
+  },
+
+  // Separador visual entre colunas
+  columnSeparator: {
+    width: 1,
+    backgroundColor: colors.border,
+    height: '100%',
+    margin: 0,
+  },
+
+  itemsTableRowAlt: {
+    backgroundColor: colors.background.alt,
+  },
+
+  // Estilo para as células da tabela
+  tableCell: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 1,
+  },
+
+  // Estilo para o texto das células
+  tableCellText: {
     fontSize: 8,
-    minHeight: 20,
+    lineHeight: 1.2,
   },
 
-  itemsTableRowEven: {
-    backgroundColor: colors.background.alt,
+  // Colunas da tabela com tamanhos fixos e centralizadas
+  itemCol: {
+    width: 40,
+    textAlign: "center",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  productCol: {
+    width: 80,
+    textAlign: "center",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  varietyCol: {
+    width: 70,
+    textAlign: "center",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  talhaoCol: {
+    width: 150,
+    textAlign: "center",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  classificationCol: {
+    width: 90,
+    textAlign: "center",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  packagingCol: {
+    width: 80,
+    textAlign: "center",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  quantityCol: {
+    width: 50,
+    textAlign: "center",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  priceCol: {
+    width: 70,
+    textAlign: "center",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  subtotalCol: {
+    width: 80,
+    textAlign: "center",
+    justifyContent: "center",
+    alignItems: "center",
   },
 
-  itemCol: { flex: 0.5, padding: '0 2' }, // Item
-  productCol: { flex: 1.5, padding: '0 2' }, // Produto
-  talhaoCol: { flex: 1.2, padding: '0 2' }, // Talhão
-  varietyCol: { flex: 1, padding: '0 2' }, // Variedade
-  classificationCol: { flex: 0.8, padding: '0 2' }, // Classificação
-  packagingCol: { flex: 0.8, padding: '0 2' }, // Embalagem
-  quantityCol: { flex: 0.6, padding: '0 2', textAlign: "right" }, // Quant.
-  priceCol: { flex: 0.9, padding: '0 2', textAlign: "right" }, // Preço Unit.
-  subtotalCol: { flex: 0.9, padding: '0 2', textAlign: "right" }, // Subtotal
-
+  // Total da venda
   saleTotal: {
-    backgroundColor: colors.background.alt,
+    backgroundColor: colors.background.main,
     padding: '8 12',
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderColor: colors.border,
     alignItems: 'flex-end',
   },
 
   saleTotalText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "bold",
-    color: colors.primary,
+    color: colors.text.primary,
   },
 
-  grandTotal: {
-    backgroundColor: colors.primary,
-    padding: '10 15',
-    marginTop: 20,
-    borderRadius: 2,
+  // Total geral
+  grandTotalSection: {
+    marginTop: 30,
+    paddingTop: 15,
+    borderTopWidth: 2,
+    borderTopColor: colors.primary,
     alignItems: 'flex-end',
   },
 
   grandTotalText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "bold",
-    color: colors.background.main,
+    color: colors.primary,
   },
 
-  // Footer styles
+  // Rodapé
   footer: {
     position: "absolute",
     bottom: 30,
     left: 40,
     right: 40,
     textAlign: "center",
-    color: colors.text.secondary,
+    color: colors.text.light,
     fontSize: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
     paddingTop: 10,
   },
 
-  generationDate: {
+  footerLine: {
+    marginBottom: 2,
+  },
+
+  // Informações de geração
+  generationInfo: {
     textAlign: "center",
-    marginTop: 15,
-    marginBottom: 15,
-    fontSize: 10,
+    marginTop: 20,
+    fontSize: 9,
     color: colors.text.secondary,
   },
 
-  pageNumber: {
-    position: "absolute",
-    bottom: 30,
-    right: 40,
+  // Status cancelada
+  canceledBadge: {
+    backgroundColor: '#f44336',
+    color: 'white',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 2,
     fontSize: 8,
-    color: colors.text.light,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    marginLeft: 10,
   },
 })
 
-const SalesReportPDF = ({ sales, selectedSales, clientName = "Todos os Clientes", hideMonetaryValues = false }) => {
+const SalesReportPDF = ({
+  sales,
+  selectedSales,
+  clientName = "Todos os Clientes",
+  hideMonetaryValues = false,
+  periodStart = null,
+  periodEnd = null
+}) => {
   const safeFormatDate = (dateInput) => {
     try {
       if (!dateInput) return "Data não informada"
 
       let date
 
+      // Handle direct date strings like "16/09/2025"
       if (typeof dateInput === "string") {
+        // Check if it's already in Brazilian format DD/MM/YYYY
+        const brazilianDateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/
+        if (brazilianDateRegex.test(dateInput)) {
+          return dateInput // Return as is if already formatted correctly
+        }
+
+        // Try parsing as ISO string first
         date = parseISO(dateInput)
         if (isValid(date)) {
           return format(date, "dd/MM/yyyy")
         }
 
+        // Try parsing as timestamp string
         if (/^\d+$/.test(dateInput)) {
           const timestamp = dateInput.length === 10 ? Number(dateInput) * 1000 : Number(dateInput)
           date = new Date(timestamp)
           if (isValid(date)) {
             return format(date, "dd/MM/yyyy")
+          }
+        }
+
+        // Try parsing common date formats
+        const commonFormats = [
+          /^(\d{4})-(\d{1,2})-(\d{1,2})$/, // YYYY-MM-DD
+          /^(\d{1,2})-(\d{1,2})-(\d{4})$/, // DD-MM-YYYY
+          /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/, // DD/MM/YY
+        ]
+
+        for (let format of commonFormats) {
+          if (format.test(dateInput)) {
+            date = new Date(dateInput)
+            if (isValid(date)) {
+              return format(date, "dd/MM/yyyy")
+            }
           }
         }
       }
@@ -243,10 +369,6 @@ const SalesReportPDF = ({ sales, selectedSales, clientName = "Todos os Clientes"
 
       if (isDate(dateInput) && isValid(dateInput)) {
         return format(dateInput, "dd/MM/yyyy")
-      }
-
-      if (date && isValid(date)) {
-        return format(date, "dd/MM/yyyy")
       }
 
       return "Data inválida"
@@ -273,12 +395,10 @@ const SalesReportPDF = ({ sales, selectedSales, clientName = "Todos os Clientes"
           const safeSale = { ...sale }
 
           safeSale.id = safeSale.id || `sale-${Math.random().toString(36).substr(2, 9)}`
-          // Use the cliente field directly from the sale object
           safeSale.client = safeSale.cliente || safeSale.client || safeSale.clientName || "Cliente não informado"
           safeSale.paymentMethod = safeSale.paymentMethod || safeSale.formaPagamento || "Não especificado"
           safeSale.paymentTerms = safeSale.paymentTerms || safeSale.prazoDias || null
           safeSale.orderDate = safeSale.orderDate || safeSale.dataPedido || safeSale.date
-          // Ensure dataCarregamento is properly mapped to loadingDate
           safeSale.loadingDate = safeSale.dataCarregamento || safeSale.loadingDate || null
           safeSale.total = typeof safeSale.total === "number" ? safeSale.total : 0
 
@@ -286,20 +406,9 @@ const SalesReportPDF = ({ sales, selectedSales, clientName = "Todos os Clientes"
             safeSale.items = []
           }
 
-          if (!safeSale.orderDate) {
-            safeSale.orderDate = new Date().toISOString()
-          } else {
-            try {
-              const date = new Date(safeSale.orderDate)
-              if (isValid(date)) {
-                safeSale.orderDate = date.toISOString()
-              } else {
-                safeSale.orderDate = new Date().toISOString()
-              }
-            } catch (e) {
-              safeSale.orderDate = new Date().toISOString()
-            }
-          }
+          // Format dates - fix the date formatting to use the correct field names
+          safeSale.orderDateFormatted = safeFormatDate(safeSale.dataPedido || safeSale.orderDate)
+          safeSale.loadingDateFormatted = safeFormatDate(safeSale.dataCarregamento || safeSale.loadingDate)
 
           safeSale.items = safeSale.items.map((item, index) => ({
             ...item,
@@ -307,6 +416,7 @@ const SalesReportPDF = ({ sales, selectedSales, clientName = "Todos os Clientes"
             name: item.name || item.tipoProduto || "Item sem nome",
             productType: item.productType || item.tipoProduto || "Não especificado",
             variety: item.variety || item.variedade || "Não especificado",
+            talhao: item.talhao || "Não especificado",
             classification: item.classification || item.classificacao || "Não especificado",
             packaging: item.packaging || item.embalagem || "Não especificado",
             quantity:
@@ -322,11 +432,11 @@ const SalesReportPDF = ({ sales, selectedSales, clientName = "Todos os Clientes"
                 : typeof item.valorTotal === "number"
                   ? item.valorTotal
                   : (typeof item.quantity === "number"
-                      ? item.quantity
-                      : typeof item.quantidade === "number"
-                        ? item.quantidade
-                        : 0) *
-                    (typeof item.price === "number" ? item.price : typeof item.preco === "number" ? item.preco : 0),
+                    ? item.quantity
+                    : typeof item.quantidade === "number"
+                      ? item.quantidade
+                      : 0) *
+                  (typeof item.price === "number" ? item.price : typeof item.preco === "number" ? item.preco : 0),
           }))
 
           return safeSale
@@ -353,131 +463,200 @@ const SalesReportPDF = ({ sales, selectedSales, clientName = "Todos os Clientes"
 
   const grandTotal = salesToShow.reduce((acc, sale) => acc + (Number(sale.total) || 0), 0)
 
+  const formatPeriod = () => {
+    if (periodStart && periodEnd) {
+      return `${safeFormatDate(periodStart)} a ${safeFormatDate(periodEnd)}`
+    }
+    return `Gerado em ${format(new Date(), "dd/MM/yyyy")}`
+  }
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
+        {/* Cabeçalho do Documento com Logo */}
         <View style={styles.header}>
           <View style={styles.logoSection}>
             <Image style={styles.logo} src={matriceLogo} />
             <View style={styles.headerText}>
-              <Text style={styles.reportTitle}>Relatório Sistema de Gestão Agrícola AgroColeta</Text>
-              <Text style={styles.subtitle}>Sistema de Controle de Vendas</Text>
+              <Text style={styles.reportTitle}>AgroColeta - Sistema de Gestão Agrícola</Text>
+              <Text style={styles.reportSubtitle}>Controle de Vendas</Text>
             </View>
           </View>
         </View>
 
+        {/* Lista de Vendas */}
         {salesToShow.map((sale, saleIndex) => (
           <View key={sale.id} style={styles.saleSection}>
             {/* Cabeçalho da Venda */}
             <View style={styles.saleHeader}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={styles.saleTitle}>
                   Venda {saleIndex + 1} - {sale.client}
                 </Text>
                 {sale.status === 'cancelada' && (
-                  <Text style={{
-                    backgroundColor: '#f44336',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: 4,
-                    fontSize: 12,
-                    fontWeight: 'bold',
-                    textTransform: 'uppercase'
-                  }}>
-                    Cancelada
-                  </Text>
+                  <Text style={styles.canceledBadge}>Cancelada</Text>
                 )}
               </View>
 
-              {/* Informações da Venda */}
-              <View style={styles.saleInfoGrid}>
-                <View style={styles.saleInfoItem}>
+              <Text style={[styles.saleInfoLabel, { marginBottom: 8, fontSize: 10 }]}>Informações da Venda</Text>
+
+              {/* Primeira linha: Cliente e Data do Pedido */}
+              <View style={styles.saleInfoRow}>
+                <View style={styles.saleInfoGroup}>
                   <Text style={styles.saleInfoLabel}>Cliente:</Text>
                   <Text style={styles.saleInfoValue}>{sale.client}</Text>
                 </View>
+                <View style={styles.saleInfoGroup}>
+                  <Text style={styles.saleInfoLabel}>Data do Pedido:</Text>
+                  <Text style={styles.saleInfoValue}>{sale.orderDateFormatted}</Text>
+                </View>
+              </View>
 
-                <View style={styles.saleInfoItem}>
-                  <Text style={styles.saleInfoLabel}>Forma Pagamento:</Text>
+              {/* Segunda linha: Forma de Pagamento e Data Carregamento */}
+              <View style={styles.saleInfoRow}>
+                <View style={styles.saleInfoGroup}>
+                  <Text style={styles.saleInfoLabel}>Forma de Pagamento:</Text>
                   <Text style={styles.saleInfoValue}>{sale.paymentMethod}</Text>
+                  {sale.paymentTerms && (
+                    <>
+                      <Text style={styles.saleInfoSeparator}>•</Text>
+                      <Text style={styles.saleInfoLabel}>Prazo:</Text>
+                      <Text style={styles.saleInfoValue}>{sale.paymentTerms} dias</Text>
+                    </>
+                  )}
                 </View>
-
-                {sale.paymentTerms && (
-                  <View style={styles.saleInfoItem}>
-                    <Text style={styles.saleInfoLabel}>Prazo Dias:</Text>
-                    <Text style={styles.saleInfoValue}>{sale.paymentTerms} dias</Text>
-                  </View>
-                )}
-
-                <View style={styles.saleInfoItem}>
-                  <Text style={styles.saleInfoLabel}>Data Pedido:</Text>
-                  <Text style={styles.saleInfoValue}>{sale.dataPedido || sale.orderDate}</Text>
-                </View>
-
                 {(sale.loadingDate || sale.dataCarregamento) && (
-                  <View style={styles.saleInfoItem}>
+                  <View style={styles.saleInfoGroup}>
                     <Text style={styles.saleInfoLabel}>Data Carregamento:</Text>
-                    <Text style={styles.saleInfoValue}>
-                      {sale.dataCarregamento || sale.loadingDate}
-                    </Text>
+                    <Text style={styles.saleInfoValue}>{sale.loadingDateFormatted}</Text>
                   </View>
                 )}
               </View>
             </View>
 
-            {/* Tabela de Itens da Venda */}
+            {/* Título da tabela */}
+            <View style={{
+              backgroundColor: colors.background.main,
+              padding: '6 10',
+              borderLeftWidth: 1,
+              borderRightWidth: 1,
+              borderColor: colors.border,
+            }}>
+              <Text style={[styles.saleInfoLabel, { fontSize: 10 }]}>Itens da Venda</Text>
+            </View>
+
+            {/* Tabela de Itens */}
             <View style={styles.itemsTable}>
+              {/* Cabeçalho da tabela */}
               <View style={styles.itemsTableHeader}>
-                <Text style={styles.itemCol}>Item</Text>
-                <Text style={styles.productCol}>Produto</Text>
-                <Text style={styles.talhaoCol}>Talhão</Text>
-                <Text style={styles.varietyCol}>Variedade</Text>
-                <Text style={styles.classificationCol}>Classificação</Text>
-                <Text style={styles.packagingCol}>Embalagem</Text>
-                <Text style={styles.quantityCol}>Quant.</Text>
-                <Text style={styles.priceCol}>Preço Unit.</Text>
-                <Text style={styles.subtotalCol}>Subtotal</Text>
+                <View style={styles.itemCol}>
+                  <Text>Item</Text>
+                </View>
+                <View style={styles.columnSeparator} />
+                <View style={styles.productCol}>
+                  <Text>Produto</Text>
+                </View>
+                <View style={styles.columnSeparator} />
+                <View style={styles.varietyCol}>
+                  <Text>Variedade</Text>
+                </View>
+                <View style={styles.columnSeparator} />
+                <View style={styles.talhaoCol}>
+                  <Text>Talhão</Text>
+                </View>
+                <View style={styles.columnSeparator} />
+                <View style={styles.classificationCol}>
+                  <Text>Classificação</Text>
+                </View>
+                <View style={styles.columnSeparator} />
+                <View style={styles.packagingCol}>
+                  <Text>Embalagem</Text>
+                </View>
+                <View style={styles.columnSeparator} />
+                <View style={styles.quantityCol}>
+                  <Text>Quant.</Text>
+                </View>
+                <View style={styles.columnSeparator} />
+                <View style={styles.priceCol}>
+                  <Text>Preço Unit.</Text>
+                </View>
+                <View style={styles.columnSeparator} />
+                <View style={styles.subtotalCol}>
+                  <Text>Subtotal</Text>
+                </View>
               </View>
 
+              {/* Linhas da tabela */}
               {sale.items.map((item, itemIndex) => (
-                <View key={itemIndex} style={[styles.itemsTableRow, itemIndex % 2 === 0 && styles.itemsTableRowEven]}>
-                  <Text style={styles.itemCol}>{item.itemNumber}</Text>
-                  <Text style={styles.productCol}>{item.productType}</Text>
-                  <Text style={styles.talhaoCol}>{item.talhao || '-'}</Text>
-                  <Text style={styles.varietyCol}>{item.variety}</Text>
-                  <Text style={styles.classificationCol}>{item.classification}</Text>
-                  <Text style={styles.packagingCol}>{item.packaging}</Text>
-                  <Text style={styles.quantityCol}>{item.quantity}</Text>
-                  <Text style={styles.priceCol}>{formatCurrency(item.price)}</Text>
-                  <Text style={styles.subtotalCol}>{formatCurrency(item.total)}</Text>
+                <View
+                  key={itemIndex}
+                  style={[
+                    styles.itemsTableRow,
+                    itemIndex % 2 === 1 && styles.itemsTableRowAlt
+                  ]}
+                >
+                  <View style={[styles.itemCol, styles.tableCell]}>
+                    <Text style={styles.tableCellText}>{item.itemNumber}</Text>
+                  </View>
+                  <View style={styles.columnSeparator} />
+                  <View style={[styles.productCol, styles.tableCell]}>
+                    <Text style={styles.tableCellText}>{item.productType}</Text>
+                  </View>
+                  <View style={styles.columnSeparator} />
+                  <View style={[styles.varietyCol, styles.tableCell]}>
+                    <Text style={styles.tableCellText}>{item.variety}</Text>
+                  </View>
+                  <View style={styles.columnSeparator} />
+                  <View style={[styles.talhaoCol, styles.tableCell]}>
+                    <Text style={styles.tableCellText}>{item.talhao}</Text>
+                  </View>
+                  <View style={styles.columnSeparator} />
+                  <View style={[styles.classificationCol, styles.tableCell]}>
+                    <Text style={styles.tableCellText}>{item.classification}</Text>
+                  </View>
+                  <View style={styles.columnSeparator} />
+                  <View style={[styles.packagingCol, styles.tableCell]}>
+                    <Text style={styles.tableCellText}>{item.packaging}</Text>
+                  </View>
+                  <View style={styles.columnSeparator} />
+                  <View style={[styles.quantityCol, styles.tableCell]}>
+                    <Text style={styles.tableCellText}>{item.quantity}</Text>
+                  </View>
+                  <View style={styles.columnSeparator} />
+                  <View style={[styles.priceCol, styles.tableCell]}>
+                    <Text style={styles.tableCellText}>{formatCurrency(item.price)}</Text>
+                  </View>
+                  <View style={styles.columnSeparator} />
+                  <View style={[styles.subtotalCol, styles.tableCell]}>
+                    <Text style={styles.tableCellText}>{formatCurrency(item.total)}</Text>
+                  </View>
                 </View>
               ))}
             </View>
 
             {/* Total da Venda */}
             <View style={styles.saleTotal}>
-              <Text style={styles.saleTotalText}>Total dessa Venda: {formatCurrency(sale.total)}</Text>
+              <Text style={styles.saleTotalText}>
+                Total desta Venda: {formatCurrency(sale.total)}
+              </Text>
             </View>
           </View>
         ))}
 
-        <View style={styles.grandTotal}>
-          <Text style={styles.grandTotalText}>Total Geral do Relatório: {formatCurrency(grandTotal)}</Text>
+        {/* Total Geral */}
+        <View style={styles.grandTotalSection}>
+          <Text style={styles.grandTotalText}>
+            Total Geral do Relatório: {formatCurrency(grandTotal)}
+          </Text>
         </View>
 
-        <View style={styles.generationDate}>
-          <Text>Relatório gerado em {format(new Date(), "dd/MM/yyyy")}</Text>
-        </View>
 
+        {/* Rodapé */}
         <View style={styles.footer}>
-          <Text>J.R. AGSOLUTIONS - Rua Gameleiras, 529 - Campestre - São Gotardo/MG - CEP 38.800-000</Text>
-          <Text>Tel: (34) 9 9653-2577 | contato@jragrosolutions.com.br</Text>
+          <Text>Relatório gerado em {format(new Date(), "dd/MM/yyyy HH:mm:ss")}</Text>
+          <Text>Propriedade: Matrice</Text>
+          <Text style={styles.footerLine}>J. R. AgroSolutions</Text>
         </View>
-
-        <Text
-          style={styles.pageNumber}
-          render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`}
-          fixed
-        />
       </Page>
     </Document>
   )

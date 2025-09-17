@@ -7,7 +7,7 @@ import SalesReportPDF from "./SalesReportPDF"
 import { database } from "../firebase/firebase"
 import { ref, onValue, off } from "firebase/database"
 
-const ReportsSection = ({ propertyName = "Matrice" }) => {
+const ReportsSection = ({ propertyName = "Matrice", preselectedSaleId = null }) => {
   const [sales, setSales] = useState([])
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
@@ -21,6 +21,25 @@ const ReportsSection = ({ propertyName = "Matrice" }) => {
   const [hideMonetaryValues, setHideMonetaryValues] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+  
+  const resetView = () => {
+    setSelectedSales([])
+    setSelectAll(false)
+    setSelectedClient("")
+    setSelectedProductType("")
+    setSearchTerm("")
+    setCurrentPage(1)
+  }
+
+  useEffect(() => {
+    if (preselectedSaleId && sales.length > 0) {
+      const saleExists = sales.find((sale) => sale.id === preselectedSaleId)
+      if (saleExists) {
+        setSelectedSales([preselectedSaleId])
+        console.log(`Pre-selected sale: ${preselectedSaleId}`)
+      }
+    }
+  }, [preselectedSaleId, sales])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,7 +91,8 @@ const ReportsSection = ({ propertyName = "Matrice" }) => {
                 propriedade: sale.propriedade || "",
                 status: sale.status || "",
                 tipoFrete: sale.tipoFrete || "",
-                valorTotal: items.reduce((sum, item) => sum + (Number(item.valorTotal) || 0), 0) || sale.valorTotal || 0,
+                valorTotal:
+                  items.reduce((sum, item) => sum + (Number(item.valorTotal) || 0), 0) || sale.valorTotal || 0,
                 items: items,
                 total: items.reduce((sum, item) => sum + (Number(item.valorTotal) || 0), 0) || sale.valorTotal || 0,
                 paymentMethod: sale.formaPagamento || "",
@@ -139,15 +159,13 @@ const ReportsSection = ({ propertyName = "Matrice" }) => {
   }, [sales])
 
   const getClientName = (sale) => {
-    // First try to get from sale.cliente directly
     if (sale.cliente) return sale.cliente
-    
-    // Fallback to looking up by clientId if needed
+
     if (sale.clientId) {
       const client = clients.find((c) => c.id === sale.clientId)
       if (client) return client.Nome || client.nome || client.name || `Cliente ${sale.clientId}`
     }
-    
+
     return "Cliente não especificado"
   }
 
@@ -211,7 +229,7 @@ const ReportsSection = ({ propertyName = "Matrice" }) => {
     if (searchTerm.trim() !== "") {
       const searchLower = searchTerm.toLowerCase()
       result = result.filter((sale) => {
-        const clientName = sale.cliente?.toLowerCase() || ""
+        const clientName = getClientName(sale).toLowerCase()
         const saleId = sale.id?.toLowerCase() || ""
         const total = formatCurrency(sale.total || 0).toLowerCase()
 
@@ -239,16 +257,14 @@ const ReportsSection = ({ propertyName = "Matrice" }) => {
     return result
   }, [sales, selectedClient, selectedProductType, searchTerm])
 
-  // Calculate pagination after filteredSales is defined
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage)
   const indexOfLastItem = currentPage * itemsPerPage
   const indexOfFirstItem = indexOfLastItem - itemsPerPage
   const currentSales = filteredSales.slice(indexOfFirstItem, indexOfLastItem)
-  
-  // Handle page change
+
   const paginate = (pageNumber) => setCurrentPage(pageNumber)
-  const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages))
-  const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1))
+  const nextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+  const prevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1))
 
   const toggleSaleSelection = (saleId) => {
     setSelectedSales((prev) => (prev.includes(saleId) ? prev.filter((id) => id !== saleId) : [...prev, saleId]))
@@ -427,12 +443,16 @@ const ReportsSection = ({ propertyName = "Matrice" }) => {
                   <SalesReportPDF
                     sales={selectedSales.length > 0 ? sales.filter((s) => selectedSales.includes(s.id)) : filteredSales}
                     selectedSales={selectedSales}
-                    clientName={selectedClient ? getClientName(sales.find(s => s.clientId === selectedClient) || {}) : "Todos os Clientes"}
+                    clientName={selectedClient ? getClientName(selectedClient) : "Todos os Clientes"}
                     hideMonetaryValues={hideMonetaryValues}
                   />
                 }
                 fileName={`relatorio-vendas-${new Date().toISOString().split("T")[0]}.pdf`}
                 className="w-full sm:w-auto"
+                onClick={() => {
+                  // Reset the view after a short delay to ensure the PDF is generated
+                  setTimeout(resetView, 1000);
+                }}
               >
                 {({ blob, url, loading, error }) => {
                   const hasSelectedSales = selectedSales.length > 0
@@ -450,25 +470,9 @@ const ReportsSection = ({ propertyName = "Matrice" }) => {
                     >
                       {loading ? (
                         <>
-                          <svg
-                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
                           Gerando...
                         </>
@@ -501,19 +505,34 @@ const ReportsSection = ({ propertyName = "Matrice" }) => {
                       className="h-4 w-4 text-[#16A34A] focus:ring-[#16A34A] border-gray-300 rounded mx-auto block"
                     />
                   </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28"
+                  >
                     Data
                   </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]"
+                  >
                     Cliente
                   </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48"
+                  >
                     Forma de Pagamento
                   </th>
-                  <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-36"
+                  >
                     Valor Total
                   </th>
-                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
+                  >
                     Itens
                   </th>
                 </tr>
@@ -521,7 +540,14 @@ const ReportsSection = ({ propertyName = "Matrice" }) => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {currentSales.length > 0 ? (
                   currentSales.map((sale) => (
-                    <tr key={sale.id} className={`${sale.status === 'cancelada' ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'hover:bg-gray-50'} transition-colors`}>
+                    <tr
+                      key={sale.id}
+                      className={`${sale.status === "cancelada" 
+                        ? "bg-red-50 text-red-700 hover:bg-red-100" 
+                        : selectedSales.includes(sale.id) 
+                          ? "bg-gray-100 hover:bg-gray-200" 
+                          : "hover:bg-gray-50"} transition-colors`}
+                    >
                       <td className="px-4 py-3 whitespace-nowrap text-center">
                         <input
                           type="checkbox"
@@ -534,28 +560,28 @@ const ReportsSection = ({ propertyName = "Matrice" }) => {
                         {sale.dataPedido ? formatDate(sale.dataPedido) : formatDate(sale.date)}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
-                        <div className="font-medium">
-                          {getClientName(sale)}
-                        </div>
+                        <div className="font-medium">{getClientName(sale)}</div>
                         {sale.items?.length > 0 && (
-                          <div 
-                            className="text-xs text-gray-500 truncate max-w-xs" 
-                            title={[...new Set(sale.items.map(item => item.tipoProduto).filter(Boolean))].join(', ')}
+                          <div
+                            className="text-xs text-gray-500 truncate max-w-xs"
+                            title={[...new Set(sale.items.map((item) => item.tipoProduto).filter(Boolean))].join(", ")}
                           >
-                            {[...new Set(sale.items.map(item => item.tipoProduto).filter(Boolean))].join(', ')}
+                            {[...new Set(sale.items.map((item) => item.tipoProduto).filter(Boolean))].join(", ")}
                           </div>
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${
-                          sale.status === 'cancelada' 
-                            ? 'bg-red-100 text-red-800' 
-                            : 'bg-green-100 text-green-800'
-                        }`}>
-                          {sale.status === 'cancelada' ? 'Cancelada' : (sale.paymentMethod || "Não informado")}
+                        <span
+                          className={`px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${
+                            sale.status === "cancelada" ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
+                          }`}
+                        >
+                          {sale.status === "cancelada" ? "Cancelada" : sale.paymentMethod || "Não informado"}
                         </span>
                       </td>
-                      <td className={`px-4 py-3 whitespace-nowrap text-right text-sm font-semibold ${sale.status === 'cancelada' ? 'text-red-600' : 'text-gray-900'}`}>
+                      <td
+                        className={`px-4 py-3 whitespace-nowrap text-right text-sm font-semibold ${sale.status === "cancelada" ? "text-red-600" : "text-gray-900"}`}
+                      >
                         {formatCurrency(sale.total)}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-center">
@@ -570,7 +596,12 @@ const ReportsSection = ({ propertyName = "Matrice" }) => {
                     <td colSpan="6" className="px-6 py-8 text-center text-sm text-gray-500">
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
                         </svg>
                         <p className="font-medium text-gray-600">Nenhuma venda encontrada</p>
                         <p className="text-xs text-gray-500">Tente ajustar os filtros de busca</p>
@@ -580,21 +611,20 @@ const ReportsSection = ({ propertyName = "Matrice" }) => {
                 )}
               </tbody>
             </table>
-            
-            {/* Pagination Controls */}
+
             <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
               <div className="flex-1 flex justify-between sm:hidden">
                 <button
                   onClick={prevPage}
                   disabled={currentPage === 1}
-                  className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                  className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${currentPage === 1 ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-white text-gray-700 hover:bg-gray-50"}`}
                 >
                   Anterior
                 </button>
                 <button
                   onClick={nextPage}
                   disabled={currentPage === totalPages || totalPages === 0}
-                  className={`ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${currentPage === totalPages || totalPages === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                  className={`ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${currentPage === totalPages || totalPages === 0 ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-white text-gray-700 hover:bg-gray-50"}`}
                 >
                   Próximo
                 </button>
@@ -602,11 +632,10 @@ const ReportsSection = ({ propertyName = "Matrice" }) => {
               <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm text-gray-700">
-                    Mostrando <span className="font-medium">{filteredSales.length === 0 ? 0 : indexOfFirstItem + 1}</span> a{' '}
-                    <span className="font-medium">
-                      {Math.min(indexOfLastItem, filteredSales.length)}
-                    </span>{' '}
-                    de <span className="font-medium">{filteredSales.length}</span> resultados
+                    Mostrando{" "}
+                    <span className="font-medium">{filteredSales.length === 0 ? 0 : indexOfFirstItem + 1}</span> a{" "}
+                    <span className="font-medium">{Math.min(indexOfLastItem, filteredSales.length)}</span> de{" "}
+                    <span className="font-medium">{filteredSales.length}</span> resultados
                   </p>
                 </div>
                 <div>
@@ -614,47 +643,67 @@ const ReportsSection = ({ propertyName = "Matrice" }) => {
                     <button
                       onClick={prevPage}
                       disabled={currentPage === 1}
-                      className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'}`}
+                      className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${currentPage === 1 ? "text-gray-300 cursor-not-allowed" : "text-gray-500 hover:bg-gray-50"}`}
                     >
                       <span className="sr-only">Anterior</span>
-                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                      <svg
+                        className="h-5 w-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                     </button>
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
+                      let pageNum
                       if (totalPages <= 5) {
-                        pageNum = i + 1;
+                        pageNum = i + 1
                       } else if (currentPage <= 3) {
-                        pageNum = i + 1;
+                        pageNum = i + 1
                       } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
+                        pageNum = totalPages - 4 + i
                       } else {
-                        pageNum = currentPage - 2 + i;
+                        pageNum = currentPage - 2 + i
                       }
-                      
+
                       return (
                         <button
                           key={pageNum}
                           onClick={() => paginate(pageNum)}
                           className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                             currentPage === pageNum
-                              ? 'z-10 bg-[#16A34A] border-[#16A34A] text-white'
-                              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                              ? "z-10 bg-[#16A34A] border-[#16A34A] text-white"
+                              : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
                           }`}
                         >
                           {pageNum}
                         </button>
-                      );
+                      )
                     })}
                     <button
                       onClick={nextPage}
                       disabled={currentPage === totalPages || totalPages === 0}
-                      className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${currentPage === totalPages || totalPages === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'}`}
+                      className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${currentPage === totalPages || totalPages === 0 ? "text-gray-300 cursor-not-allowed" : "text-gray-500 hover:bg-gray-50"}`}
                     >
                       <span className="sr-only">Próximo</span>
-                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                      <svg
+                        className="h-5 w-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                     </button>
                   </nav>
@@ -668,31 +717,25 @@ const ReportsSection = ({ propertyName = "Matrice" }) => {
           <h4 className="font-medium text-gray-900 mb-4">Resumo do Relatório</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm font-medium text-gray-500">Total de Vendas Válidas</div>
-              <div className="mt-1 text-2xl font-semibold text-gray-900">
-                {filteredSales.filter(sale => sale.status !== 'cancelada').length}
-              </div>
+              <div className="text-sm font-medium text-gray-500">Total de Vendas</div>
+              <div className="mt-1 text-2xl font-semibold text-gray-900">{filteredSales.length}</div>
               <div className="mt-2 text-sm text-gray-500">
                 {selectedSales.length > 0 && <span>{selectedSales.length} selecionada(s)</span>}
               </div>
             </div>
 
             <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm font-medium text-gray-500">Valor Total Válido</div>
+              <div className="text-sm font-medium text-gray-500">Valor Total</div>
               <div className="mt-1 text-2xl font-semibold text-gray-900">
-                {formatCurrency(
-                  filteredSales
-                    .filter(sale => sale.status !== 'cancelada')
-                    .reduce((sum, sale) => sum + (Number(sale.total) || 0), 0)
-                )}
+                {formatCurrency(filteredSales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0))}
               </div>
               <div className="mt-2 text-sm text-gray-500">
                 {selectedSales.length > 0 && (
                   <span>
                     {formatCurrency(
                       filteredSales
-                        .filter(sale => selectedSales.includes(sale.id) && sale.status !== 'cancelada')
-                        .reduce((sum, sale) => sum + (Number(sale.total) || 0), 0)
+                        .filter((sale) => selectedSales.includes(sale.id))
+                        .reduce((sum, sale) => sum + (Number(sale.total) || 0), 0),
                     )}{" "}
                     selecionado(s)
                   </span>
@@ -703,24 +746,21 @@ const ReportsSection = ({ propertyName = "Matrice" }) => {
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="text-sm font-medium text-gray-500">Ticket Médio</div>
               <div className="mt-1 text-2xl font-semibold text-gray-900">
-                {(() => {
-                  const activeSales = filteredSales.filter(sale => sale.status !== 'cancelada');
-                  const total = activeSales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0);
-                  const count = activeSales.length;
-                  return formatCurrency(count > 0 ? total / count : 0);
-                })()}
+                {formatCurrency(
+                  filteredSales.length > 0
+                    ? filteredSales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0) / filteredSales.length
+                    : 0,
+                )}
               </div>
               <div className="mt-2 text-sm text-gray-500">
                 {selectedSales.length > 1 && (
                   <span>
-                    {(() => {
-                      const selectedActiveSales = filteredSales.filter(
-                        sale => selectedSales.includes(sale.id) && sale.status !== 'cancelada'
-                      );
-                      if (selectedActiveSales.length === 0) return 'R$ 0,00';
-                      const total = selectedActiveSales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0);
-                      return `${formatCurrency(total / selectedActiveSales.length)} (${selectedActiveSales.length} ativas)`;
-                    })()}
+                    {formatCurrency(
+                      filteredSales
+                        .filter((sale) => selectedSales.includes(sale.id))
+                        .reduce((sum, sale) => sum + (Number(sale.total) || 0), 0) / selectedSales.length,
+                    )}{" "}
+                    (selecionadas)
                   </span>
                 )}
               </div>

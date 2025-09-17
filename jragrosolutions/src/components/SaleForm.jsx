@@ -427,26 +427,18 @@ const SaleForm = ({ products, onSaleSubmit, userData }) => {
 
       // Reset form
       setSaleData({
-        orderDate: new Date().toISOString().split("T")[0],
         clientId: "",
+        orderDate: new Date().toISOString().split("T")[0],
+        loadingDate: "",
         paymentMethod: "",
         paymentTerm: "",
-        paymentNotes: "",
-        items: [
-          {
-            productId: "",
-            talhao: "",
-            variety: "",
-            classification: "",
-            packaging: "",
-            quantity: 0,
-            unitPrice: 0,
-          },
-        ],
-        loadingDate: "",
         shippingMethod: "",
         generalNotes: "",
+        items: [],
       })
+      
+      // Scroll to top of the page after successful submission
+      window.scrollTo({ top: 0, behavior: 'smooth' })
 
       // Clear success message after 3 seconds
       setTimeout(() => {
