@@ -4,6 +4,7 @@ import Login from "./pages/Login"
 import Dashboard from "./pages/Dashboard"
 import Lancamentos from "./pages/Lancamentos"
 import Vendas from "./pages/Vendas"
+import Mecanico from "./pages/Mecanico"
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/lancamentos" element={<Lancamentos />} />
           <Route path="/vendas" element={<Vendas />} />
+          <Route path="/mecanico" element={<Mecanico />} />
         </Routes>
       </div>
     </Router>

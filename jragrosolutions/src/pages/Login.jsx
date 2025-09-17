@@ -71,6 +71,8 @@ const Login = () => {
             navigate("/lancamentos")
           } else if (userRole === "seller") {
             navigate("/vendas")
+          } else if (userRole === "mecanico") {
+            navigate("/mecanico")
           } else {
             // Fazer logout do usuário e mostrar erro para roles não reconhecidas
             await auth.signOut()
