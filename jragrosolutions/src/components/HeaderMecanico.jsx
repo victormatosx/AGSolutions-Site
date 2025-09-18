@@ -7,12 +7,12 @@ import { useNavigate } from "react-router-dom"
 import { Menu, X, LogOut, Plus } from "lucide-react"
 import logoVerde from "../assets/logoVerde.png"
 
-const HeaderMecanico = ({ onNavigate, currentPage }) => {
+const HeaderMecanico = ({ onNavigate, currentPage, activeTab = 'aberto', setActiveTab = () => {} }) => {
   const [user, loading, error] = useAuthState(auth)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(true)
   const lastScrollY = useRef(0)
-  const navigate = useNavigate()
+  const navigate = useNavigate() 
 
   useEffect(() => {
     const handleScroll = () => {
@@ -67,15 +67,34 @@ const HeaderMecanico = ({ onNavigate, currentPage }) => {
           </button>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            {/* Styled Home Link */}
-            <button
-              onClick={() => handleNavigation("home")}
-              className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-2 rounded-full hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:scale-105"
-            >
-              Voltar para Home
-            </button>
-
+          <nav className="hidden md:flex items-center space-x-6">
+            {/* Navigation Tabs */}
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setActiveTab('aberto')}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === 'aberto'
+                    ? 'text-green-600'
+                    : 'text-gray-600 hover:text-green-600'
+                }`}
+              >
+                Ver Ordens em Aberto
+              </button>
+              <button
+                onClick={() => setActiveTab('fechado')}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === 'fechado'
+                    ? 'text-green-600'
+                    : 'text-gray-600 hover:text-green-600'
+                }`}
+              >
+                Ver Ordens Concluídas
+              </button>
+            </div>
+            
+            {/* Spacer */}
+            <div className="w-px h-6 bg-gray-200 mx-2"></div>
+            
             {/* Logout Button */}
             <button
               onClick={handleLogout}
@@ -97,17 +116,38 @@ const HeaderMecanico = ({ onNavigate, currentPage }) => {
         {isMenuOpen && (
           <div className="md:hidden mt-4 py-4 bg-white rounded-lg shadow-lg">
             <nav className="flex flex-col space-y-4 px-4">
-              <hr className="border-gray-200" />
-              <button
-                onClick={() => handleNavigation("home")}
-                className="text-left text-gray-700 hover:text-green-600 transition-colors"
-              >
-                Voltar para Home
-              </button>
+              <div className="flex flex-col space-y-2 py-2">
+                <button
+                  onClick={() => {
+                    setActiveTab('aberto');
+                    closeMenu();
+                  }}
+                  className={`px-4 py-3 text-left font-medium transition-colors ${
+                    activeTab === 'aberto'
+                      ? 'text-green-600'
+                      : 'text-gray-600 hover:text-green-600'
+                  }`}
+                >
+                  Ver Ordens em Aberto
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab('fechado');
+                    closeMenu();
+                  }}
+                  className={`px-4 py-3 text-left font-medium transition-colors ${
+                    activeTab === 'fechado'
+                      ? 'text-green-600'
+                      : 'text-gray-600 hover:text-green-600'
+                  }`}
+                >
+                  Ver Ordens Concluídas
+                </button>
+              </div>
               <hr className="border-gray-200" />
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 text-left text-red-600 hover:text-red-700 transition-colors"
+                className="flex items-center gap-2 text-left text-red-600 hover:text-red-700 transition-colors px-4 py-2"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Sair do sistema</span>

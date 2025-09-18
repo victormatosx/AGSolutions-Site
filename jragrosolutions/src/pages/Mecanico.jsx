@@ -17,7 +17,7 @@ const Mecanico = () => {
       try {
         if (!user) {
           setAuthorized(false)
-          navigate("/login", { replace: true })
+          navigate("/login", { replace: true }) 
           return
         }
 
@@ -66,14 +66,7 @@ const Mecanico = () => {
   }, [navigate])
 
   if (checking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex items-center space-x-2 text-gray-600">
-          <div className="w-6 h-6 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
-          <span>Carregando...</span>
-        </div>
-      </div>
-    )
+    return null; // Let the component handle the loading state
   }
 
   if (!authorized) return null
