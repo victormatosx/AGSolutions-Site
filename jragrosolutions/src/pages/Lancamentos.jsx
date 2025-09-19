@@ -10,6 +10,7 @@ import HeaderLancamento from "../components/HeaderLancamento"
 import FormAbastecimentoMaquina from "../components/FormAbastecimentoMaquina"
 import FormApontamentoMaquina from "../components/FormApontamentoMaquina"
 import FormAbastecimentoVeiculo from "../components/FormAbastecimentoVeiculo"
+import FormOrdemServico from "../components/FormOrdemServico"
 
 const Lancamento = () => {
   const [user] = useAuthState(auth)
@@ -117,7 +118,7 @@ const Lancamento = () => {
       </button>
 
       <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
           {selectedCategory === "maquinas" ? (
             <>
               <div
@@ -153,6 +154,23 @@ const Lancamento = () => {
                 </h3>
                 <p className="text-slate-600 mt-2">Registrar abastecimento de máquina</p>
               </div>
+
+              <div
+                className={`group bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 border-2 shadow-lg hover:shadow-xl hover:-translate-y-1 ${
+                  selectedType === "os"
+                    ? "border-green-500 bg-green-50/50 shadow-green-500/20"
+                    : "border-white/20 hover:border-green-200"
+                }`}
+                onClick={() => handleTypeSelect("os")}
+              >
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/25 group-hover:scale-110 transition-transform duration-300">
+                  <Settings className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 group-hover:text-green-600 transition-colors duration-300">
+                  Abrir OS
+                </h3>
+                <p className="text-slate-600 mt-2">Registrar ordem de serviço</p>
+              </div>
             </>
           ) : (
             <div className="col-span-full flex justify-center">
@@ -186,6 +204,8 @@ const Lancamento = () => {
       return <FormApontamentoMaquina onSubmit={handleFormSubmit} onCancel={handleFormCancel} isLoading={isLoading} />
     } else if (selectedCategory === "veiculos" && selectedType === "abastecimento") {
       return <FormAbastecimentoVeiculo onSubmit={handleFormSubmit} onCancel={handleFormCancel} isLoading={isLoading} />
+    } else if (selectedCategory === "maquinas" && selectedType === "os") {
+      return <FormOrdemServico onSubmit={handleFormSubmit} onCancel={handleFormCancel} isLoading={isLoading} />
     }
   }
 
