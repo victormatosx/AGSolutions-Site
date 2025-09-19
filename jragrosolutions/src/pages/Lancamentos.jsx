@@ -11,6 +11,8 @@ import FormAbastecimentoMaquina from "../components/FormAbastecimentoMaquina"
 import FormApontamentoMaquina from "../components/FormApontamentoMaquina"
 import FormAbastecimentoVeiculo from "../components/FormAbastecimentoVeiculo"
 import FormOrdemServico from "../components/FormOrdemServico"
+import { ref, push, serverTimestamp } from 'firebase/database'
+import { database } from '../firebase/firebase'
 
 const Lancamento = () => {
   const [user] = useAuthState(auth)
@@ -53,19 +55,55 @@ const Lancamento = () => {
     }
   }
 
-  const handleFormSubmit = async (formData) => {
-    // The actual saving is done in FormApontamentoMaquina.jsx
-    setMessage({
-      type: "success",
-      text: "Apontamento enviado com sucesso!",
-    })
+  const handleSubmitOrdemServico = async (formData) => {
+    setIsLoading(true)
+    try {
+      // Get the user's property name (assuming it's stored in user.propriedade or similar)
+      // For now, we'll use 'Matrice' as per your example
+      const propriedadeNome = 'Matrice' // This should be replaced with the actual property from user object
+      
+      // Create a new service order in the database under the correct property
+      const ordemServicoRef = ref(database, `propriedades/${propriedadeNome}/ordemServico`)
+      
+      // Get current date and time in ISO 8601 format (e.g., '2025-09-19T00:52:11.000Z')
+      const now = new Date().toISOString();
+      
+      // Convert the date from YYYY-MM-DD to DD/MM/YYYY
+      const [year, month, day] = formData.data.split('-');
+      const formattedDate = `${day}/${month}/${year}`;
+      
+      // Prepare the service order data
+      const ordemData = {
+        criadoEm: now,
+        data: formattedDate,
+        descricaoProblema: formData.descricao,
+        equipamento: `${formData.maquinario.id} - ${formData.maquinario.nome}`,
+        horimetroEntrada: formData.horimetro,
+        status: "aberto",
+        tipoEquipamento: formData.maquinario.tipo,
+        userId: user.uid
+      }
+      
+      // Save the data to Firebase with a single auto-generated ID
+      await push(ordemServicoRef, ordemData)
+      
+      setMessage({
+        type: "success",
+        text: "Ordem de serviço criada com sucesso!",
+      })
 
-    setTimeout(() => {
-      setCurrentView("categories")
-      setSelectedCategory(null)
-      setSelectedType(null)
-      setMessage({ type: "", text: "" })
-    }, 3000) // Aumentado tempo para 3 segundos
+      setTimeout(() => {
+        setCurrentView("categories")
+        setSelectedCategory(null)
+        setSelectedType(null)
+        setMessage({ type: "", text: "" })
+      }, 3000) // Aumentado tempo para 3 segundos
+    } catch (error) {
+      console.error('Erro ao criar ordem de serviço:', error)
+      // You might want to show an error message to the user here
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleFormCancel = () => {
@@ -199,13 +237,13 @@ const Lancamento = () => {
 
   const renderForm = () => {
     if (selectedCategory === "maquinas" && selectedType === "abastecimento") {
-      return <FormAbastecimentoMaquina onSubmit={handleFormSubmit} onCancel={handleFormCancel} isLoading={isLoading} />
+      return <FormAbastecimentoMaquina onSubmit={handleSubmitOrdemServico} onCancel={handleFormCancel} isLoading={isLoading} />
     } else if (selectedCategory === "maquinas" && selectedType === "apontamento") {
-      return <FormApontamentoMaquina onSubmit={handleFormSubmit} onCancel={handleFormCancel} isLoading={isLoading} />
+      return <FormApontamentoMaquina onSubmit={handleSubmitOrdemServico} onCancel={handleFormCancel} isLoading={isLoading} />
     } else if (selectedCategory === "veiculos" && selectedType === "abastecimento") {
-      return <FormAbastecimentoVeiculo onSubmit={handleFormSubmit} onCancel={handleFormCancel} isLoading={isLoading} />
+      return <FormAbastecimentoVeiculo onSubmit={handleSubmitOrdemServico} onCancel={handleFormCancel} isLoading={isLoading} />
     } else if (selectedCategory === "maquinas" && selectedType === "os") {
-      return <FormOrdemServico onSubmit={handleFormSubmit} onCancel={handleFormCancel} isLoading={isLoading} />
+      return <FormOrdemServico onSubmit={handleSubmitOrdemServico} onCancel={handleFormCancel} isLoading={isLoading} />
     }
   }
 
