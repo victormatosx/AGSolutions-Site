@@ -87,14 +87,6 @@ const HeaderLancamento = ({ onNavigate, currentPage }) => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
 
-            {/* Styled Home Link */}
-            <button
-              onClick={() => handleNavigation("home")}
-              className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-2 rounded-full hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:scale-105"
-            >
-              Voltar para Home
-            </button>
-
             {/* Logout Button */}
             <button
               onClick={handleLogout}
