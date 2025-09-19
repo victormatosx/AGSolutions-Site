@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronDown } from 'lucide-react';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../firebase/firebase';
@@ -53,11 +53,34 @@ const MaquinarioSelector = ({ isOpen, onClose, onSelect }) => {
     item.modelo?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const modalRef = useRef(null);
+
+  // Handle click outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        onClose();
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div 
+        ref={modalRef}
+        className="bg-white rounded-xl w-full max-w-2xl max-h-[80vh] flex flex-col" 
+        onClick={e => e.stopPropagation()}
+      >
         <div className="p-4 border-b border-slate-200 flex justify-between items-center">
           <h3 className="text-lg font-semibold text-slate-800">
             Selecionar {activeTab === 'maquinario' ? 'Máquinário' : 'Implemento'}

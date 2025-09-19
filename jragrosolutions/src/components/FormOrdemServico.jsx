@@ -5,9 +5,9 @@ import MaquinarioSelector from './MaquinarioSelector'
 const Popup = ({ message, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl transform transition-all">
+      <div className="bg-white rounded-xl p-4 sm:p-6 max-w-md w-full mx-4 shadow-xl transform transition-all">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-slate-800">Atenção</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-slate-800">Atenção</h3>
           <button 
             onClick={onClose}
             className="text-slate-500 hover:text-slate-700 transition-colors"
@@ -16,7 +16,7 @@ const Popup = ({ message, onClose }) => {
             <X size={20} />
           </button>
         </div>
-        <p className="text-slate-700 mb-6">{message}</p>
+        <p className="text-sm sm:text-base text-slate-700 mb-4 sm:mb-6">{message}</p>
         <div className="flex justify-end">
           <button
             onClick={onClose}
@@ -85,155 +85,158 @@ const FormOrdemServico = ({ onSubmit, onCancel, isLoading }) => {
 
   return (
     <>
-    <form onSubmit={handleSubmit} className="space-y-6 bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl">
-      <h2 className="text-2xl font-bold text-slate-800 mb-6">Ordem de Serviço</h2>
-      
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Maquinário/Implemento <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowMaquinarioSelector(true)}
-              className={`w-full text-left px-4 py-2 rounded-lg border ${
-                formData.maquinario.nome 
-                  ? 'border-green-500 bg-green-50' 
-                  : 'border-slate-300 hover:border-slate-400'
-              } focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all flex items-center justify-between`}
-            >
-              {formData.maquinario.nome ? (
-                <span className="font-medium text-slate-900">{formData.maquinario.nome}</span>
-              ) : (
-                <span className="text-slate-500">Selecione um máquinário ou implemento</span>
+    <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 lg:p-8 shadow-xl">
+        <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-4 sm:mb-6">Ordem de Serviço</h2>
+        
+        <div className="space-y-4 sm:space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Maquinário/Implemento <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowMaquinarioSelector(true)}
+                className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 rounded-lg border ${
+                  formData.maquinario.nome 
+                    ? 'border-green-500 bg-green-50' 
+                    : 'border-slate-300 hover:border-slate-400'
+                } focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all flex items-center justify-between min-h-[44px]`}
+              >
+                {formData.maquinario.nome ? (
+                  <span className="font-medium text-slate-900 text-sm sm:text-base truncate pr-2">{formData.maquinario.nome}</span>
+                ) : (
+                  <span className="text-slate-500 text-sm sm:text-base">Selecione um maquinário ou implemento</span>
+                )}
+                <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5 text-slate-400 flex-shrink-0" />
+              </button>
+              {!formData.maquinario.nome && (
+                <p className="mt-1 text-xs sm:text-sm text-slate-500">
+                  Selecione um item da lista
+                </p>
               )}
-              <ChevronDown className="h-5 w-5 text-slate-400" />
-            </button>
-            {!formData.maquinario.nome && (
-              <p className="mt-1 text-sm text-slate-500">
-                Selecione um item da lista
-              </p>
-            )}
-            <input
-              type="hidden"
-              name="maquinario"
-              value={formData.maquinario.id}
-              required
-            />
+              <input
+                type="hidden"
+                name="maquinario"
+                value={formData.maquinario.id}
+                required
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="horimetro" className="block text-sm font-medium text-slate-700 mb-2">
+                Horímetro de Entrada <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                id="horimetro"
+                name="horimetro"
+                placeholder="0.0"
+                value={formData.horimetro}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all text-sm sm:text-base min-h-[44px]"
+              />
+              <p className="mt-1 text-xs sm:text-sm text-slate-500">Horímetro atual do equipamento</p>
+            </div>
+
+            <div>
+              <label htmlFor="data" className="block text-sm font-medium text-slate-700 mb-2">
+                Data <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                id="data"
+                name="data"
+                value={formData.data}
+                onChange={handleInputChange}
+                onFocus={(e) => e.target.showPicker()}
+                required
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all text-sm sm:text-base min-h-[44px] cursor-pointer"
+              />
+              <p className="mt-1 text-xs sm:text-sm text-slate-500">Data da solicitação</p>
+            </div>
+          </div>
+
           <div>
-            <label htmlFor="horimetro" className="block text-sm font-medium text-slate-700 mb-1">
-              Horímetro de Entrada <span className="text-red-500">*</span>
+            <label htmlFor="descricao" className="block text-sm font-medium text-slate-700 mb-2">
+              Descrição do Problema <span className="text-red-500">*</span>
             </label>
-            <input
-              type="number"
-              step="0.1"
-              id="horimetro"
-              name="horimetro"
-              placeholder="0.0"
-              value={formData.horimetro}
+            <textarea
+              id="descricao"
+              name="descricao"
+              placeholder="Descreva detalhadamente o problema encontrado no equipamento..."
+              value={formData.descricao}
               onChange={handleInputChange}
               required
-              className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
+              rows={4}
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all resize-none text-sm sm:text-base"
             />
-            <p className="mt-1 text-sm text-slate-500">Horímetro atual do equipamento</p>
+            <p className="mt-1 text-xs sm:text-sm text-slate-500">Forneça o máximo de detalhes possível sobre o problema</p>
           </div>
 
           <div>
-            <label htmlFor="data" className="block text-sm font-medium text-slate-700 mb-1">
-              Data <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Anexar Fotos <span className="text-slate-500 font-normal">(opcional)</span>
             </label>
-            <input
-              type="date"
-              id="data"
-              name="data"
-              value={formData.data}
-              onChange={handleInputChange}
-              required
-              className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
-            />
-            <p className="mt-1 text-sm text-slate-500">Data da solicitação</p>
-          </div>
-        </div>
-
-        <div>
-          <label htmlFor="descricao" className="block text-sm font-medium text-slate-700 mb-1">
-            Descrição do Problema <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            id="descricao"
-            name="descricao"
-            placeholder="Descreva detalhadamente o problema encontrado no equipamento..."
-            value={formData.descricao}
-            onChange={handleInputChange}
-            required
-            rows={4}
-            className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all resize-none"
-          />
-          <p className="mt-1 text-sm text-slate-500">Forneça o máximo de detalhes possível sobre o problema</p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Anexar Fotos <span className="text-slate-500 font-normal">(opcional)</span>
-          </label>
-          <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-lg hover:border-green-500 transition-colors">
-            <div className="space-y-1 text-center">
-              <Upload className="mx-auto h-12 w-12 text-slate-400" />
-              <div className="flex text-sm text-slate-600">
-                <label 
-                  htmlFor="fotos" 
-                  className="relative cursor-pointer rounded-md font-medium text-green-600 hover:text-green-700"
-                  onClick={handleFileButtonClick}
-                >
-                  <span>Selecione as fotos</span>
-                  <input
-                    id="fotos"
-                    name="fotos"
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="sr-only"
-                    ref={fileInputRef}
-                  />
-                </label>
+            <div className="mt-1 flex justify-center px-4 sm:px-6 pt-4 sm:pt-5 pb-4 sm:pb-6 border-2 border-slate-300 border-dashed rounded-lg hover:border-green-500 transition-colors">
+              <div className="space-y-1 text-center">
+                <Upload className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-slate-400" />
+                <div className="flex text-xs sm:text-sm text-slate-600">
+                  <label 
+                    htmlFor="fotos" 
+                    className="relative cursor-pointer rounded-md font-medium text-green-600 hover:text-green-700"
+                    onClick={handleFileButtonClick}
+                  >
+                    <span>Selecione as fotos</span>
+                    <input
+                      id="fotos"
+                      name="fotos"
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="sr-only"
+                      ref={fileInputRef}
+                    />
+                  </label>
+                </div>
+                <p className="text-xs text-slate-500">PNG, JPG até 10MB</p>
+                {formData.fotos.length > 0 && (
+                  <p className="text-xs sm:text-sm text-green-600">{formData.fotos.length} arquivo(s) selecionado(s)</p>
+                )}
               </div>
-              <p className="text-xs text-slate-500">PNG, JPG até 10MB</p>
-              {formData.fotos.length > 0 && (
-                <p className="text-sm text-green-600">{formData.fotos.length} arquivo(s) selecionado(s)</p>
-              )}
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-        <p className="text-sm text-slate-500">
-          <span className="text-red-500">*</span> Campos obrigatórios
-        </p>
-        <div className="flex gap-4">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="px-6 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-          >
-            {isLoading ? "Criando..." : "Criar Ordem de Serviço"}
-          </button>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-slate-200 space-y-3 sm:space-y-0">
+          <p className="text-xs sm:text-sm text-slate-500 text-center sm:text-left">
+            <span className="text-red-500">*</span> Campos obrigatórios
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors order-2 sm:order-1"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full sm:w-auto px-6 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 order-1 sm:order-2"
+            >
+              {isLoading ? "Criando..." : "Criar Ordem de Serviço"}
+            </button>
+          </div>
         </div>
-      </div>
-    </form>
+      </form>
+    </div>
     
     {showPopup && (
       <Popup 
