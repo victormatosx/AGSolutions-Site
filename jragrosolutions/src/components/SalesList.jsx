@@ -207,6 +207,7 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, onGeneratePDF, propertyN
       status: sale.status || "pendente",
       dataPedido: formatForInput(parseDateToMs(sale.dataPedido ?? "")) || "",
       prazoDias: sale.prazoDias || "",
+      tipoFrete: sale.tipoFrete || "",
     })
   }
 
@@ -257,6 +258,7 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, onGeneratePDF, propertyN
         status: editForm.status,
         dataPedido: editForm.dataPedido,
         prazoDias: editForm.prazoDias,
+        tipoFrete: editForm.tipoFrete,
       })
 
       setIsEditing(false)
@@ -489,8 +491,8 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, onGeneratePDF, propertyN
                 <button
                   onClick={() => {
                     if (onGeneratePDF) {
-                      onGeneratePDF(selectedSale);
-                      handleCloseModal();
+                      onGeneratePDF(selectedSale)
+                      handleCloseModal()
                     }
                   }}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -613,6 +615,10 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, onGeneratePDF, propertyN
                             ? formatDateFromMs(selectedSale.parsedDateMs)
                             : formatAnyDate(selectedSale.dataCarregamento || selectedSale.date) || "Não informado"}
                         </p>
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Tipo do Frete</label>
+                          <p className="text-gray-900">{selectedSale.tipoFrete || "Não informado"}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -677,16 +683,6 @@ const SalesList = ({ clients, onEditSale, onDeleteSale, onGeneratePDF, propertyN
                   <p className="text-gray-900 whitespace-pre-line">
                     {selectedSale.observacao || "Nenhuma observação adicionada."}
                   </p>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="border-t border-gray-200 pt-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-lg font-medium text-gray-900">
-                    <Package className="w-5 h-5 text-purple-600" />
-                    Ações da Venda
-                  </div>
                 </div>
               </div>
             </div>
