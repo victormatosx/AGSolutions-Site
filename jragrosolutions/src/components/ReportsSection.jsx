@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react"
 import { BarChart3, Download } from "lucide-react"
-import { PDFDownloadLink } from "@react-pdf/renderer"
+import { pdf } from '@react-pdf/renderer'
 import SalesReportPDF from "./SalesReportPDF"
 import { database } from "../firebase/firebase"
 import { ref, onValue, off } from "firebase/database"
@@ -20,6 +20,7 @@ const ReportsSection = ({ propertyName = "Matrice", preselectedSaleId = null }) 
   const [selectAll, setSelectAll] = useState(false)
   const [hideMonetaryValues, setHideMonetaryValues] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
   const itemsPerPage = 10
   
   const resetView = () => {
@@ -438,56 +439,68 @@ const ReportsSection = ({ propertyName = "Matrice", preselectedSaleId = null }) 
               </label>
             </div>
             <div className="flex-1">
-              <PDFDownloadLink
-                document={
-                  <SalesReportPDF
-                    sales={selectedSales.length > 0 ? sales.filter((s) => selectedSales.includes(s.id)) : filteredSales}
-                    selectedSales={selectedSales}
-                    clientName={selectedClient ? getClientName(selectedClient) : "Todos os Clientes"}
-                    hideMonetaryValues={hideMonetaryValues}
-                  />
-                }
-                fileName={`relatorio-vendas-${new Date().toISOString().split("T")[0]}.pdf`}
-                className="w-full sm:w-auto"
-                onClick={() => {
-                  // Reset the view after a short delay to ensure the PDF is generated
-                  setTimeout(resetView, 1000);
+              <button
+                onClick={async () => {
+                  if (selectedSales.length === 0 || isGeneratingPdf) return;
+                  
+                  setIsGeneratingPdf(true);
+                  try {
+                    const selectedSalesData = sales.filter((s) => selectedSales.includes(s.id));
+                    const doc = (
+                      <SalesReportPDF 
+                        sales={selectedSalesData}
+                        selectedSales={selectedSales}
+                        clientName={selectedClient ? getClientName(selectedClient) : "Todos os Clientes"}
+                        hideMonetaryValues={hideMonetaryValues}
+                      />
+                    );
+                    
+                    const blob = await pdf(doc).toBlob();
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `relatorio-vendas-${new Date().toISOString().split("T")[0]}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                    
+                    // Small delay to ensure the PDF is downloaded before resetting
+                    setTimeout(() => {
+                      resetView();
+                      setIsGeneratingPdf(false);
+                    }, 1000);
+                  } catch (error) {
+                    console.error('Error generating PDF:', error);
+                    setIsGeneratingPdf(false);
+                    // You might want to show an error message to the user here
+                  }
                 }}
+                disabled={selectedSales.length === 0 || isGeneratingPdf}
+                className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedSales.length === 0 || isGeneratingPdf
+                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    : "bg-[#16A34A] text-white hover:bg-green-600"
+                }`}
+                title={selectedSales.length === 0 ? "Selecione pelo menos uma venda para gerar o relatório" : ""}
               >
-                {({ blob, url, loading, error }) => {
-                  const hasSelectedSales = selectedSales.length > 0
-                  const isDisabled = loading || !hasSelectedSales
-
-                  return (
-                    <button
-                      disabled={isDisabled}
-                      className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        isDisabled
-                          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                          : "bg-[#16A34A] text-white hover:bg-green-600"
-                      }`}
-                      title={!hasSelectedSales ? "Selecione pelo menos uma venda para gerar o relatório" : ""}
-                    >
-                      {loading ? (
-                        <>
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Gerando...
-                        </>
-                      ) : (
-                        <>
-                          <Download className="w-4 h-4" />
-                          {hasSelectedSales
-                            ? `Exportar ${selectedSales.length} venda(s) selecionada(s)`
-                            : "Selecione vendas para exportar"}
-                        </>
-                      )}
-                    </button>
-                  )
-                }}
-              </PDFDownloadLink>
+                {isGeneratingPdf ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Gerando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    {selectedSales.length > 0
+                      ? `Exportar ${selectedSales.length} venda(s) selecionada(s)`
+                      : "Selecione vendas para exportar"}
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
