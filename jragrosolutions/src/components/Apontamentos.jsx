@@ -27,6 +27,9 @@ import {
   XCircle,
   UserPlus,
   ArrowUpDown,
+  DollarSign,
+  CreditCard,
+  Package,
 } from "lucide-react"
 
 const Apontamentos = () => {
@@ -880,14 +883,26 @@ const Apontamentos = () => {
     }
 
     const getItemDetails = () => {
-      const details = [
-        {
+      const details = []
+
+      // Adicionar data de abastecimento para abastecimentoVeiculos, ou data normal se não houver
+      if (selectedType === 'abastecimentoVeiculos') {
+        details.push({
+          icon: <Calendar className="w-4 h-4" />,
+          label: "Data do Abastecimento",
+          value: item.dataAbastecimento 
+            ? formatDate({ data: item.dataAbastecimento }) 
+            : formatDate(item) || 'N/A',
+        })
+      } else {
+        details.push({
           icon: <Calendar className="w-4 h-4" />,
           label: "Data",
-          value: formatDate(item), // Usar a nova função formatDate
-        },
-      ]
+          value: formatDate(item) || 'N/A',
+        })
+      }
 
+      // Adicionar responsável se existir userId
       if (item.userId) {
         details.push({
           icon: <UserPlus className="w-4 h-4" />,
@@ -910,6 +925,7 @@ const Apontamentos = () => {
           details.push({ icon: <MapPin className="w-4 h-4" />, label: "Objetivo", value: item.objetivo || "N/A" })
           break
         case "abastecimentoVeiculos":
+          // Já adicionamos dataAbastecimento e responsável no início
           details.push(
             { icon: <Fuel className="w-4 h-4" />, label: "Produto", value: item.produto || "N/A" },
             { icon: <Settings className="w-4 h-4" />, label: "Quantidade", value: `${item.quantidade || 0}L` },
@@ -1214,75 +1230,156 @@ const Apontamentos = () => {
           </div>
 
           <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                Informações Principais
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {mainInfoOrder.map((key) => {
-                  const value = mainInfo[key]
-                  if (value === undefined || value === null) return null
-
-                  return (
-                    <div key={key} className="bg-slate-50 rounded-xl p-4">
-                      <div className="text-sm font-medium text-slate-600 mb-2">
-                        {key === "fichaControle"
-                          ? "Ficha de Controle"
-                          : key === "atividade"
-                            ? "Atividade"
-                            : key === "data"
-                              ? "Data"
-                              : key === "cultura"
-                                ? "Cultura"
-                                : key === "responsavel"
-                                  ? "Responsável"
-                                  : key === "propriedade"
-                                    ? "Propriedade"
-                                    : key === "observacao"
-                                      ? "Observação"
-                                      : key}
-                        :
-                      </div>
-                      {isEditing && key !== "responsavel" ? (
-                        <input
-                          type="text"
-                          value={value || ""}
-                          onChange={(e) => handleInputChange(key, e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
-                        />
-                      ) : (
-                        <div className="text-slate-800 font-medium">{formatValue(key, value)}</div>
-                      )}
-                    </div>
-                  )
-                })}
-
-                {direcionadores.length > 0 && (
-                  <div className="bg-slate-50 rounded-xl p-4 md:col-span-2">
-                    <div className="text-sm font-medium text-slate-600 mb-2">Direcionadores:</div>
-                    <div className="space-y-2">
-                      {direcionadores.map((direcionador, index) => (
-                        <div key={index} className="bg-white rounded-lg p-3 border border-slate-200">
-                          <div className="flex flex-wrap gap-4 text-sm">
-                            <div>
-                              <span className="font-medium text-slate-600">Nome:</span>
-                              <span className="ml-1 text-slate-800">{direcionador.name}</span>
-                            </div>
-                            {direcionador.culturaAssociada && (
-                              <div>
-                                <span className="font-medium text-slate-600">Cultura:</span>
-                                <span className="ml-1 text-slate-800">{direcionador.culturaAssociada}</span>
-                              </div>
-                            )}
-                          </div>
+            {selectedType === "abastecimentoVeiculos" ? (
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  Detalhes do Abastecimento
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { key: 'veiculo', label: 'Veículo', icon: <Truck className="w-4 h-4" /> },
+                    { key: 'hodometro', label: 'Hodômetro', icon: <Settings className="w-4 h-4" />, format: v => v ? `${v} km` : 'N/A' },
+                    { key: 'horimetro', label: 'Hodômetro', icon: <Clock className="w-4 h-4" />, format: v => v ? `${v} km` : 'N/A' },
+                    { key: 'tanqueDiesel', label: 'Posto', icon: <Fuel className="w-4 h-4" />, format: v => v || 'N/A' },
+                    { key: 'produto', label: 'Produto', icon: <Package className="w-4 h-4" /> },
+                    { key: 'data', label: 'Data do Registro', icon: <Calendar className="w-4 h-4" />, format: v => formatDate({ data: v }) },
+                    { key: 'dataAbastecimento', label: 'Data do Abastecimento', icon: <Calendar className="w-4 h-4" />, format: v => formatDate({ data: v }) },
+                    { key: 'tanque', label: 'Tanque', icon: <Fuel className="w-4 h-4" /> },
+                    { key: 'combustivel', label: 'Combustível', icon: <Fuel className="w-4 h-4" /> },
+                    { key: 'quantidade', label: 'Quantidade', icon: <Settings className="w-4 h-4" />, format: v => v ? `${v}L` : 'N/A' },
+                    { key: 'valorUnitario', label: 'Valor Unitário', icon: <DollarSign className="w-4 h-4" />, format: v => v ? `R$ ${parseFloat(v).toFixed(2).replace('.', ',')}` : 'N/A' },
+                    { key: 'valorTotal', label: 'Valor Total', icon: <DollarSign className="w-4 h-4" />, format: v => v ? `R$ ${parseFloat(v).toFixed(2).replace('.', ',')}` : 'N/A' },
+                    { 
+                      key: 'formaPagamento', 
+                      label: 'Forma de Pagamento', 
+                      icon: <CreditCard className="w-4 h-4" />,
+                      format: v => {
+                        const formatos = {
+                          'cartao': 'Cartão',
+                          'pix': 'Pix',
+                          'dinheiro': 'Dinheiro'
+                        };
+                        return formatos[v?.toLowerCase()] || v || 'N/A';
+                      }
+                    },
+                    { key: 'observacao', label: 'Observação', icon: <FileText className="w-4 h-4" />, fullWidth: true },
+                    { 
+                      key: 'status', 
+                      label: 'Status', 
+                      icon: (value) => value === 'Concluído' ? 
+                        <CheckCircle2 className="w-4 h-4 text-green-500" /> : 
+                        <Clock className="w-4 h-4 text-yellow-500" />,
+                      format: (value) => (
+                        <span className={`inline-flex items-center gap-1 ${value === "Concluído" ? "text-green-600" : "text-yellow-600"}`}>
+                          {value || "Pendente"}
+                        </span>
+                      )
+                    },
+                  ].map(({ key, label, icon, format, fullWidth }) => {
+                    const value = currentItem[key];
+                    if (value === undefined || value === null) return null;
+                    
+                    const displayValue = format ? format(value) : value;
+                    const IconComponent = typeof icon === 'function' ? icon(value) : icon;
+                    
+                    return (
+                      <div 
+                        key={key} 
+                        className={`bg-slate-50 rounded-xl p-4 ${fullWidth ? 'md:col-span-2' : ''}`}
+                      >
+                        <div className="flex items-center gap-2 text-slate-600 text-sm font-medium mb-1">
+                          {IconComponent}
+                          {label}:
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                        {isEditing && key !== 'status' ? (
+                          <input
+                            type={key.toLowerCase().includes("data") ? "datetime-local" : "text"}
+                            value={value || ""}
+                            onChange={(e) => handleInputChange(key, e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                          />
+                        ) : (
+                          <div className="text-slate-800 font-medium">
+                            {displayValue || "N/A"}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  Informações Principais
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {mainInfoOrder.map((key) => {
+                    const value = mainInfo[key]
+                    if (value === undefined || value === null) return null
+
+                    return (
+                      <div key={key} className="bg-slate-50 rounded-xl p-4">
+                        <div className="text-sm font-medium text-slate-600 mb-2">
+                          {key === "fichaControle"
+                            ? "Ficha de Controle"
+                            : key === "atividade"
+                              ? "Atividade"
+                              : key === "data"
+                                ? "Data"
+                                : key === "cultura"
+                                  ? "Cultura"
+                                  : key === "responsavel"
+                                    ? "Responsável"
+                                    : key === "propriedade"
+                                      ? "Propriedade"
+                                      : key === "observacao"
+                                        ? "Observação"
+                                        : key}
+                          :
+                        </div>
+                        {isEditing && key !== "responsavel" ? (
+                          <input
+                            type="text"
+                            value={value || ""}
+                            onChange={(e) => handleInputChange(key, e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                          />
+                        ) : (
+                          <div className="text-slate-800 font-medium">{formatValue(key, value)}</div>
+                        )}
+                      </div>
+                    )
+                  })}
+
+                  {direcionadores.length > 0 && (
+                    <div className="bg-slate-50 rounded-xl p-4 md:col-span-2">
+                      <div className="text-sm font-medium text-slate-600 mb-2">Direcionadores:</div>
+                      <div className="space-y-2">
+                        {direcionadores.map((direcionador, index) => (
+                          <div key={index} className="bg-white rounded-lg p-3 border border-slate-200">
+                            <div className="flex flex-wrap gap-4 text-sm">
+                              <div>
+                                <span className="font-medium text-slate-600">Nome:</span>
+                                <span className="ml-1 text-slate-800">{direcionador.name}</span>
+                              </div>
+                              {direcionador.culturaAssociada && (
+                                <div>
+                                  <span className="font-medium text-slate-600">Cultura:</span>
+                                  <span className="ml-1 text-slate-800">{direcionador.culturaAssociada}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {operacoesMecanizadas.length > 0 && (
               <div>
