@@ -602,9 +602,9 @@ const Apontamentos = () => {
     let currentData = data[selectedType] || []
 
     // Filtrar por status
-    if (selectedStatus === 'pending') {
+    if (selectedStatus === "pending") {
       // Incluir tanto 'pending' quanto 'synced' na seção 'Para Validar'
-      currentData = currentData.filter((item) => item.status === 'pending' || item.status === 'synced')
+      currentData = currentData.filter((item) => item.status === "pending" || item.status === "synced")
     } else {
       // Para outros status (como 'validated'), manter a lógica original
       currentData = currentData.filter((item) => item.status === selectedStatus)
@@ -886,19 +886,17 @@ const Apontamentos = () => {
       const details = []
 
       // Adicionar data de abastecimento para abastecimentoVeiculos, ou data normal se não houver
-      if (selectedType === 'abastecimentoVeiculos') {
+      if (selectedType === "abastecimentoVeiculos") {
         details.push({
           icon: <Calendar className="w-4 h-4" />,
           label: "Data do Abastecimento",
-          value: item.dataAbastecimento 
-            ? formatDate({ data: item.dataAbastecimento }) 
-            : formatDate(item) || 'N/A',
+          value: item.dataAbastecimento ? formatDate({ data: item.dataAbastecimento }) : formatDate(item) || "N/A",
         })
       } else {
         details.push({
           icon: <Calendar className="w-4 h-4" />,
           label: "Data",
-          value: formatDate(item) || 'N/A',
+          value: formatDate(item) || "N/A",
         })
       }
 
@@ -1230,69 +1228,69 @@ const Apontamentos = () => {
           </div>
 
           <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
-            {selectedType === "abastecimentoVeiculos" ? (
+            {selectedType === "abastecimentos" ? (
               <div className="mb-8">
                 <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  Detalhes do Abastecimento
+                  Detalhes do Abastecimento de Máquina
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
-                    { key: 'veiculo', label: 'Veículo', icon: <Truck className="w-4 h-4" /> },
-                    { key: 'hodometro', label: 'Hodômetro', icon: <Settings className="w-4 h-4" />, format: v => v ? `${v} km` : 'N/A' },
-                    { key: 'horimetro', label: 'Hodômetro', icon: <Clock className="w-4 h-4" />, format: v => v ? `${v} km` : 'N/A' },
-                    { key: 'tanqueDiesel', label: 'Posto', icon: <Fuel className="w-4 h-4" />, format: v => v || 'N/A' },
-                    { key: 'produto', label: 'Produto', icon: <Package className="w-4 h-4" /> },
-                    { key: 'data', label: 'Data do Registro', icon: <Calendar className="w-4 h-4" />, format: v => formatDate({ data: v }) },
-                    { key: 'dataAbastecimento', label: 'Data do Abastecimento', icon: <Calendar className="w-4 h-4" />, format: v => formatDate({ data: v }) },
-                    { key: 'tanque', label: 'Tanque', icon: <Fuel className="w-4 h-4" /> },
-                    { key: 'combustivel', label: 'Combustível', icon: <Fuel className="w-4 h-4" /> },
-                    { key: 'quantidade', label: 'Quantidade', icon: <Settings className="w-4 h-4" />, format: v => v ? `${v}L` : 'N/A' },
-                    { key: 'valorUnitario', label: 'Valor Unitário', icon: <DollarSign className="w-4 h-4" />, format: v => v ? `R$ ${parseFloat(v).toFixed(2).replace('.', ',')}` : 'N/A' },
-                    { key: 'valorTotal', label: 'Valor Total', icon: <DollarSign className="w-4 h-4" />, format: v => v ? `R$ ${parseFloat(v).toFixed(2).replace('.', ',')}` : 'N/A' },
-                    { 
-                      key: 'formaPagamento', 
-                      label: 'Forma de Pagamento', 
-                      icon: <CreditCard className="w-4 h-4" />,
-                      format: v => {
-                        const formatos = {
-                          'cartao': 'Cartão',
-                          'pix': 'Pix',
-                          'dinheiro': 'Dinheiro'
-                        };
-                        return formatos[v?.toLowerCase()] || v || 'N/A';
-                      }
+                    { key: "bem", label: "Máquina", icon: <Settings className="w-4 h-4" /> },
+                    { key: "tanqueDiesel", label: "Tanque", icon: <Fuel className="w-4 h-4" /> },
+                    { key: "produto", label: "Combustível", icon: <Package className="w-4 h-4" /> },
+                    {
+                      key: "quantidade",
+                      label: "Quantidade",
+                      icon: <Settings className="w-4 h-4" />,
+                      format: (v) => (v ? `${v}L` : "N/A"),
                     },
-                    { key: 'observacao', label: 'Observação', icon: <FileText className="w-4 h-4" />, fullWidth: true },
-                    { 
-                      key: 'status', 
-                      label: 'Status', 
-                      icon: (value) => value === 'Concluído' ? 
-                        <CheckCircle2 className="w-4 h-4 text-green-500" /> : 
-                        <Clock className="w-4 h-4 text-yellow-500" />,
-                      format: (value) => (
-                        <span className={`inline-flex items-center gap-1 ${value === "Concluído" ? "text-green-600" : "text-yellow-600"}`}>
-                          {value || "Pendente"}
-                        </span>
-                      )
+                    {
+                      key: "horimetro",
+                      label: "Horímetro",
+                      icon: <Clock className="w-4 h-4" />,
+                      format: (v) => (v ? `${v}h` : "N/A"),
                     },
-                  ].map(({ key, label, icon, format, fullWidth }) => {
-                    const value = currentItem[key];
-                    if (value === undefined || value === null) return null;
-                    
-                    const displayValue = format ? format(value) : value;
-                    const IconComponent = typeof icon === 'function' ? icon(value) : icon;
-                    
+                    {
+                      key: "data",
+                      label: "Data",
+                      icon: <Calendar className="w-4 h-4" />,
+                      format: (v) => formatDate({ data: v }),
+                    },
+                    {
+                      key: "responsavel",
+                      label: "Responsável",
+                      icon: <UserPlus className="w-4 h-4" />,
+                      value: mainInfo.responsavel,
+                    },
+                    {
+                      key: "status",
+                      label: "Status",
+                      icon: (value) => {
+                        if (value === "validated") return <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        if (value === "synced") return <CheckCircle className="w-4 h-4 text-blue-500" />
+                        return <Clock className="w-4 h-4 text-yellow-500" />
+                      },
+                      format: (value) => {
+                        if (value === "validated") return <span className="text-green-600 font-medium">Validado</span>
+                        if (value === "synced") return <span className="text-blue-600 font-medium">Sincronizado</span>
+                        return <span className="text-yellow-600 font-medium">Pendente</span>
+                      },
+                    },
+                  ].map(({ key, label, icon, format, value: customValue }) => {
+                    const value = customValue !== undefined ? customValue : currentItem[key]
+                    if (value === undefined || value === null) return null
+
+                    const displayValue = format ? format(value) : value
+                    const IconComponent = typeof icon === "function" ? icon(value) : icon
+
                     return (
-                      <div 
-                        key={key} 
-                        className={`bg-slate-50 rounded-xl p-4 ${fullWidth ? 'md:col-span-2' : ''}`}
-                      >
+                      <div key={key} className="bg-slate-50 rounded-xl p-4">
                         <div className="flex items-center gap-2 text-slate-600 text-sm font-medium mb-1">
                           {IconComponent}
                           {label}:
                         </div>
-                        {isEditing && key !== 'status' ? (
+                        {isEditing && key !== "status" && key !== "responsavel" ? (
                           <input
                             type={key.toLowerCase().includes("data") ? "datetime-local" : "text"}
                             value={value || ""}
@@ -1300,12 +1298,129 @@ const Apontamentos = () => {
                             className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
                           />
                         ) : (
-                          <div className="text-slate-800 font-medium">
-                            {displayValue || "N/A"}
-                          </div>
+                          <div className="text-slate-800 font-medium">{displayValue || "N/A"}</div>
                         )}
                       </div>
-                    );
+                    )
+                  })}
+                </div>
+              </div>
+            ) : selectedType === "abastecimentoVeiculos" ? (
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  Detalhes do Abastecimento
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { key: "veiculo", label: "Veículo", icon: <Truck className="w-4 h-4" /> },
+                    {
+                      key: "hodometro",
+                      label: "Hodômetro",
+                      icon: <Settings className="w-4 h-4" />,
+                      format: (v) => (v ? `${v} km` : "N/A"),
+                    },
+                    {
+                      key: "horimetro",
+                      label: "Hodômetro",
+                      icon: <Clock className="w-4 h-4" />,
+                      format: (v) => (v ? `${v} km` : "N/A"),
+                    },
+                    {
+                      key: "tanqueDiesel",
+                      label: "Posto",
+                      icon: <Fuel className="w-4 h-4" />,
+                      format: (v) => v || "N/A",
+                    },
+                    { key: "produto", label: "Produto", icon: <Package className="w-4 h-4" /> },
+                    {
+                      key: "data",
+                      label: "Data do Registro",
+                      icon: <Calendar className="w-4 h-4" />,
+                      format: (v) => formatDate({ data: v }),
+                    },
+                    {
+                      key: "dataAbastecimento",
+                      label: "Data do Abastecimento",
+                      icon: <Calendar className="w-4 h-4" />,
+                      format: (v) => formatDate({ data: v }),
+                    },
+                    { key: "tanque", label: "Tanque", icon: <Fuel className="w-4 h-4" /> },
+                    { key: "combustivel", label: "Combustível", icon: <Fuel className="w-4 h-4" /> },
+                    {
+                      key: "quantidade",
+                      label: "Quantidade",
+                      icon: <Settings className="w-4 h-4" />,
+                      format: (v) => (v ? `${v}L` : "N/A"),
+                    },
+                    {
+                      key: "valorUnitario",
+                      label: "Valor Unitário",
+                      icon: <DollarSign className="w-4 h-4" />,
+                      format: (v) => (v ? `R$ ${Number.parseFloat(v).toFixed(2).replace(".", ",")}` : "N/A"),
+                    },
+                    {
+                      key: "valorTotal",
+                      label: "Valor Total",
+                      icon: <DollarSign className="w-4 h-4" />,
+                      format: (v) => (v ? `R$ ${Number.parseFloat(v).toFixed(2).replace(".", ",")}` : "N/A"),
+                    },
+                    {
+                      key: "formaPagamento",
+                      label: "Forma de Pagamento",
+                      icon: <CreditCard className="w-4 h-4" />,
+                      format: (v) => {
+                        const formatos = {
+                          cartao: "Cartão",
+                          pix: "Pix",
+                          dinheiro: "Dinheiro",
+                        }
+                        return formatos[v?.toLowerCase()] || v || "N/A"
+                      },
+                    },
+                    { key: "observacao", label: "Observação", icon: <FileText className="w-4 h-4" />, fullWidth: true },
+                    {
+                      key: "status",
+                      label: "Status",
+                      icon: (value) =>
+                        value === "Concluído" ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <Clock className="w-4 h-4 text-yellow-500" />
+                        ),
+                      format: (value) => (
+                        <span
+                          className={`inline-flex items-center gap-1 ${value === "Concluído" ? "text-green-600" : "text-yellow-600"}`}
+                        >
+                          {value || "Pendente"}
+                        </span>
+                      ),
+                    },
+                  ].map(({ key, label, icon, format, fullWidth }) => {
+                    const value = currentItem[key]
+                    if (value === undefined || value === null) return null
+
+                    const displayValue = format ? format(value) : value
+                    const IconComponent = typeof icon === "function" ? icon(value) : icon
+
+                    return (
+                      <div key={key} className={`bg-slate-50 rounded-xl p-4 ${fullWidth ? "md:col-span-2" : ""}`}>
+                        <div className="flex items-center gap-2 text-slate-600 text-sm font-medium mb-1">
+                          {IconComponent}
+                          {label}:
+                        </div>
+                        {isEditing && key !== "status" ? (
+                          <input
+                            type={key.toLowerCase().includes("data") ? "datetime-local" : "text"}
+                            value={value || ""}
+                            onChange={(e) => handleInputChange(key, e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                          />
+                        ) : (
+                          <div className="text-slate-800 font-medium">{displayValue || "N/A"}</div>
+                        )}
+                      </div>
+                    )
                   })}
                 </div>
               </div>
