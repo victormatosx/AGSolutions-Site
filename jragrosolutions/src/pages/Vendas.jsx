@@ -64,13 +64,12 @@ const Vendas = () => {
         // Fetch clients
         const clientsRef = ref(database, `propriedades/${userData.propriedade}/clientes`)
         const clientsSnapshot = await get(clientsRef)
-        console.log("Clients snapshot:", clientsSnapshot.val()) // Debug log
+        console.log("Clients snapshot:", clientsSnapshot.val())
 
         if (clientsSnapshot.exists()) {
           const clientsData = []
           const clientsObj = clientsSnapshot.val()
 
-          // Handle both array and object formats
           if (Array.isArray(clientsObj)) {
             clientsObj.forEach((client, index) => {
               if (client) {
@@ -82,7 +81,6 @@ const Vendas = () => {
               }
             })
           } else {
-            // Handle object format
             Object.entries(clientsObj).forEach(([id, client]) => {
               if (client) {
                 clientsData.push({
@@ -94,7 +92,7 @@ const Vendas = () => {
             })
           }
 
-          console.log("Processed clients:", clientsData) // Debug log
+          console.log("Processed clients:", clientsData)
           setClients(clientsData)
         }
       } catch (error) {
@@ -137,7 +135,6 @@ const Vendas = () => {
       }
 
       try {
-        // Buscar dados do usuário
         const propriedadesRef = ref(database, "propriedades")
         const propriedadesSnapshot = await get(propriedadesRef)
 
@@ -145,7 +142,6 @@ const Vendas = () => {
           const propriedades = propriedadesSnapshot.val()
           let foundUserData = null
 
-          // Percorrer todas as propriedades para encontrar o usuário
           for (const [propriedadeName, propriedadeData] of Object.entries(propriedades)) {
             if (propriedadeData.users && propriedadeData.users[user.uid]) {
               foundUserData = {
@@ -158,14 +154,12 @@ const Vendas = () => {
 
           if (foundUserData) {
             if (foundUserData.role !== "seller") {
-              // Usuário não tem permissão de vendedor
               await auth.signOut()
               navigate("/login")
               return
             }
             setUserData(foundUserData)
           } else {
-            // Usuário não encontrado
             await auth.signOut()
             navigate("/login")
           }
@@ -184,7 +178,6 @@ const Vendas = () => {
     }
   }, [user, loading, navigate])
 
-  // Dados mockados
   // Navigation items
   const navItems = [
     { id: DASHBOARD, label: "Dashboard", icon: Home },

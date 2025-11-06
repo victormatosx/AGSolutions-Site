@@ -97,27 +97,6 @@ const DashboardVendas = ({ salesData, userData }) => {
     const clientLastPurchase = {}
     const nameByKey = {}
 
-    // Helper para parsear datas de venda com alta tolerância (DD/MM/YYYY, timestamp, ISO, etc.)
-    const parseDataPedidoMs = (value) => {
-      if (value == null || value === "") return NaN
-      if (typeof value === "number") {
-        const s = String(value)
-        return s.length <= 10 ? value * 1000 : value
-      }
-      const str = String(value).trim()
-      const brMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(.*))?$/)
-      if (brMatch) {
-        const [, d, m, y, time] = brMatch
-        const iso = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}${time ? "T" + time : "T00:00:00"}`
-        const ms = Date.parse(iso)
-        return isNaN(ms) ? NaN : ms
-      }
-      let ms = Date.parse(str)
-      if (!isNaN(ms)) return ms
-      ms = Date.parse(str.replace(" ", "T"))
-      return isNaN(ms) ? NaN : ms
-    }
-
     validSales.forEach((sale) => {
       const clientId = sale.clientId || sale.clienteId
       // tentar mapear nome
@@ -149,12 +128,9 @@ const DashboardVendas = ({ salesData, userData }) => {
       clientRevenue[key] = (clientRevenue[key] || 0) + revenue
       clientPurchaseCount[key] = (clientPurchaseCount[key] || 0) + 1
 
-      const ms = parseDataPedidoMs(sale.dataPedido || sale.date || sale.criadoEm)
-      if (!isNaN(ms)) {
-        const saleDate = new Date(ms)
-        if (!clientLastPurchase[key] || saleDate > clientLastPurchase[key]) {
-          clientLastPurchase[key] = saleDate
-        }
+      const saleDate = new Date(sale.dataPedido || sale.date || sale.criadoEm)
+      if (!clientLastPurchase[key] || saleDate > clientLastPurchase[key]) {
+        clientLastPurchase[key] = saleDate
       }
     })
 
@@ -203,7 +179,26 @@ const DashboardVendas = ({ salesData, userData }) => {
       .sort((a, b) => b.daysSince - a.daysSince)
       .map((c) => ({ name: c.name, lastPurchase: c.last.toLocaleDateString("pt-BR") }))
 
-    // parseDataPedidoMs já definido acima para reutilização aqui em "lastPurchases"
+    // Helper para parsear dataPedido (formato DD/MM/YYYY ou timestamps)
+    const parseDataPedidoMs = (value) => {
+      if (value == null || value === "") return NaN
+      if (typeof value === "number") {
+        const s = String(value)
+        return s.length <= 10 ? value * 1000 : value
+      }
+      const str = String(value).trim()
+      const brMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(.*))?$/)
+      if (brMatch) {
+        const [, d, m, y, time] = brMatch
+        const iso = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}${time ? "T" + time : "T00:00:00"}`
+        const ms = Date.parse(iso)
+        return isNaN(ms) ? NaN : ms
+      }
+      let ms = Date.parse(str)
+      if (!isNaN(ms)) return ms
+      ms = Date.parse(str.replace(" ", "T"))
+      return isNaN(ms) ? NaN : ms
+    }
 
     // Last purchases (5 últimas vendas), ordenadas por dataPedido
     const lastPurchases = validSales
@@ -578,41 +573,6 @@ const DashboardVendas = ({ salesData, userData }) => {
                 <p className="text-sm text-gray-500 text-center py-4">Nenhum cliente inativo</p>
               )}
             </div>
-            {inactiveTotal > 0 && (
-              <div className="flex items-center justify-between mt-4">
-                <p className="text-xs text-gray-500">
-                  Mostrando {inactiveStart + 1}
-                  –{inactiveStart + inactiveSlice.length} de {inactiveTotal}
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setInactivePage((p) => Math.max(1, p - 1))}
-                    disabled={inactivePageSafe <= 1}
-                    className={`px-3 py-1 rounded border text-sm ${
-                      inactivePageSafe <= 1
-                        ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                    }`}
-                  >
-                    Anterior
-                  </button>
-                  <span className="text-xs text-gray-600">
-                    Página {inactivePageSafe} de {inactiveTotalPages}
-                  </span>
-                  <button
-                    onClick={() => setInactivePage((p) => Math.min(inactiveTotalPages, p + 1))}
-                    disabled={inactivePageSafe >= inactiveTotalPages}
-                    className={`px-3 py-1 rounded border text-sm ${
-                      inactivePageSafe >= inactiveTotalPages
-                        ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                    }`}
-                  >
-                    Próxima
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Last Purchases */}
