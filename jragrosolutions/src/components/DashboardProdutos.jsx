@@ -1,6 +1,6 @@
 ﻿"use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Package, DollarSign, TrendingUp, Users, BarChart3, PieChartIcon } from "lucide-react"
 import {
   BarChart,
@@ -51,7 +51,9 @@ const DashboardProdutos = ({ salesData, userData }) => {
     }
 
     const validSales = salesData.filter((sale) => {
-      if (!sale || sale.status?.toLowerCase() === "cancelada") return false
+      if (!sale) return false
+      const status = sale.status?.toLowerCase()
+      if (status === "cancelada" || status === "cancelado") return false
       const saleDate = new Date(sale.dataPedido || sale.date || sale.criadoEm)
       return !isNaN(saleDate.getTime()) && saleDate >= startDate
     })
@@ -60,6 +62,7 @@ const DashboardProdutos = ({ salesData, userData }) => {
     const productMetrics = {}
     const productPriceHistory = {}
     const productClients = {}
+    let totalRevenueFromSales = 0
 
     validSales.forEach((sale) => {
       const saleDate = new Date(sale.dataPedido || sale.date || sale.criadoEm)
@@ -78,12 +81,42 @@ const DashboardProdutos = ({ salesData, userData }) => {
                 ? Object.values(sale.produtos)
                 : []
 
+      // Monte um snapshot de itens com totais e quantidades
+      const parsedItems = []
+      let sumItemTotals = 0
+      let sumItemQty = 0
       itemsArr.forEach((item) => {
         const productName = (item?.tipoProduto || item?.produto || item?.name || "Produto sem nome").toString()
-        const quantity = Number(item?.quantidade ?? item?.quantity ?? item?.qty ?? 0) || 0
-        const price = Number(item?.preco ?? item?.price ?? item?.valorUnitario ?? 0) || 0
-        const revenue = quantity * price
-        const clientId = sale.clientId || sale.clienteId
+        let quantity = Number(item?.quantidade ?? item?.quantity ?? item?.qty)
+        if (!Number.isFinite(quantity)) quantity = 0
+        let price = Number(item?.preco ?? item?.price ?? item?.valorUnitario)
+        if (!Number.isFinite(price)) price = 0
+        const itemTotalRaw = Number(item?.valorTotal)
+        const itemTotal = Number.isFinite(itemTotalRaw) && itemTotalRaw > 0 ? itemTotalRaw : quantity * price
+        parsedItems.push({ productName, quantity, itemTotal })
+        sumItemTotals += itemTotal
+        sumItemQty += quantity
+      })
+
+      // Valor total da venda (prioriza campos de venda)
+      const saleValue = (Number(sale?.valorTotal) || Number(sale?.total) || 0) > 0
+        ? (Number(sale?.valorTotal) || Number(sale?.total) || 0)
+        : sumItemTotals
+      totalRevenueFromSales += Number.isFinite(saleValue) ? saleValue : 0
+
+      // Distribui o total da venda pelos itens para garantir soma = total da venda
+      const factor = sumItemTotals > 0 && saleValue > 0 ? (saleValue / sumItemTotals) : 0
+      const clientId = sale.clientId || sale.clienteId
+
+      parsedItems.forEach(({ productName, quantity, itemTotal }) => {
+        let revenue = itemTotal
+        if (saleValue > 0) {
+          if (factor > 0) {
+            revenue = itemTotal * factor
+          } else if (sumItemQty > 0) {
+            revenue = saleValue * (quantity / sumItemQty)
+          }
+        }
 
         if (!productMetrics[productName]) {
           productMetrics[productName] = {
@@ -98,15 +131,16 @@ const DashboardProdutos = ({ salesData, userData }) => {
 
         productMetrics[productName].revenue += revenue
         productMetrics[productName].quantity += quantity
-        productMetrics[productName].priceSum += price
-        productMetrics[productName].priceCount += 1
+        // Para média ponderada: acumular receita e quantidade
+        productMetrics[productName].priceSum += revenue
+        productMetrics[productName].priceCount += quantity
 
-        // Price history
+        // Price history (usar receita ajustada e quantidade)
         if (!productPriceHistory[monthKey]) {
-          productPriceHistory[monthKey] = { month: monthKey, totalPrice: 0, count: 0 }
+          productPriceHistory[monthKey] = { month: monthKey, totalRevenue: 0, totalQuantity: 0 }
         }
-        productPriceHistory[monthKey].totalPrice += price
-        productPriceHistory[monthKey].count += 1
+        productPriceHistory[monthKey].totalRevenue += revenue
+        productPriceHistory[monthKey].totalQuantity += quantity
 
         // Product clients
         if (!productClients[productName]) {
@@ -123,10 +157,11 @@ const DashboardProdutos = ({ salesData, userData }) => {
       product.avgPrice = product.priceCount > 0 ? product.priceSum / product.priceCount : 0
     })
 
-    const totalRevenue = Object.values(productMetrics).reduce((sum, p) => sum + p.revenue, 0)
+    // Receita Total baseada no total das vendas (deve igualar Clientes)
+    const totalRevenue = totalRevenueFromSales
     const totalQuantity = Object.values(productMetrics).reduce((sum, p) => sum + p.quantity, 0)
-    const avgPrice =
-      Object.values(productMetrics).reduce((sum, p) => sum + p.avgPrice, 0) / Object.keys(productMetrics).length || 0
+    // Preço médio geral ponderado por quantidade
+    const avgPrice = totalQuantity > 0 ? totalRevenue / totalQuantity : 0
 
     // Top product (por quantidade vendida)
     const sortedByRevenue = Object.values(productMetrics).sort((a, b) => b.revenue - a.revenue)
@@ -140,35 +175,62 @@ const DashboardProdutos = ({ salesData, userData }) => {
     const monthsLabels = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"]
     // Construir histÃ³rico de preÃ§os com TODAS as vendas (nÃ£o sÃ³ do perÃ­odo)
     const priceHistoryAll = {}
-    ;(salesData || []).forEach((sale) => {
-      if (!sale || sale.status?.toLowerCase() === 'cancelada') return
-      const saleDate = new Date(sale.dataPedido || sale.date || sale.criadoEm)
-      if (isNaN(saleDate.getTime())) return
-      const y = saleDate.getFullYear()
-      const m = String(saleDate.getMonth() + 1).padStart(2, '0')
-      const key = `${y}-${m}`
-      const itemsArr = Array.isArray(sale?.itens)
-        ? sale.itens
-        : sale?.itens && typeof sale.itens === 'object'
-          ? Object.values(sale.itens)
-          : Array.isArray(sale?.items)
-            ? sale.items
-            : sale?.items && typeof sale.items === 'object'
-              ? Object.values(sale.items)
-              : sale?.produtos && typeof sale.produtos === 'object'
-                ? Object.values(sale.produtos)
-                : []
-      itemsArr.forEach((item) => {
-        const price = Number(item?.preco ?? item?.price ?? item?.valorUnitario ?? 0) || 0
-        if (!priceHistoryAll[key]) priceHistoryAll[key] = { total: 0, count: 0 }
-        priceHistoryAll[key].total += price
-        priceHistoryAll[key].count += 1
-      })
-    })
-    const priceEvolution = monthsLabels.map((label, idx) => {
+;(salesData || []).forEach((sale) => {
+  if (!sale) return
+  const statusAll = sale.status?.toLowerCase()
+  if (statusAll === 'cancelada' || statusAll === 'cancelado') return
+  const saleDate = new Date(sale.dataPedido || sale.date || sale.criadoEm)
+  if (isNaN(saleDate.getTime())) return
+  const y = saleDate.getFullYear()
+  const m = String(saleDate.getMonth() + 1).padStart(2, '0')
+  const key = ${y}-
+  const itemsArr = Array.isArray(sale?.itens)
+    ? sale.itens
+    : sale?.itens && typeof sale.itens === 'object'
+      ? Object.values(sale.itens)
+      : Array.isArray(sale?.items)
+        ? sale.items
+        : sale?.items && typeof sale.items === 'object'
+          ? Object.values(sale.items)
+          : sale?.produtos && typeof sale.produtos === 'object'
+            ? Object.values(sale.produtos)
+            : []
+
+  // Snapshot de itens
+  const parsed = []
+  let sumTotals = 0
+  let sumQty = 0
+  itemsArr.forEach((item) => {
+    let q = Number(item?.quantidade ?? item?.quantity ?? item?.qty)
+    if (!Number.isFinite(q)) q = 0
+    let p = Number(item?.preco ?? item?.price ?? item?.valorUnitario)
+    if (!Number.isFinite(p)) p = 0
+    const t = Number(item?.valorTotal)
+    const it = Number.isFinite(t) && t > 0 ? t : q * p
+    parsed.push({ q, it })
+    sumTotals += it
+    sumQty += q
+  })
+
+  const saleValue = (Number(sale?.valorTotal) || Number(sale?.total) || 0) > 0
+    ? (Number(sale?.valorTotal) || Number(sale?.total) || 0)
+    : sumTotals
+  const factorAll = sumTotals > 0 && saleValue > 0 ? (saleValue / sumTotals) : 0
+
+  parsed.forEach(({ q, it }) => {
+    let rev = it
+    if (saleValue > 0) {
+      if (factorAll > 0) rev = it * factorAll
+      else if (sumQty > 0) rev = saleValue * (q / sumQty)
+    }
+    if (!priceHistoryAll[key]) priceHistoryAll[key] = { totalRevenue: 0, totalQuantity: 0 }
+    priceHistoryAll[key].totalRevenue += rev
+    priceHistoryAll[key].totalQuantity += q
+  })
+})const priceEvolution = monthsLabels.map((label, idx) => {
       const key = `${priceYear}-${String(idx + 1).padStart(2,'0')}`
       const rec = priceHistoryAll[key]
-      const avg = rec && rec.count > 0 ? rec.total / rec.count : 0
+      const avg = rec && rec.totalQuantity > 0 ? rec.totalRevenue / rec.totalQuantity : 0
       return { month: label, avgPrice: avg }
     })
 
@@ -199,39 +261,60 @@ const DashboardProdutos = ({ salesData, userData }) => {
     }
 
     const previousSales = salesData.filter((sale) => {
-      if (!sale || sale.status?.toLowerCase() === "cancelada") return false
+      if (!sale || ["cancelada","cancelado"].includes((sale.status?.toLowerCase() || ""))) return false
       const saleDate = new Date(sale.dataPedido || sale.date || sale.criadoEm)
       return !isNaN(saleDate.getTime()) && saleDate >= previousStartDate && saleDate < startDate
     })
 
     const previousProductMetrics = {}
     previousSales.forEach((sale) => {
-      const itemsArr = Array.isArray(sale?.itens)
-        ? sale.itens
-        : sale?.itens && typeof sale.itens === 'object'
-          ? Object.values(sale.itens)
-          : Array.isArray(sale?.items)
-            ? sale.items
-            : sale?.items && typeof sale.items === 'object'
-              ? Object.values(sale.items)
-              : sale?.produtos && typeof sale.produtos === 'object'
-                ? Object.values(sale.produtos)
-                : []
+  const itemsArr = Array.isArray(sale?.itens)
+    ? sale.itens
+    : sale?.itens && typeof sale.itens === 'object'
+      ? Object.values(sale.itens)
+      : Array.isArray(sale?.items)
+        ? sale.items
+        : sale?.items && typeof sale.items === 'object'
+          ? Object.values(sale.items)
+          : sale?.produtos && typeof sale.produtos === 'object'
+            ? Object.values(sale.produtos)
+            : []
 
-      itemsArr.forEach((item) => {
-        const productName = (item?.tipoProduto || item?.produto || item?.name || "Produto sem nome").toString()
-        const quantity = Number(item?.quantidade ?? item?.quantity ?? item?.qty ?? 0) || 0
-        const price = Number(item?.preco ?? item?.price ?? item?.valorUnitario ?? 0) || 0
-        const revenue = quantity * price
+  // Snapshot de itens
+  const parsedPrev = []
+  let sumPrevTotals = 0
+  let sumPrevQty = 0
+  itemsArr.forEach((item) => {
+    const productName = (item?.tipoProduto || item?.produto || item?.name || "Produto sem nome").toString()
+    let quantity = Number(item?.quantidade ?? item?.quantity ?? item?.qty)
+    if (!Number.isFinite(quantity)) quantity = 0
+    let price = Number(item?.preco ?? item?.price ?? item?.valorUnitario)
+    if (!Number.isFinite(price)) price = 0
+    const itemTotalRaw = Number(item?.valorTotal)
+    const itemTotal = Number.isFinite(itemTotalRaw) && itemTotalRaw > 0 ? itemTotalRaw : quantity * price
+    parsedPrev.push({ productName, quantity, itemTotal })
+    sumPrevTotals += itemTotal
+    sumPrevQty += quantity
+  })
 
-        if (!previousProductMetrics[productName]) {
-          previousProductMetrics[productName] = { revenue: 0 }
-        }
-        previousProductMetrics[productName].revenue += revenue
-      })
-    })
+  const saleValuePrev = (Number(sale?.valorTotal) || Number(sale?.total) || 0) > 0
+    ? (Number(sale?.valorTotal) || Number(sale?.total) || 0)
+    : sumPrevTotals
+  const factorPrev = sumPrevTotals > 0 && saleValuePrev > 0 ? (saleValuePrev / sumPrevTotals) : 0
 
-    const safraComparison = sortedByRevenue.slice(0, 10).map((product) => {
+  parsedPrev.forEach(({ productName, quantity, itemTotal }) => {
+    let revenue = itemTotal
+    if (saleValuePrev > 0) {
+      if (factorPrev > 0) revenue = itemTotal * factorPrev
+      else if (sumPrevQty > 0) revenue = saleValuePrev * (quantity / sumPrevQty)
+    }
+
+    if (!previousProductMetrics[productName]) {
+      previousProductMetrics[productName] = { revenue: 0 }
+    }
+    previousProductMetrics[productName].revenue += revenue
+  })
+})const safraComparison = sortedByRevenue.slice(0, 10).map((product) => {
       const previousRevenue = previousProductMetrics[product.name]?.revenue || 0
       const growth = previousRevenue > 0 ? ((product.revenue - previousRevenue) / previousRevenue) * 100 : 0
 

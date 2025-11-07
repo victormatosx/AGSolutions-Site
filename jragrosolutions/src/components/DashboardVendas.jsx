@@ -88,7 +88,9 @@ const DashboardVendas = ({ salesData, userData }) => {
   // Aplica filtro de período nas vendas (últimos 30/90/365 dias ou todo período)
   const filteredSales = useMemo(() => {
     if (!salesData || salesData.length === 0) return []
-    const valid = salesData.filter((sale) => sale && sale.status?.toLowerCase() !== "cancelada")
+    const valid = salesData.filter(
+      (sale) => sale && !["cancelada", "cancelado"].includes((sale.status?.toLowerCase() || "")),
+    )
     if (period === "all") return valid
 
     const days = period === "month" ? 30 : period === "quarter" ? 90 : period === "year" ? 365 : 0
@@ -315,9 +317,13 @@ const DashboardVendas = ({ salesData, userData }) => {
     const validSales = filteredSales
     const productRevenue = {}
     const productQuantity = {}
-    const productPrices = {}
+    let totalRevenueFromSales = 0
+    let totalQuantityAll = 0
+    // Para preço médio por KG (unitário): soma de (preço*quantidade) e soma de quantidades
+    let unitRevenueSum = 0
+    let unitQuantitySum = 0
 
-    const iterateItems = (sale) => {
+    validSales.forEach((sale) => {
       const itemsArr = Array.isArray(sale?.itens)
         ? sale.itens
         : sale?.itens && typeof sale.itens === 'object'
@@ -329,35 +335,53 @@ const DashboardVendas = ({ salesData, userData }) => {
               : sale?.produtos && typeof sale.produtos === 'object'
                 ? Object.values(sale.produtos)
                 : []
+
+      // Snapshot de itens da venda
+      const parsedItems = []
+      let sumItemTotals = 0
+      let sumItemQty = 0
       itemsArr.forEach((item) => {
         const productName = (item?.tipoProduto || item?.produto || item?.name || 'Produto').toString()
-        const quantity = Number(item?.quantidade ?? item?.quantity ?? item?.qty ?? 0) || 0
-        const price = Number(item?.preco ?? item?.price ?? item?.valorUnitario ?? 0) || 0
-        const revenue = quantity * price
+        let quantity = Number(item?.quantidade ?? item?.quantity ?? item?.qty)
+        if (!Number.isFinite(quantity)) quantity = 0
+        let price = Number(item?.preco ?? item?.price ?? item?.valorUnitario)
+        if (!Number.isFinite(price)) price = 0
+        const itemTotalRaw = Number(item?.valorTotal)
+        const itemTotal = Number.isFinite(itemTotalRaw) && itemTotalRaw > 0 ? itemTotalRaw : quantity * price
+        parsedItems.push({ productName, quantity, itemTotal })
+        sumItemTotals += itemTotal
+        sumItemQty += quantity
+        // acumuladores para preço médio unitário (R$/kg)
+        unitRevenueSum += price * quantity
+        unitQuantitySum += quantity
+      })
+
+      // Valor total da venda (prioriza campos da venda)
+      const saleValue = (Number(sale?.valorTotal) || Number(sale?.total) || 0) > 0
+        ? (Number(sale?.valorTotal) || Number(sale?.total) || 0)
+        : sumItemTotals
+      totalRevenueFromSales += Number.isFinite(saleValue) ? saleValue : 0
+
+      // Fator para normalizar os itens ao total da venda
+      const factor = sumItemTotals > 0 && saleValue > 0 ? (saleValue / sumItemTotals) : 0
+
+      parsedItems.forEach(({ productName, quantity, itemTotal }) => {
+        let revenue = itemTotal
+        if (saleValue > 0) {
+          if (factor > 0) revenue = itemTotal * factor
+          else if (sumItemQty > 0) revenue = saleValue * (quantity / sumItemQty)
+        }
 
         productRevenue[productName] = (productRevenue[productName] || 0) + revenue
         productQuantity[productName] = (productQuantity[productName] || 0) + quantity
-
-        if (!productPrices[productName]) {
-          productPrices[productName] = []
-        }
-        productPrices[productName].push(price)
+        totalQuantityAll += quantity
       })
-    }
-
-    validSales.forEach(iterateItems)
+    })
 
     const totalProducts = Object.keys(productRevenue).length
-    const totalRevenue = Object.values(productRevenue).reduce((sum, rev) => sum + rev, 0)
-    // Preço médio por produto: média das médias de cada produto (receita do produto / quantidade do produto)
-    const perProductAverages = Object.keys(productRevenue).map((p) => {
-      const qty = productQuantity[p] || 0
-      const rev = productRevenue[p] || 0
-      return qty > 0 ? rev / qty : 0
-    })
-    const avgPrice = perProductAverages.length > 0
-      ? perProductAverages.reduce((a, b) => a + b, 0) / perProductAverages.length
-      : 0
+    const totalRevenue = totalRevenueFromSales
+    // Preço médio por KG (R$/kg) com base em preço unitário dos itens (soma(preço*qty)/soma(qty))
+    const avgPrice = unitQuantitySum > 0 ? unitRevenueSum / unitQuantitySum : 0
 
     // Mais vendido: produto com maior quantidade vendida (soma das unidades)
     const topProduct = Object.entries(productQuantity)
@@ -386,7 +410,9 @@ const DashboardVendas = ({ salesData, userData }) => {
     const priceHistoryAll = {}
     const priceHistoryByProduct = {}
     ;(salesData || []).forEach((sale) => {
-      if (!sale || sale.status?.toLowerCase() === 'cancelada') return
+      if (!sale) return
+      const statusAll = sale.status?.toLowerCase()
+      if (statusAll === 'cancelada' || statusAll === 'cancelado') return
       const ms = getSaleTimestampMs(sale)
       if (isNaN(ms)) return
       const d = new Date(ms)
@@ -405,22 +431,24 @@ const DashboardVendas = ({ salesData, userData }) => {
                 ? Object.values(sale.produtos)
                 : []
       itemsArr.forEach((item) => {
-        const price = Number(item?.preco ?? item?.price ?? item?.valorUnitario ?? 0) || 0
-        if (!priceHistoryAll[monthKey]) priceHistoryAll[monthKey] = { total: 0, count: 0, year: y, month: Number(m) }
-        priceHistoryAll[monthKey].total += price
-        priceHistoryAll[monthKey].count += 1
-
         const prodName = (item?.tipoProduto || item?.produto || item?.name || 'Produto').toString()
+        const q = Number(item?.quantidade ?? item?.quantity ?? item?.qty) || 0
+        const p = Number(item?.preco ?? item?.price ?? item?.valorUnitario) || 0
+        const unitRev = p * q
+        if (!priceHistoryAll[monthKey]) priceHistoryAll[monthKey] = { total: 0, qty: 0, year: y, month: Number(m) }
+        priceHistoryAll[monthKey].total += unitRev
+        priceHistoryAll[monthKey].qty += q
+
         if (!priceHistoryByProduct[prodName]) priceHistoryByProduct[prodName] = {}
-        if (!priceHistoryByProduct[prodName][monthKey]) priceHistoryByProduct[prodName][monthKey] = { total: 0, count: 0 }
-        priceHistoryByProduct[prodName][monthKey].total += price
-        priceHistoryByProduct[prodName][monthKey].count += 1
+        if (!priceHistoryByProduct[prodName][monthKey]) priceHistoryByProduct[prodName][monthKey] = { total: 0, qty: 0 }
+        priceHistoryByProduct[prodName][monthKey].total += unitRev
+        priceHistoryByProduct[prodName][monthKey].qty += q
       })
     })
     const priceEvolution = monthsLabels.map((label, idx) => {
       const key = `${priceYear}-${String(idx + 1).padStart(2,'0')}`
       const rec = priceHistoryAll[key]
-      const avg = rec && rec.count > 0 ? rec.total / rec.count : 0
+      const avg = rec && rec.qty > 0 ? rec.total / rec.qty : 0
       return { mes: label, preco: avg }
     })
 
@@ -430,8 +458,8 @@ const DashboardVendas = ({ salesData, userData }) => {
     productNames.forEach((p) => {
       priceEvolutionByProduct[p] = monthsLabels.map((label, idx) => {
         const key = `${priceYear}-${String(idx + 1).padStart(2,'0')}`
-        const rec = priceHistoryByProduct[p][key]
-        const avg = rec && rec.count > 0 ? rec.total / rec.count : 0
+        const rec = priceHistoryByProduct[p]?.[key]
+        const avg = rec && rec.qty > 0 ? rec.total / rec.qty : 0
         return { mes: label, preco: avg }
       })
     })
@@ -822,7 +850,7 @@ const DashboardVendas = ({ salesData, userData }) => {
             <p className="text-2xl font-bold text-gray-900">
               {productAnalytics.avgPrice.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </p>
-            <p className="text-sm text-gray-600">Preço Médio</p>
+            <p className="text-sm text-gray-600">Preço Médio (R$/kg)</p>
           </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -878,30 +906,61 @@ const DashboardVendas = ({ salesData, userData }) => {
         {/* Price Evolution */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-bold text-gray-900">Evolução do Preço Médio</h4>
-            <div className="flex items-center gap-2">
-              <label htmlFor="priceYear" className="text-sm text-gray-600">Ano:</label>
-              <select
-                id="priceYear"
-                value={priceYear}
-                onChange={(e) => setPriceYear(Number(e.target.value))}
-                className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                {priceYears.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
+            <h4 className="text-lg font-bold text-gray-900">Evolução do Preço Médio (R$/kg)</h4>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <label htmlFor="priceYear" className="text-sm text-gray-600">Ano:</label>
+                <select
+                  id="priceYear"
+                  value={priceYear}
+                  onChange={(e) => setPriceYear(Number(e.target.value))}
+                  className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  {priceYears.map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label htmlFor="priceProduct" className="text-sm text-gray-600">Produto:</label>
+                <select
+                  id="priceProduct"
+                  value={evolutionMode === 'geral' ? 'Geral' : (selectedProducts[0] || 'Geral')}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    if (v === 'Geral') {
+                      setEvolutionMode('geral')
+                      setSelectedProducts([])
+                    } else {
+                      setEvolutionMode('produto')
+                      setSelectedProducts([v])
+                    }
+                  }}
+                  className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="Geral">Geral</option>
+                  {productAnalytics.productNames?.slice(0,3).map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
           
           <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={productAnalytics.priceEvolution}>
+            <LineChart data={priceEvolutionChartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="mes" />
               <YAxis />
               <Tooltip formatter={(value) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
               <Legend />
-              <Line type="monotone" dataKey="preco" stroke="#25BE8C" strokeWidth={2} name="Preço Médio" />
+              {evolutionMode === 'produto' && selectedProducts.length > 0 ? (
+                selectedProducts.map((p, i) => (
+                  <Line key={p} type="monotone" dataKey={p} stroke={COLORS[i % COLORS.length]} strokeWidth={2} name={`Preço Médio - ${p}`} />
+                ))
+              ) : (
+                <Line type="monotone" dataKey="preco" stroke="#25BE8C" strokeWidth={2} name="Preço Médio (R$/kg)" />
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -990,4 +1049,6 @@ const DashboardVendas = ({ salesData, userData }) => {
 }
 
 export default DashboardVendas
+
+
 
