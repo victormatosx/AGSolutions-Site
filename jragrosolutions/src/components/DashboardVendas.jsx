@@ -21,7 +21,7 @@ import {
 const DashboardVendas = ({ salesData, userData }) => {
   const [totalClients, setTotalClients] = useState(0)
   const [clients, setClients] = useState([
-    { id: "c1", name: "JoÃ£o Silva", city: "SÃ£o Paulo", state: "SP" },
+    { id: "c1", name: "João Silva", city: "São Paulo", state: "SP" },
     { id: "c2", name: "Maria Santos", city: "Rio de Janeiro", state: "RJ" },
     { id: "c3", name: "Pedro Costa", city: "Belo Horizonte", state: "MG" },
     { id: "c4", name: "Ana Paula", city: "Curitiba", state: "PR" },
@@ -29,13 +29,13 @@ const DashboardVendas = ({ salesData, userData }) => {
     { id: "c6", name: "Fernanda Lima", city: "Salvador", state: "BA" },
   ])
   const [period, setPeriod] = useState("all") // all, month, quarter, year
-  // MÃ©trica do grÃ¡fico ABC de clientes: 'receita' ou 'ticket'
+  // Métrica do gráfico ABC de clientes: 'receita' ou 'ticket'
   const [abcMetric, setAbcMetric] = useState("receita")
-  // Ano selecionado para EvoluÃ§Ã£o de PreÃ§o MÃ©dio
+  // Ano selecionado para Evolução de Preço Médio
   const [priceYear, setPriceYear] = useState(new Date().getFullYear())
-  // PaginaÃ§Ã£o para clientes inativos
+  // Paginação para clientes inativos
   const [inactivePage, setInactivePage] = useState(1)
-  // Modo do grÃ¡fico de evoluÃ§Ã£o de preÃ§o: 'geral' ou 'produto'
+  // Modo do gráfico de evolução de preço: 'geral' ou 'produto'
   const [evolutionMode, setEvolutionMode] = useState('geral')
   const [selectedProducts, setSelectedProducts] = useState([])
 
@@ -85,7 +85,7 @@ const DashboardVendas = ({ salesData, userData }) => {
     return Number.NaN
   }
 
-  // Aplica filtro de perÃ­odo nas vendas (Ãºltimos 30/90/365 dias ou todo perÃ­odo)
+  // Aplica filtro de período nas vendas (últimos 30/90/365 dias ou todo período)
   const filteredSales = useMemo(() => {
     if (!salesData || salesData.length === 0) return []
     const valid = salesData.filter((sale) => sale && sale.status?.toLowerCase() !== "cancelada")
@@ -100,7 +100,7 @@ const DashboardVendas = ({ salesData, userData }) => {
     })
   }, [salesData, period])
 
-  // Anos disponÃ­veis para o seletor do grÃ¡fico EvoluÃ§Ã£o do PreÃ§o
+  // Anos disponíveis para o seletor do gráfico Evolução do Preço
   const priceYears = useMemo(() => {
     if (!salesData || salesData.length === 0) return []
     const yrs = new Set()
@@ -157,7 +157,7 @@ const DashboardVendas = ({ salesData, userData }) => {
 
       if (!key) return
 
-      // nome de exibiÃ§Ã£o: se ID, tenta achar no cadastro; senÃ£o usa o prÃ³prio nome
+      // nome de exibição: se ID, tenta achar no cadastro; senão usa o próprio nome
       if (!(key in nameByKey)) {
         if (clientId) {
           const found = clients?.find?.((c) => c.id === String(clientId))
@@ -178,7 +178,7 @@ const DashboardVendas = ({ salesData, userData }) => {
     })
 
     const activeClients = Object.keys(clientRevenue).length
-    // Ticket MÃ©dio por venda = Receita Total / NÃºmero de Vendas
+    // Ticket Médio por venda = Receita Total / Número de Vendas
     const avgTicket = totalSales > 0 ? totalRevenue / totalSales : 0
 
     // Base agregada por cliente
@@ -189,7 +189,7 @@ const DashboardVendas = ({ salesData, userData }) => {
       return { key, name, revenue, purchases, ticketMedio }
     })
 
-    // OrdenaÃ§Ãµes e Top 10
+    // Ordenações e Top 10
     const sortedByRevenue = [...clientAggregates].sort((a, b) => b.revenue - a.revenue)
     const sortedByTicket = [...clientAggregates].sort((a, b) => b.ticketMedio - a.ticketMedio)
 
@@ -207,7 +207,7 @@ const DashboardVendas = ({ salesData, userData }) => {
       purchases: c.purchases,
     }))
 
-    // MantÃ©m compatibilidade: abcCurve padrÃ£o por receita
+    // Mantém compatibilidade: abcCurve padrão por receita
     const abcCurve = abcCurveRevenue
 
     // Top 10 clients (por receita)
@@ -256,7 +256,7 @@ const DashboardVendas = ({ salesData, userData }) => {
       return isNaN(ms) ? Number.NaN : ms
     }
 
-    // Last purchases (5 Ãºltimas vendas), ordenadas por dataPedido
+    // Last purchases (5 últimas vendas), ordenadas por dataPedido
     const lastPurchases = validSales
       .map((sale) => {
         const ms = getSaleTimestampMs(sale)
@@ -349,7 +349,7 @@ const DashboardVendas = ({ salesData, userData }) => {
 
     const totalProducts = Object.keys(productRevenue).length
     const totalRevenue = Object.values(productRevenue).reduce((sum, rev) => sum + rev, 0)
-    // PreÃ§o mÃ©dio por produto: mÃ©dia das mÃ©dias de cada produto (receita do produto / quantidade do produto)
+    // Preço médio por produto: média das médias de cada produto (receita do produto / quantidade do produto)
     const perProductAverages = Object.keys(productRevenue).map((p) => {
       const qty = productQuantity[p] || 0
       const rev = productRevenue[p] || 0
@@ -381,7 +381,7 @@ const DashboardVendas = ({ salesData, userData }) => {
         value: revenue,
       }))
 
-    // Price evolution (mÃ©dia de preÃ§os por mÃªs no ano selecionado)
+    // Price evolution (média de preços por mês no ano selecionado)
     const monthsLabels = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"]
     const priceHistoryAll = {}
     const priceHistoryByProduct = {}
@@ -424,7 +424,7 @@ const DashboardVendas = ({ salesData, userData }) => {
       return { mes: label, preco: avg }
     })
 
-    // EvoluÃ§Ã£o por produto (mÃ©dia mensal do preÃ§o unitÃ¡rio)
+    // Evolução por produto (média mensal do preço unitário)
     const productNames = Object.keys(priceHistoryByProduct)
     const priceEvolutionByProduct = {}
     productNames.forEach((p) => {
@@ -468,7 +468,7 @@ const DashboardVendas = ({ salesData, userData }) => {
     validSales.forEach((sale) => {
       const clientId = sale.clientId || sale.clienteId
       const client = clients.find((c) => c.id === clientId)
-      const region = client?.state || "NÃ£o informado"
+      const region = client?.state || "Não informado"
 
       const revenue = Number(sale.valorTotal) || Number(sale.total) || 0
       regionRevenue[region] = (regionRevenue[region] || 0) + revenue
@@ -512,7 +512,7 @@ const DashboardVendas = ({ salesData, userData }) => {
   }
 
   const clientAnalytics = calculateClientAnalytics()
-  // Ajusta pÃ¡gina quando a lista muda
+  // Ajusta página quando a lista muda
   useEffect(() => {
     const total = clientAnalytics?.inactiveClients?.length || 0
     const pages = Math.max(1, Math.ceil(total / 5))
@@ -522,7 +522,7 @@ const DashboardVendas = ({ salesData, userData }) => {
   const regionAnalytics = calculateRegionAnalytics()
 
   const COLORS = ["#25BE8C", "#2a9d8f", "#3b82f6", "#8b5cf6", "#f59e0b"]
-  // Dados do grÃ¡fico de evoluÃ§Ã£o conforme modo/seleÃ§Ã£o
+  // Dados do gráfico de evolução conforme modo/seleção
   const priceEvolutionChartData = useMemo(() => {
     if (evolutionMode === 'produto') {
       const months = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"]
@@ -550,8 +550,8 @@ const DashboardVendas = ({ salesData, userData }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Dashboard AnalÃ­tico de Vendas</h2>
-          <p className="text-gray-600">AnÃ¡lise completa de clientes, produtos e regiÃµes</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Analítico de Vendas</h2>
+          <p className="text-gray-600">Análise completa de clientes, produtos e regiões</p>
         </div>
 
         <div className="mt-4 md:mt-0 flex gap-2">
@@ -561,7 +561,7 @@ const DashboardVendas = ({ salesData, userData }) => {
               period === "month" ? "bg-[#25BE8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            MÃªs
+            Mês
           </button>
           <button
             onClick={() => setPeriod("quarter")}
@@ -585,19 +585,19 @@ const DashboardVendas = ({ salesData, userData }) => {
               period === "all" ? "bg-[#25BE8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            Todo PerÃ­odo
+            Todo Período
           </button>
         </div>
       </div>
 
-      {/* ========== SEÃ‡ÃƒO: ANÃLISE DE CLIENTES ========== */}
+      {/* ========== SEÇÃO: ANÁLISE DE CLIENTES ========== */}
       <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-6 border-2 border-blue-100">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
             <Users className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-gray-900">AnÃ¡lise de Clientes</h3>
+            <h3 className="text-2xl font-bold text-gray-900">Análise de Clientes</h3>
             <p className="text-gray-600">Curva ABC, ranking e comportamento de compra</p>
           </div>
         </div>
@@ -612,43 +612,13 @@ const DashboardVendas = ({ salesData, userData }) => {
             <p className="text-2xl font-bold text-gray-900">{clientAnalytics.activeClients}</p>
             <p className="text-sm text-gray-600">Clientes Ativos</p>
           </div>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex items-center gap-2">
-              <label htmlFor="evolutionMode" className="text-sm text-gray-600">Modo:</label>
-              <select
-                id="evolutionMode"
-                value={evolutionMode}
-                onChange={(e) => setEvolutionMode(e.target.value)}
-                className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="geral">Geral</option>
-                <option value="produto">Por Produto</option>
-              </select>
-            </div>
-            {evolutionMode === 'produto' && (
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-600">Produtos:</label>
-                <select
-                  multiple
-                  value={selectedProducts}
-                  onChange={(e) => setSelectedProducts(Array.from(e.target.selectedOptions, (o) => o.value))}
-                  className="text-sm border border-gray-300 rounded-md px-2 py-1 max-w-full"
-                  size={4}
-                >
-                  {(productAnalytics.productNames || []).map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
               <Award className="w-5 h-5 text-orange-600" />
             </div>
             <p className="text-2xl font-bold text-gray-900">{clientAnalytics.totalSales}</p>
-            <p className="text-sm text-gray-600">NÃºmero de Vendas</p>
+            <p className="text-sm text-gray-600">Número de Vendas</p>
           </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -659,7 +629,7 @@ const DashboardVendas = ({ salesData, userData }) => {
             <p className="text-2xl font-bold text-gray-900">
               {clientAnalytics.avgTicket.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </p>
-            <p className="text-sm text-gray-600">Ticket MÃ©dio</p>
+            <p className="text-sm text-gray-600">Ticket Médio</p>
           </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -682,7 +652,7 @@ const DashboardVendas = ({ salesData, userData }) => {
               <h4 className="text-lg font-bold text-gray-900">Curva ABC de Clientes (Top 10)</h4>
               <div className="flex items-center gap-2">
                 <label htmlFor="abcMetric" className="text-sm text-gray-600">
-                  MÃ©trica:
+                  Métrica:
                 </label>
                 <select
                   id="abcMetric"
@@ -691,7 +661,7 @@ const DashboardVendas = ({ salesData, userData }) => {
                   className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="receita">Receita Total</option>
-                  <option value="ticket">Ticket MÃ©dio por Compra</option>
+                  <option value="ticket">Ticket Médio por Compra</option>
                 </select>
               </div>
             </div>
@@ -744,7 +714,7 @@ const DashboardVendas = ({ salesData, userData }) => {
                   }}
                   contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb" }}
                 />
-                {/* Removido LabelList para evitar sobreposiÃ§Ã£o de valores grandes; usar Tooltip */}
+                {/* Removido LabelList para evitar sobreposição de valores grandes; usar Tooltip */}
                 <Bar
                   dataKey={abcMetric === "ticket" ? "ticketMedio" : "receita"}
                   fill="url(#abcGradient)"
@@ -774,7 +744,7 @@ const DashboardVendas = ({ salesData, userData }) => {
                   >
                     <p className="text-sm font-medium text-gray-900">{client.name}</p>
                     <div className="text-right w-40">
-                      <p className="text-xs text-red-600 font-medium">Ãšltima Venda:</p>
+                      <p className="text-xs text-red-600 font-medium">Última Venda:</p>
                       <p className="text-xs text-red-700 font-semibold">{client.lastPurchase}</p>
                     </div>
                   </div>
@@ -789,7 +759,7 @@ const DashboardVendas = ({ salesData, userData }) => {
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-4">
               <Calendar className="w-5 h-5 text-blue-600" />
-              <h4 className="text-lg font-bold text-gray-900">Ãšltimas Compras</h4>
+              <h4 className="text-lg font-bold text-gray-900">Últimas Compras</h4>
             </div>
             <div className="space-y-2">
               {clientAnalytics.lastPurchases.map((purchase, index) => (
@@ -797,7 +767,7 @@ const DashboardVendas = ({ salesData, userData }) => {
                   <div>
                     <p className="text-sm font-medium text-gray-900">{purchase.clientName}</p>
                     <p className="text-xs text-gray-500">
-                      ID: {purchase.id} â€¢ Data: {purchase.date}
+                      ID: {purchase.id} • Data: {purchase.date}
                     </p>
                   </div>
                   <p className="text-sm font-bold text-[#25BE8C]">
@@ -810,15 +780,15 @@ const DashboardVendas = ({ salesData, userData }) => {
         </div>
       </div>
 
-      {/* ========== SEÃ‡ÃƒO: ANÃLISE DE PRODUTOS ========== */}
+      {/* ========== SEÇÃO: ANÁLISE DE PRODUTOS ========== */}
       <div className="bg-gradient-to-br from-purple-50 to-white rounded-2xl p-6 border-2 border-purple-100">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
             <Package className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-gray-900">AnÃ¡lise de Produtos</h3>
-            <p className="text-gray-600">Performance, mix de vendas e evoluÃ§Ã£o de preÃ§os</p>
+            <h3 className="text-2xl font-bold text-gray-900">Análise de Produtos</h3>
+            <p className="text-gray-600">Performance, mix de vendas e evolução de preços</p>
           </div>
         </div>
 
@@ -852,7 +822,7 @@ const DashboardVendas = ({ salesData, userData }) => {
             <p className="text-2xl font-bold text-gray-900">
               {productAnalytics.avgPrice.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </p>
-            <p className="text-sm text-gray-600">PreÃ§o MÃ©dio</p>
+            <p className="text-sm text-gray-600">Preço Médio</p>
           </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -908,7 +878,7 @@ const DashboardVendas = ({ salesData, userData }) => {
         {/* Price Evolution */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-bold text-gray-900">EvoluÃ§Ã£o do PreÃ§o MÃ©dio</h4>
+            <h4 className="text-lg font-bold text-gray-900">Evolução do Preço Médio</h4>
             <div className="flex items-center gap-2">
               <label htmlFor="priceYear" className="text-sm text-gray-600">Ano:</label>
               <select
@@ -925,32 +895,27 @@ const DashboardVendas = ({ salesData, userData }) => {
           </div>
           
           <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={priceEvolutionChartData}>
+            <LineChart data={productAnalytics.priceEvolution}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="mes" />
               <YAxis />
               <Tooltip formatter={(value) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
               <Legend />
-              <Line type="monotone" dataKey="preco" stroke="#25BE8C" strokeWidth={2} name="Preço Médio"  hide={evolutionMode === 'produto'} />
-              {evolutionMode === 'produto' && (
-                selectedProducts.map((p, idx) => (
-                  <Line key={p} type="monotone" dataKey={p} stroke={COLORS[idx % COLORS.length]} strokeWidth={2} name={p} />
-                ))
-              )}
+              <Line type="monotone" dataKey="preco" stroke="#25BE8C" strokeWidth={2} name="Preço Médio" />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* ========== SEÃ‡ÃƒO: ANÃLISE DE REGIÃ•ES ========== */}
+      {/* ========== SEÇÃO: ANÁLISE DE REGIÕES ========== */}
       <div className="bg-gradient-to-br from-green-50 to-white rounded-2xl p-6 border-2 border-green-100">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 bg-[#25BE8C] rounded-xl flex items-center justify-center">
             <MapPin className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-gray-900">AnÃ¡lise de RegiÃµes</h3>
-            <p className="text-gray-600">Faturamento geogrÃ¡fico e crescimento regional</p>
+            <h3 className="text-2xl font-bold text-gray-900">Análise de Regiões</h3>
+            <p className="text-gray-600">Faturamento geográfico e crescimento regional</p>
           </div>
         </div>
 
@@ -992,8 +957,8 @@ const DashboardVendas = ({ salesData, userData }) => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">PosiÃ§Ã£o</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">RegiÃ£o</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Posição</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Região</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Faturamento</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Crescimento</th>
                 </tr>

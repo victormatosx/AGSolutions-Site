@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { Package, DollarSign, TrendingUp, Users, BarChart3, PieChartIcon } from "lucide-react"
@@ -19,6 +19,11 @@ import {
 
 const DashboardProdutos = ({ salesData, userData }) => {
   const [period, setPeriod] = useState("month")
+  // Ano selecionado para EvoluÃ§Ã£o de PreÃ§o MÃ©dio
+  const [priceYear, setPriceYear] = useState(new Date().getFullYear())
+  // Modo de evolução: geral vs por produto; seleção múltipla
+  const [evolutionMode, setEvolutionMode] = useState('geral')
+  const [selectedProducts, setSelectedProducts] = useState([])
   const [analytics, setAnalytics] = useState({
     totalProducts: 0,
     totalRevenue: 0,
@@ -60,46 +65,57 @@ const DashboardProdutos = ({ salesData, userData }) => {
       const saleDate = new Date(sale.dataPedido || sale.date || sale.criadoEm)
       const monthKey = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, "0")}`
 
-      if (sale.produtos) {
-        Object.values(sale.produtos).forEach((product) => {
-          const productName = product.nome || product.name || "Produto sem nome"
-          const quantity = Number(product.quantidade) || 0
-          const price = Number(product.preco) || Number(product.price) || 0
-          const revenue = quantity * price
-          const clientId = sale.clientId || sale.clienteId
+      // Suporta 'itens' (array/obj), 'items' e fallback 'produtos'
+      const itemsArr = Array.isArray(sale?.itens)
+        ? sale.itens
+        : sale?.itens && typeof sale.itens === 'object'
+          ? Object.values(sale.itens)
+          : Array.isArray(sale?.items)
+            ? sale.items
+            : sale?.items && typeof sale.items === 'object'
+              ? Object.values(sale.items)
+              : sale?.produtos && typeof sale.produtos === 'object'
+                ? Object.values(sale.produtos)
+                : []
 
-          if (!productMetrics[productName]) {
-            productMetrics[productName] = {
-              name: productName,
-              revenue: 0,
-              quantity: 0,
-              avgPrice: 0,
-              priceSum: 0,
-              priceCount: 0,
-            }
-          }
+      itemsArr.forEach((item) => {
+        const productName = (item?.tipoProduto || item?.produto || item?.name || "Produto sem nome").toString()
+        const quantity = Number(item?.quantidade ?? item?.quantity ?? item?.qty ?? 0) || 0
+        const price = Number(item?.preco ?? item?.price ?? item?.valorUnitario ?? 0) || 0
+        const revenue = quantity * price
+        const clientId = sale.clientId || sale.clienteId
 
-          productMetrics[productName].revenue += revenue
-          productMetrics[productName].quantity += quantity
-          productMetrics[productName].priceSum += price
-          productMetrics[productName].priceCount += 1
+        if (!productMetrics[productName]) {
+          productMetrics[productName] = {
+            name: productName,
+            revenue: 0,
+            quantity: 0,
+            avgPrice: 0,
+            priceSum: 0,
+            priceCount: 0,
+          }
+        }
 
-          // Price history
-          if (!productPriceHistory[monthKey]) {
-            productPriceHistory[monthKey] = { month: monthKey, totalPrice: 0, count: 0 }
-          }
-          productPriceHistory[monthKey].totalPrice += price
-          productPriceHistory[monthKey].count += 1
+        productMetrics[productName].revenue += revenue
+        productMetrics[productName].quantity += quantity
+        productMetrics[productName].priceSum += price
+        productMetrics[productName].priceCount += 1
 
-          // Product clients
-          if (!productClients[productName]) {
-            productClients[productName] = new Set()
-          }
-          if (clientId) {
-            productClients[productName].add(clientId)
-          }
-        })
-      }
+        // Price history
+        if (!productPriceHistory[monthKey]) {
+          productPriceHistory[monthKey] = { month: monthKey, totalPrice: 0, count: 0 }
+        }
+        productPriceHistory[monthKey].totalPrice += price
+        productPriceHistory[monthKey].count += 1
+
+        // Product clients
+        if (!productClients[productName]) {
+          productClients[productName] = new Set()
+        }
+        if (clientId) {
+          productClients[productName].add(clientId)
+        }
+      })
     })
 
     // Calculate metrics
@@ -112,20 +128,49 @@ const DashboardProdutos = ({ salesData, userData }) => {
     const avgPrice =
       Object.values(productMetrics).reduce((sum, p) => sum + p.avgPrice, 0) / Object.keys(productMetrics).length || 0
 
-    // Top product
+    // Top product (por quantidade vendida)
     const sortedByRevenue = Object.values(productMetrics).sort((a, b) => b.revenue - a.revenue)
-    const topProduct = sortedByRevenue[0] || { name: "-", revenue: 0, quantity: 0 }
+    const sortedByQuantity = Object.values(productMetrics).sort((a, b) => b.quantity - a.quantity)
+    const topProduct = sortedByQuantity[0] || { name: "-", revenue: 0, quantity: 0 }
 
     // Revenue by product (top 20)
     const revenueByProduct = sortedByRevenue.slice(0, 20)
 
-    // Price evolution
-    const priceEvolution = Object.values(productPriceHistory)
-      .map((item) => ({
-        month: item.month,
-        avgPrice: item.count > 0 ? item.totalPrice / item.count : 0,
-      }))
-      .sort((a, b) => a.month.localeCompare(b.month))
+    // Price evolution por ano selecionado (Jan..Dez)
+    const monthsLabels = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"]
+    // Construir histÃ³rico de preÃ§os com TODAS as vendas (nÃ£o sÃ³ do perÃ­odo)
+    const priceHistoryAll = {}
+    ;(salesData || []).forEach((sale) => {
+      if (!sale || sale.status?.toLowerCase() === 'cancelada') return
+      const saleDate = new Date(sale.dataPedido || sale.date || sale.criadoEm)
+      if (isNaN(saleDate.getTime())) return
+      const y = saleDate.getFullYear()
+      const m = String(saleDate.getMonth() + 1).padStart(2, '0')
+      const key = `${y}-${m}`
+      const itemsArr = Array.isArray(sale?.itens)
+        ? sale.itens
+        : sale?.itens && typeof sale.itens === 'object'
+          ? Object.values(sale.itens)
+          : Array.isArray(sale?.items)
+            ? sale.items
+            : sale?.items && typeof sale.items === 'object'
+              ? Object.values(sale.items)
+              : sale?.produtos && typeof sale.produtos === 'object'
+                ? Object.values(sale.produtos)
+                : []
+      itemsArr.forEach((item) => {
+        const price = Number(item?.preco ?? item?.price ?? item?.valorUnitario ?? 0) || 0
+        if (!priceHistoryAll[key]) priceHistoryAll[key] = { total: 0, count: 0 }
+        priceHistoryAll[key].total += price
+        priceHistoryAll[key].count += 1
+      })
+    })
+    const priceEvolution = monthsLabels.map((label, idx) => {
+      const key = `${priceYear}-${String(idx + 1).padStart(2,'0')}`
+      const rec = priceHistoryAll[key]
+      const avg = rec && rec.count > 0 ? rec.total / rec.count : 0
+      return { month: label, avgPrice: avg }
+    })
 
     // Product mix (pie chart)
     const COLORS = ["#25BE8C", "#2a9d8f", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#ec4899", "#14b8a6"]
@@ -161,19 +206,29 @@ const DashboardProdutos = ({ salesData, userData }) => {
 
     const previousProductMetrics = {}
     previousSales.forEach((sale) => {
-      if (sale.produtos) {
-        Object.values(sale.produtos).forEach((product) => {
-          const productName = product.nome || product.name || "Produto sem nome"
-          const quantity = Number(product.quantidade) || 0
-          const price = Number(product.preco) || Number(product.price) || 0
-          const revenue = quantity * price
+      const itemsArr = Array.isArray(sale?.itens)
+        ? sale.itens
+        : sale?.itens && typeof sale.itens === 'object'
+          ? Object.values(sale.itens)
+          : Array.isArray(sale?.items)
+            ? sale.items
+            : sale?.items && typeof sale.items === 'object'
+              ? Object.values(sale.items)
+              : sale?.produtos && typeof sale.produtos === 'object'
+                ? Object.values(sale.produtos)
+                : []
 
-          if (!previousProductMetrics[productName]) {
-            previousProductMetrics[productName] = { revenue: 0 }
-          }
-          previousProductMetrics[productName].revenue += revenue
-        })
-      }
+      itemsArr.forEach((item) => {
+        const productName = (item?.tipoProduto || item?.produto || item?.name || "Produto sem nome").toString()
+        const quantity = Number(item?.quantidade ?? item?.quantity ?? item?.qty ?? 0) || 0
+        const price = Number(item?.preco ?? item?.price ?? item?.valorUnitario ?? 0) || 0
+        const revenue = quantity * price
+
+        if (!previousProductMetrics[productName]) {
+          previousProductMetrics[productName] = { revenue: 0 }
+        }
+        previousProductMetrics[productName].revenue += revenue
+      })
     })
 
     const safraComparison = sortedByRevenue.slice(0, 10).map((product) => {
@@ -203,7 +258,18 @@ const DashboardProdutos = ({ salesData, userData }) => {
       topClientsByProduct,
       safraComparison,
     })
-  }, [salesData, period])
+  }, [salesData, period, priceYear])
+
+  // Anos disponÃ­veis nas vendas (para o seletor do grÃ¡fico de preÃ§o)
+  const priceYears = useMemo(() => {
+    if (!salesData || salesData.length === 0) return []
+    const yrs = new Set()
+    salesData.forEach((s) => {
+      const d = new Date(s.dataPedido || s.date || s.criadoEm)
+      if (!isNaN(d.getTime())) yrs.add(d.getFullYear())
+    })
+    return Array.from(yrs).sort((a, b) => a - b)
+  }, [salesData])
 
   const indicators = [
     {
@@ -221,7 +287,7 @@ const DashboardProdutos = ({ salesData, userData }) => {
       bgColor: "bg-green-50",
     },
     {
-      title: "Preço Médio",
+      title: "PreÃ§o MÃ©dio",
       value: analytics.avgPrice.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
       icon: TrendingUp,
       color: "text-blue-600",
@@ -243,7 +309,7 @@ const DashboardProdutos = ({ salesData, userData }) => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-1">Dashboard de Produtos</h2>
-          <p className="text-gray-600">Análise de performance, mix de vendas e evolução de preços</p>
+          <p className="text-gray-600">AnÃ¡lise de performance, mix de vendas e evoluÃ§Ã£o de preÃ§os</p>
         </div>
 
         <div className="flex gap-2">
@@ -253,7 +319,7 @@ const DashboardProdutos = ({ salesData, userData }) => {
               period === "month" ? "bg-[#25BE8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            Mês
+            MÃªs
           </button>
           <button
             onClick={() => setPeriod("quarter")}
@@ -323,8 +389,21 @@ const DashboardProdutos = ({ salesData, userData }) => {
           <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-blue-600" />
-              Evolução do Preço Médio
+              EvoluÃ§Ã£o do PreÃ§o MÃ©dio
             </h3>
+            <div className="flex items-center justify-end mb-2">
+              <label htmlFor="priceYearProdutos" className="text-sm text-gray-600 mr-2">Ano:</label>
+              <select
+                id="priceYearProdutos"
+                value={priceYear}
+                onChange={(e) => setPriceYear(Number(e.target.value))}
+                className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                {priceYears.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={analytics.priceEvolution}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -436,7 +515,7 @@ const DashboardProdutos = ({ salesData, userData }) => {
                           isPositive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {isPositive ? "↑" : "↓"} {Math.abs(Number(item.growth))}%
+                        {isPositive ? "â†‘" : "â†“"} {Math.abs(Number(item.growth))}%
                       </span>
                       <span className="text-xs text-gray-500">{isPositive ? "Crescimento" : "Queda"}</span>
                     </div>
