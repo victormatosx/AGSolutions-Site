@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { DollarSign, Users, TrendingUp, Package, MapPin, AlertCircle, Calendar, Award } from "lucide-react"
 import { ref, onValue } from "firebase/database"
 import { database } from "../firebase/firebase"
@@ -23,7 +23,7 @@ import {
 const DashboardVendas = ({ salesData, userData }) => {
   const [totalClients, setTotalClients] = useState(0)
   const [clients, setClients] = useState([])
-  const [period, setPeriod] = useState("month") // month, quarter, year
+  const [period, setPeriod] = useState("all") // all, month, quarter, year
   // Paginação para clientes inativos
   const [inactivePage, setInactivePage] = useState(1)
 
@@ -71,13 +71,71 @@ const DashboardVendas = ({ salesData, userData }) => {
     return () => unsubscribe()
   }, [userData])
 
+  // Helper para obter o timestamp (ms) de uma venda
+  const getSaleTimestampMs = (sale) => {
+    if (!sale) return NaN
+    const fromNumberLike = (val) => {
+      if (val == null || val === "") return NaN
+      if (typeof val === "number") {
+        const s = String(val)
+        return s.length <= 10 ? val * 1000 : val
+      }
+      const str = String(val).trim()
+      let ms = Date.parse(str)
+      if (!isNaN(ms)) return ms
+      ms = Date.parse(str.replace(" ", "T"))
+      return isNaN(ms) ? NaN : ms
+    }
+
+    // dataPedido pode vir como DD/MM/YYYY (opcionalmente com hora) ou timestamp/ISO
+    if (sale.dataPedido != null && sale.dataPedido !== "") {
+      const val = sale.dataPedido
+      if (typeof val === "number") return fromNumberLike(val)
+      const str = String(val).trim()
+      const brMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(.*))?$/)
+      if (brMatch) {
+        const [, d, m, y, time] = brMatch
+        const iso = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}${time ? "T" + time : "T00:00:00"}`
+        const ms = Date.parse(iso)
+        if (!isNaN(ms)) return ms
+      }
+      const parsed = fromNumberLike(str)
+      if (!isNaN(parsed)) return parsed
+    }
+
+    // Fallbacks comuns
+    const candidates = [sale.date, sale.criadoEm, sale.createdAt, sale.emissao]
+    for (const c of candidates) {
+      const ms = fromNumberLike(c)
+      if (!isNaN(ms)) return ms
+    }
+
+    return NaN
+  }
+
+  // Aplica filtro de período nas vendas (últimos 30/90/365 dias ou todo período)
+  const filteredSales = useMemo(() => {
+    if (!salesData || salesData.length === 0) return []
+    const valid = salesData.filter((sale) => sale && sale.status?.toLowerCase() !== "cancelada")
+    if (period === "all") return valid
+
+    const days = period === "month" ? 30 : period === "quarter" ? 90 : period === "year" ? 365 : 0
+    if (!days) return valid
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000
+    return valid.filter((s) => {
+      const ms = getSaleTimestampMs(s)
+      return !isNaN(ms) && ms >= cutoff
+    })
+  }, [salesData, period])
+
   const calculateClientAnalytics = () => {
     // Permite calcular mesmo sem a lista de clientes cadastrados (fallback para nome na venda)
-    if (!salesData || salesData.length === 0) {
+    if (!filteredSales || filteredSales.length === 0) {
       return {
         totalRevenue: 0,
         activeClients: 0,
         avgTicket: 0,
+        totalSales: 0,
         newClientsPercent: 0,
         abcCurve: [],
         topClients: [],
@@ -87,7 +145,7 @@ const DashboardVendas = ({ salesData, userData }) => {
       }
     }
 
-    const validSales = salesData.filter((sale) => sale && sale.status?.toLowerCase() !== "cancelada")
+    const validSales = filteredSales
     const totalRevenue = validSales.reduce((sum, sale) => sum + (Number(sale.valorTotal) || Number(sale.total) || 0), 0)
     const totalSales = validSales.length
 
@@ -203,7 +261,7 @@ const DashboardVendas = ({ salesData, userData }) => {
     // Last purchases (5 últimas vendas), ordenadas por dataPedido
     const lastPurchases = validSales
       .map((sale) => {
-        const ms = parseDataPedidoMs(sale.dataPedido)
+        const ms = getSaleTimestampMs(sale)
         const total = Number(sale.valorTotal) || Number(sale.total) || 0
         let clientName = null
         if (typeof sale?.cliente === "string" && sale.cliente.trim() !== "") clientName = sale.cliente
@@ -241,7 +299,7 @@ const DashboardVendas = ({ salesData, userData }) => {
   }
 
   const calculateProductAnalytics = () => {
-    if (!salesData || salesData.length === 0) {
+    if (!filteredSales || filteredSales.length === 0) {
       return {
         totalProducts: 0,
         totalRevenue: 0,
@@ -254,7 +312,7 @@ const DashboardVendas = ({ salesData, userData }) => {
       }
     }
 
-    const validSales = salesData.filter((sale) => sale && sale.status?.toLowerCase() !== "cancelada")
+    const validSales = filteredSales
     const productRevenue = {}
     const productQuantity = {}
     const productPrices = {}
@@ -326,7 +384,7 @@ const DashboardVendas = ({ salesData, userData }) => {
   }
 
   const calculateRegionAnalytics = () => {
-    if (!salesData || salesData.length === 0 || !clients || clients.length === 0) {
+    if (!filteredSales || filteredSales.length === 0 || !clients || clients.length === 0) {
       return {
         revenueByRegion: [],
         clientsByRegion: [],
@@ -336,7 +394,7 @@ const DashboardVendas = ({ salesData, userData }) => {
       }
     }
 
-    const validSales = salesData.filter((sale) => sale && sale.status?.toLowerCase() !== "cancelada")
+    const validSales = filteredSales
     const regionRevenue = {}
     const regionClients = {}
 
@@ -416,7 +474,7 @@ const DashboardVendas = ({ salesData, userData }) => {
         <div className="mt-4 md:mt-0 flex gap-2">
           <button
             onClick={() => setPeriod("month")}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`order-2 px-4 py-2 rounded-lg font-medium transition-colors ${
               period === "month" ? "bg-[#25BE8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
@@ -424,7 +482,7 @@ const DashboardVendas = ({ salesData, userData }) => {
           </button>
           <button
             onClick={() => setPeriod("quarter")}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`order-3 px-4 py-2 rounded-lg font-medium transition-colors ${
               period === "quarter" ? "bg-[#25BE8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
@@ -432,11 +490,19 @@ const DashboardVendas = ({ salesData, userData }) => {
           </button>
           <button
             onClick={() => setPeriod("year")}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`order-4 px-4 py-2 rounded-lg font-medium transition-colors ${
               period === "year" ? "bg-[#25BE8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
             Ano
+          </button>
+          <button
+            onClick={() => setPeriod("all")}
+            className={`order-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+              period === "all" ? "bg-[#25BE8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            Todo Período
           </button>
         </div>
       </div>
@@ -466,7 +532,7 @@ const DashboardVendas = ({ salesData, userData }) => {
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
-              <DollarSign className="w-5 h-5 text-green-600" />
+              <Award className="w-5 h-5 text-orange-600" />
               <span className="text-xs font-medium text-green-600">+12%</span>
             </div>
             <p className="text-2xl font-bold text-gray-900">
@@ -790,18 +856,3 @@ const DashboardVendas = ({ salesData, userData }) => {
 }
 
 export default DashboardVendas
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
