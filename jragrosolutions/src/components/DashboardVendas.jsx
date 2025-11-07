@@ -1,9 +1,7 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useMemo } from "react"
 import { DollarSign, Users, TrendingUp, Package, MapPin, AlertCircle, Calendar, Award } from "lucide-react"
-import { ref, onValue } from "firebase/database"
-import { database } from "../firebase/firebase"
 import {
   BarChart,
   Bar,
@@ -22,60 +20,34 @@ import {
 
 const DashboardVendas = ({ salesData, userData }) => {
   const [totalClients, setTotalClients] = useState(0)
-  const [clients, setClients] = useState([])
+  const [clients, setClients] = useState([
+    { id: "c1", name: "JoÃ£o Silva", city: "SÃ£o Paulo", state: "SP" },
+    { id: "c2", name: "Maria Santos", city: "Rio de Janeiro", state: "RJ" },
+    { id: "c3", name: "Pedro Costa", city: "Belo Horizonte", state: "MG" },
+    { id: "c4", name: "Ana Paula", city: "Curitiba", state: "PR" },
+    { id: "c5", name: "Carlos Oliveira", city: "Porto Alegre", state: "RS" },
+    { id: "c6", name: "Fernanda Lima", city: "Salvador", state: "BA" },
+  ])
   const [period, setPeriod] = useState("all") // all, month, quarter, year
-  // Paginação para clientes inativos
+  // MÃ©trica do grÃ¡fico ABC de clientes: 'receita' ou 'ticket'
+  const [abcMetric, setAbcMetric] = useState("receita")
+  // Ano selecionado para EvoluÃ§Ã£o de PreÃ§o MÃ©dio
+  const [priceYear, setPriceYear] = useState(new Date().getFullYear())
+  // PaginaÃ§Ã£o para clientes inativos
   const [inactivePage, setInactivePage] = useState(1)
+  // Modo do grÃ¡fico de evoluÃ§Ã£o de preÃ§o: 'geral' ou 'produto'
+  const [evolutionMode, setEvolutionMode] = useState('geral')
+  const [selectedProducts, setSelectedProducts] = useState([])
 
   useEffect(() => {
-    if (!userData?.propriedade) return
-
-    const clientsRef = ref(database, `propriedades/${userData.propriedade}/clientes`)
-
-    const unsubscribe = onValue(clientsRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const clientsData = []
-        const clientsObj = snapshot.val()
-
-        if (Array.isArray(clientsObj)) {
-          clientsObj.forEach((client, index) => {
-            if (client) {
-              clientsData.push({
-                id: index.toString(),
-                name: client.Nome || client.nome || client.name || `Cliente ${index}`,
-                city: client.Cidade || client.cidade || client.city || "Não informado",
-                state: client.Estado || client.estado || client.state || "Não informado",
-                ...client,
-              })
-            }
-          })
-        } else {
-          Object.entries(clientsObj).forEach(([id, client]) => {
-            if (client) {
-              clientsData.push({
-                id,
-                name: client.Nome || client.nome || client.name || `Cliente ${id}`,
-                city: client.Cidade || client.cidade || client.city || "Não informado",
-                state: client.Estado || client.estado || client.state || "Não informado",
-                ...client,
-              })
-            }
-          })
-        }
-
-        setClients(clientsData)
-        setTotalClients(clientsData.length)
-      }
-    })
-
-    return () => unsubscribe()
-  }, [userData])
+    setTotalClients(clients.length)
+  }, [clients])
 
   // Helper para obter o timestamp (ms) de uma venda
   const getSaleTimestampMs = (sale) => {
-    if (!sale) return NaN
+    if (!sale) return Number.NaN
     const fromNumberLike = (val) => {
-      if (val == null || val === "") return NaN
+      if (val == null || val === "") return Number.NaN
       if (typeof val === "number") {
         const s = String(val)
         return s.length <= 10 ? val * 1000 : val
@@ -84,7 +56,7 @@ const DashboardVendas = ({ salesData, userData }) => {
       let ms = Date.parse(str)
       if (!isNaN(ms)) return ms
       ms = Date.parse(str.replace(" ", "T"))
-      return isNaN(ms) ? NaN : ms
+      return isNaN(ms) ? Number.NaN : ms
     }
 
     // dataPedido pode vir como DD/MM/YYYY (opcionalmente com hora) ou timestamp/ISO
@@ -110,10 +82,10 @@ const DashboardVendas = ({ salesData, userData }) => {
       if (!isNaN(ms)) return ms
     }
 
-    return NaN
+    return Number.NaN
   }
 
-  // Aplica filtro de período nas vendas (últimos 30/90/365 dias ou todo período)
+  // Aplica filtro de perÃ­odo nas vendas (Ãºltimos 30/90/365 dias ou todo perÃ­odo)
   const filteredSales = useMemo(() => {
     if (!salesData || salesData.length === 0) return []
     const valid = salesData.filter((sale) => sale && sale.status?.toLowerCase() !== "cancelada")
@@ -128,6 +100,17 @@ const DashboardVendas = ({ salesData, userData }) => {
     })
   }, [salesData, period])
 
+  // Anos disponÃ­veis para o seletor do grÃ¡fico EvoluÃ§Ã£o do PreÃ§o
+  const priceYears = useMemo(() => {
+    if (!salesData || salesData.length === 0) return []
+    const yrs = new Set()
+    salesData.forEach((s) => {
+      const ms = getSaleTimestampMs(s)
+      if (!isNaN(ms)) yrs.add(new Date(ms).getFullYear())
+    })
+    return Array.from(yrs).sort((a, b) => a - b)
+  }, [salesData])
+
   const calculateClientAnalytics = () => {
     // Permite calcular mesmo sem a lista de clientes cadastrados (fallback para nome na venda)
     if (!filteredSales || filteredSales.length === 0) {
@@ -138,6 +121,8 @@ const DashboardVendas = ({ salesData, userData }) => {
         totalSales: 0,
         newClientsPercent: 0,
         abcCurve: [],
+        abcCurveRevenue: [],
+        abcCurveTicket: [],
         topClients: [],
         inactiveClients: [],
         clientProducts: [],
@@ -172,7 +157,7 @@ const DashboardVendas = ({ salesData, userData }) => {
 
       if (!key) return
 
-      // nome de exibição: se ID, tenta achar no cadastro; senão usa o próprio nome
+      // nome de exibiÃ§Ã£o: se ID, tenta achar no cadastro; senÃ£o usa o prÃ³prio nome
       if (!(key in nameByKey)) {
         if (clientId) {
           const found = clients?.find?.((c) => c.id === String(clientId))
@@ -193,30 +178,43 @@ const DashboardVendas = ({ salesData, userData }) => {
     })
 
     const activeClients = Object.keys(clientRevenue).length
-    // Ticket Médio por venda = Receita Total / Número de Vendas
+    // Ticket MÃ©dio por venda = Receita Total / NÃºmero de Vendas
     const avgTicket = totalSales > 0 ? totalRevenue / totalSales : 0
 
-    // ABC Curve (top 20% clients generating 80% revenue)
-    const sortedClients = Object.entries(clientRevenue)
-      .sort(([, a], [, b]) => b - a)
-      .map(([key, revenue]) => ({
-        key,
-        name: nameByKey[key] || "Cliente",
-        revenue,
-      }))
+    // Base agregada por cliente
+    const clientAggregates = Object.entries(clientRevenue).map(([key, revenue]) => {
+      const name = nameByKey[key] || "Cliente"
+      const purchases = clientPurchaseCount[key] || 0
+      const ticketMedio = purchases > 0 ? revenue / purchases : 0
+      return { key, name, revenue, purchases, ticketMedio }
+    })
 
-    const abcCurve = sortedClients.slice(0, 10).map((client) => ({
-      name: client.name.length > 15 ? client.name.substring(0, 15) + "..." : client.name,
-      fullName: client.name,
-      receita: client.revenue,
-      purchases: clientPurchaseCount[client.key] || 0,
+    // OrdenaÃ§Ãµes e Top 10
+    const sortedByRevenue = [...clientAggregates].sort((a, b) => b.revenue - a.revenue)
+    const sortedByTicket = [...clientAggregates].sort((a, b) => b.ticketMedio - a.ticketMedio)
+
+    const abcCurveRevenue = sortedByRevenue.slice(0, 10).map((c) => ({
+      name: c.name.length > 15 ? c.name.substring(0, 15) + "..." : c.name,
+      fullName: c.name,
+      receita: c.revenue,
+      purchases: c.purchases,
     }))
 
-    // Top 10 clients
-    const topClients = sortedClients.slice(0, 10).map((client) => ({
-      name: client.name,
-      revenue: client.revenue,
-      purchases: clientPurchaseCount[client.key] || 0,
+    const abcCurveTicket = sortedByTicket.slice(0, 10).map((c) => ({
+      name: c.name.length > 15 ? c.name.substring(0, 15) + "..." : c.name,
+      fullName: c.name,
+      ticketMedio: c.ticketMedio,
+      purchases: c.purchases,
+    }))
+
+    // MantÃ©m compatibilidade: abcCurve padrÃ£o por receita
+    const abcCurve = abcCurveRevenue
+
+    // Top 10 clients (por receita)
+    const topClients = sortedByRevenue.slice(0, 10).map((c) => ({
+      name: c.name,
+      revenue: c.revenue,
+      purchases: c.purchases,
     }))
 
     // Inactive clients (no purchase in 90 days)
@@ -239,7 +237,7 @@ const DashboardVendas = ({ salesData, userData }) => {
 
     // Helper para parsear dataPedido (formato DD/MM/YYYY ou timestamps)
     const parseDataPedidoMs = (value) => {
-      if (value == null || value === "") return NaN
+      if (value == null || value === "") return Number.NaN
       if (typeof value === "number") {
         const s = String(value)
         return s.length <= 10 ? value * 1000 : value
@@ -250,15 +248,15 @@ const DashboardVendas = ({ salesData, userData }) => {
         const [, d, m, y, time] = brMatch
         const iso = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}${time ? "T" + time : "T00:00:00"}`
         const ms = Date.parse(iso)
-        return isNaN(ms) ? NaN : ms
+        return isNaN(ms) ? Number.NaN : ms
       }
       let ms = Date.parse(str)
       if (!isNaN(ms)) return ms
       ms = Date.parse(str.replace(" ", "T"))
-      return isNaN(ms) ? NaN : ms
+      return isNaN(ms) ? Number.NaN : ms
     }
 
-    // Last purchases (5 últimas vendas), ordenadas por dataPedido
+    // Last purchases (5 Ãºltimas vendas), ordenadas por dataPedido
     const lastPurchases = validSales
       .map((sale) => {
         const ms = getSaleTimestampMs(sale)
@@ -291,6 +289,8 @@ const DashboardVendas = ({ salesData, userData }) => {
       avgTicket,
       totalSales,
       abcCurve,
+      abcCurveRevenue,
+      abcCurveTicket,
       topClients,
       inactiveClients,
       clientProducts: [],
@@ -317,31 +317,51 @@ const DashboardVendas = ({ salesData, userData }) => {
     const productQuantity = {}
     const productPrices = {}
 
-    validSales.forEach((sale) => {
-      if (sale.items && Array.isArray(sale.items)) {
-        sale.items.forEach((item) => {
-          const productName = item.produto || item.product || "Produto"
-          const quantity = Number(item.quantidade) || Number(item.quantity) || 0
-          const price = Number(item.preco) || Number(item.price) || 0
-          const revenue = quantity * price
+    const iterateItems = (sale) => {
+      const itemsArr = Array.isArray(sale?.itens)
+        ? sale.itens
+        : sale?.itens && typeof sale.itens === 'object'
+          ? Object.values(sale.itens)
+          : Array.isArray(sale?.items)
+            ? sale.items
+            : sale?.items && typeof sale.items === 'object'
+              ? Object.values(sale.items)
+              : sale?.produtos && typeof sale.produtos === 'object'
+                ? Object.values(sale.produtos)
+                : []
+      itemsArr.forEach((item) => {
+        const productName = (item?.tipoProduto || item?.produto || item?.name || 'Produto').toString()
+        const quantity = Number(item?.quantidade ?? item?.quantity ?? item?.qty ?? 0) || 0
+        const price = Number(item?.preco ?? item?.price ?? item?.valorUnitario ?? 0) || 0
+        const revenue = quantity * price
 
-          productRevenue[productName] = (productRevenue[productName] || 0) + revenue
-          productQuantity[productName] = (productQuantity[productName] || 0) + quantity
+        productRevenue[productName] = (productRevenue[productName] || 0) + revenue
+        productQuantity[productName] = (productQuantity[productName] || 0) + quantity
 
-          if (!productPrices[productName]) {
-            productPrices[productName] = []
-          }
-          productPrices[productName].push(price)
-        })
-      }
-    })
+        if (!productPrices[productName]) {
+          productPrices[productName] = []
+        }
+        productPrices[productName].push(price)
+      })
+    }
+
+    validSales.forEach(iterateItems)
 
     const totalProducts = Object.keys(productRevenue).length
     const totalRevenue = Object.values(productRevenue).reduce((sum, rev) => sum + rev, 0)
-    const avgPrice = totalRevenue / Object.values(productQuantity).reduce((sum, qty) => sum + qty, 0) || 0
+    // PreÃ§o mÃ©dio por produto: mÃ©dia das mÃ©dias de cada produto (receita do produto / quantidade do produto)
+    const perProductAverages = Object.keys(productRevenue).map((p) => {
+      const qty = productQuantity[p] || 0
+      const rev = productRevenue[p] || 0
+      return qty > 0 ? rev / qty : 0
+    })
+    const avgPrice = perProductAverages.length > 0
+      ? perProductAverages.reduce((a, b) => a + b, 0) / perProductAverages.length
+      : 0
 
-    // Top product
-    const topProduct = Object.entries(productRevenue).sort(([, a], [, b]) => b - a)[0]?.[0] || "N/A"
+    // Mais vendido: produto com maior quantidade vendida (soma das unidades)
+    const topProduct = Object.entries(productQuantity)
+      .sort(([, aQty], [, bQty]) => bQty - aQty)[0]?.[0] || "N/A"
 
     // Revenue by product (top 20)
     const revenueByProduct = Object.entries(productRevenue)
@@ -361,15 +381,60 @@ const DashboardVendas = ({ salesData, userData }) => {
         value: revenue,
       }))
 
-    // Price evolution (mock data for now)
-    const priceEvolution = [
-      { mes: "Jan", preco: avgPrice * 0.9 },
-      { mes: "Fev", preco: avgPrice * 0.95 },
-      { mes: "Mar", preco: avgPrice * 1.0 },
-      { mes: "Abr", preco: avgPrice * 1.05 },
-      { mes: "Mai", preco: avgPrice * 1.02 },
-      { mes: "Jun", preco: avgPrice },
-    ]
+    // Price evolution (mÃ©dia de preÃ§os por mÃªs no ano selecionado)
+    const monthsLabels = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"]
+    const priceHistoryAll = {}
+    const priceHistoryByProduct = {}
+    ;(salesData || []).forEach((sale) => {
+      if (!sale || sale.status?.toLowerCase() === 'cancelada') return
+      const ms = getSaleTimestampMs(sale)
+      if (isNaN(ms)) return
+      const d = new Date(ms)
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const monthKey = `${y}-${m}`
+      const itemsArr = Array.isArray(sale?.itens)
+        ? sale.itens
+        : sale?.itens && typeof sale.itens === 'object'
+          ? Object.values(sale.itens)
+          : Array.isArray(sale?.items)
+            ? sale.items
+            : sale?.items && typeof sale.items === 'object'
+              ? Object.values(sale.items)
+              : sale?.produtos && typeof sale.produtos === 'object'
+                ? Object.values(sale.produtos)
+                : []
+      itemsArr.forEach((item) => {
+        const price = Number(item?.preco ?? item?.price ?? item?.valorUnitario ?? 0) || 0
+        if (!priceHistoryAll[monthKey]) priceHistoryAll[monthKey] = { total: 0, count: 0, year: y, month: Number(m) }
+        priceHistoryAll[monthKey].total += price
+        priceHistoryAll[monthKey].count += 1
+
+        const prodName = (item?.tipoProduto || item?.produto || item?.name || 'Produto').toString()
+        if (!priceHistoryByProduct[prodName]) priceHistoryByProduct[prodName] = {}
+        if (!priceHistoryByProduct[prodName][monthKey]) priceHistoryByProduct[prodName][monthKey] = { total: 0, count: 0 }
+        priceHistoryByProduct[prodName][monthKey].total += price
+        priceHistoryByProduct[prodName][monthKey].count += 1
+      })
+    })
+    const priceEvolution = monthsLabels.map((label, idx) => {
+      const key = `${priceYear}-${String(idx + 1).padStart(2,'0')}`
+      const rec = priceHistoryAll[key]
+      const avg = rec && rec.count > 0 ? rec.total / rec.count : 0
+      return { mes: label, preco: avg }
+    })
+
+    // EvoluÃ§Ã£o por produto (mÃ©dia mensal do preÃ§o unitÃ¡rio)
+    const productNames = Object.keys(priceHistoryByProduct)
+    const priceEvolutionByProduct = {}
+    productNames.forEach((p) => {
+      priceEvolutionByProduct[p] = monthsLabels.map((label, idx) => {
+        const key = `${priceYear}-${String(idx + 1).padStart(2,'0')}`
+        const rec = priceHistoryByProduct[p][key]
+        const avg = rec && rec.count > 0 ? rec.total / rec.count : 0
+        return { mes: label, preco: avg }
+      })
+    })
 
     return {
       totalProducts,
@@ -378,6 +443,8 @@ const DashboardVendas = ({ salesData, userData }) => {
       topProduct,
       revenueByProduct,
       priceEvolution,
+      priceEvolutionByProduct,
+      productNames,
       productMix,
       topClientsByProduct: [],
     }
@@ -401,7 +468,7 @@ const DashboardVendas = ({ salesData, userData }) => {
     validSales.forEach((sale) => {
       const clientId = sale.clientId || sale.clienteId
       const client = clients.find((c) => c.id === clientId)
-      const region = client?.state || "Não informado"
+      const region = client?.state || "NÃ£o informado"
 
       const revenue = Number(sale.valorTotal) || Number(sale.total) || 0
       regionRevenue[region] = (regionRevenue[region] || 0) + revenue
@@ -440,12 +507,12 @@ const DashboardVendas = ({ salesData, userData }) => {
       clientsByRegion,
       avgTicketByRegion,
       topRegions,
-      topProductsByRegion: [],
+      topProductsByProductByRegion: [],
     }
   }
 
   const clientAnalytics = calculateClientAnalytics()
-  // Ajusta página quando a lista muda
+  // Ajusta pÃ¡gina quando a lista muda
   useEffect(() => {
     const total = clientAnalytics?.inactiveClients?.length || 0
     const pages = Math.max(1, Math.ceil(total / 5))
@@ -455,6 +522,22 @@ const DashboardVendas = ({ salesData, userData }) => {
   const regionAnalytics = calculateRegionAnalytics()
 
   const COLORS = ["#25BE8C", "#2a9d8f", "#3b82f6", "#8b5cf6", "#f59e0b"]
+  // Dados do grÃ¡fico de evoluÃ§Ã£o conforme modo/seleÃ§Ã£o
+  const priceEvolutionChartData = useMemo(() => {
+    if (evolutionMode === 'produto') {
+      const months = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"]
+      const data = months.map((mes, idx) => {
+        const row = { mes }
+        selectedProducts.forEach((p) => {
+          const serie = productAnalytics.priceEvolutionByProduct?.[p]
+          row[p] = Array.isArray(serie) ? (serie[idx]?.preco ?? 0) : 0
+        })
+        return row
+      })
+      return data
+    }
+    return productAnalytics.priceEvolution
+  }, [evolutionMode, selectedProducts, productAnalytics.priceEvolution, productAnalytics.priceEvolutionByProduct])
   const INACTIVE_PAGE_SIZE = 5
   const inactiveTotal = clientAnalytics?.inactiveClients?.length || 0
   const inactiveTotalPages = Math.max(1, Math.ceil(inactiveTotal / INACTIVE_PAGE_SIZE))
@@ -467,8 +550,8 @@ const DashboardVendas = ({ salesData, userData }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Analítico de Vendas</h2>
-          <p className="text-gray-600">Análise completa de clientes, produtos e regiões</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Dashboard AnalÃ­tico de Vendas</h2>
+          <p className="text-gray-600">AnÃ¡lise completa de clientes, produtos e regiÃµes</p>
         </div>
 
         <div className="mt-4 md:mt-0 flex gap-2">
@@ -478,7 +561,7 @@ const DashboardVendas = ({ salesData, userData }) => {
               period === "month" ? "bg-[#25BE8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            Mês
+            MÃªs
           </button>
           <button
             onClick={() => setPeriod("quarter")}
@@ -502,19 +585,19 @@ const DashboardVendas = ({ salesData, userData }) => {
               period === "all" ? "bg-[#25BE8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            Todo Período
+            Todo PerÃ­odo
           </button>
         </div>
       </div>
 
-      {/* ========== SEÇÃO: ANÁLISE DE CLIENTES ========== */}
+      {/* ========== SEÃ‡ÃƒO: ANÃLISE DE CLIENTES ========== */}
       <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-6 border-2 border-blue-100">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
             <Users className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-gray-900">Análise de Clientes</h3>
+            <h3 className="text-2xl font-bold text-gray-900">AnÃ¡lise de Clientes</h3>
             <p className="text-gray-600">Curva ABC, ranking e comportamento de compra</p>
           </div>
         </div>
@@ -529,6 +612,44 @@ const DashboardVendas = ({ salesData, userData }) => {
             <p className="text-2xl font-bold text-gray-900">{clientAnalytics.activeClients}</p>
             <p className="text-sm text-gray-600">Clientes Ativos</p>
           </div>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center gap-2">
+              <label htmlFor="evolutionMode" className="text-sm text-gray-600">Modo:</label>
+              <select
+                id="evolutionMode"
+                value={evolutionMode}
+                onChange={(e) => setEvolutionMode(e.target.value)}
+                className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="geral">Geral</option>
+                <option value="produto">Por Produto</option>
+              </select>
+            </div>
+            {evolutionMode === 'produto' && (
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-600">Produtos:</label>
+                <select
+                  multiple
+                  value={selectedProducts}
+                  onChange={(e) => setSelectedProducts(Array.from(e.target.selectedOptions, (o) => o.value))}
+                  className="text-sm border border-gray-300 rounded-md px-2 py-1 max-w-full"
+                  size={4}
+                >
+                  {(productAnalytics.productNames || []).map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <Award className="w-5 h-5 text-orange-600" />
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{clientAnalytics.totalSales}</p>
+            <p className="text-sm text-gray-600">NÃºmero de Vendas</p>
+          </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
@@ -538,7 +659,7 @@ const DashboardVendas = ({ salesData, userData }) => {
             <p className="text-2xl font-bold text-gray-900">
               {clientAnalytics.avgTicket.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </p>
-            <p className="text-sm text-gray-600">Ticket Médio</p>
+            <p className="text-sm text-gray-600">Ticket MÃ©dio</p>
           </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -551,23 +672,34 @@ const DashboardVendas = ({ salesData, userData }) => {
             </p>
             <p className="text-sm text-gray-600">Receita Total</p>
           </div>
-
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <Award className="w-5 h-5 text-orange-600" />
-            </div>
-            <p className="text-2xl font-bold text-gray-900">{clientAnalytics.totalSales}</p>
-            <p className="text-sm text-gray-600">Número de Vendas</p>
-          </div>
         </div>
 
         {/* Client Charts */}
         <div className="grid grid-cols-1 gap-6">
           {/* ABC Curve - ocupa largura total */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h4 className="text-lg font-bold text-gray-900 mb-4">Curva ABC de Clientes (Top 10)</h4>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-bold text-gray-900">Curva ABC de Clientes (Top 10)</h4>
+              <div className="flex items-center gap-2">
+                <label htmlFor="abcMetric" className="text-sm text-gray-600">
+                  MÃ©trica:
+                </label>
+                <select
+                  id="abcMetric"
+                  value={abcMetric}
+                  onChange={(e) => setAbcMetric(e.target.value)}
+                  className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="receita">Receita Total</option>
+                  <option value="ticket">Ticket MÃ©dio por Compra</option>
+                </select>
+              </div>
+            </div>
             <ResponsiveContainer width="100%" height={360}>
-              <BarChart data={clientAnalytics.abcCurve} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
+              <BarChart
+                data={abcMetric === "ticket" ? clientAnalytics.abcCurveTicket : clientAnalytics.abcCurveRevenue}
+                margin={{ top: 10, right: 30, left: 0, bottom: 10 }}
+              >
                 <defs>
                   <linearGradient id="abcGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#34d399" stopOpacity={0.9} />
@@ -585,10 +717,16 @@ const DashboardVendas = ({ salesData, userData }) => {
                   axisLine={{ stroke: "#e5e7eb" }}
                 />
                 <YAxis
-                  domain={[0, 5000000]}
-                  ticks={[0, 500000, 1000000, 1500000, 2000000, 2500000, 3000000, 3500000, 4000000, 4500000, 5000000]}
+                  domain={abcMetric === "ticket" ? [0, 1000000] : [0, 5000000]}
+                  ticks={
+                    abcMetric === "ticket"
+                      ? [100000, 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000]
+                      : [0, 500000, 1000000, 1500000, 2000000, 2500000, 3000000, 3500000, 4000000, 4500000, 5000000]
+                  }
                   width={100}
-                  tickFormatter={(v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })}
+                  tickFormatter={(v) =>
+                    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })
+                  }
                   tick={{ fontSize: 12 }}
                   tickLine={false}
                   axisLine={{ stroke: "#e5e7eb" }}
@@ -599,15 +737,19 @@ const DashboardVendas = ({ salesData, userData }) => {
                     const p = payload && payload[0]
                     if (p && p.payload) {
                       const name = p.payload.fullName || label
-                      const vendas = typeof p.payload.purchases === 'number' ? p.payload.purchases : undefined
+                      const vendas = typeof p.payload.purchases === "number" ? p.payload.purchases : undefined
                       return vendas != null ? `${name} - ${vendas} vendas` : name
                     }
                     return label
                   }}
                   contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb" }}
                 />
-                {/* Removido LabelList para evitar sobreposição de valores grandes; usar Tooltip */}
-                <Bar dataKey="receita" fill="url(#abcGradient)" radius={[8, 8, 0, 0]} />
+                {/* Removido LabelList para evitar sobreposiÃ§Ã£o de valores grandes; usar Tooltip */}
+                <Bar
+                  dataKey={abcMetric === "ticket" ? "ticketMedio" : "receita"}
+                  fill="url(#abcGradient)"
+                  radius={[8, 8, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -631,11 +773,13 @@ const DashboardVendas = ({ salesData, userData }) => {
                     className="grid grid-cols-[minmax(0,1fr)_160px] items-center p-3 bg-red-50 rounded-lg border border-red-200 gap-3"
                   >
                     <p className="text-sm font-medium text-gray-900">{client.name}</p>
-                    <div className="text-right w-40"><p className="text-xs text-red-600 font-medium">Última Venda:</p><p className="text-xs text-red-700 font-semibold">{client.lastPurchase}</p></div>
+                    <div className="text-right w-40">
+                      <p className="text-xs text-red-600 font-medium">Ãšltima Venda:</p>
+                      <p className="text-xs text-red-700 font-semibold">{client.lastPurchase}</p>
+                    </div>
                   </div>
                 ))
               ) : (
-
                 <p className="text-sm text-gray-500 text-center py-4">Nenhum cliente inativo</p>
               )}
             </div>
@@ -645,32 +789,36 @@ const DashboardVendas = ({ salesData, userData }) => {
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-4">
               <Calendar className="w-5 h-5 text-blue-600" />
-              <h4 className="text-lg font-bold text-gray-900">Últimas Compras</h4>
+              <h4 className="text-lg font-bold text-gray-900">Ãšltimas Compras</h4>
             </div>
             <div className="space-y-2">
               {clientAnalytics.lastPurchases.map((purchase, index) => (
-  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-    <div>
-      <p className="text-sm font-medium text-gray-900">{purchase.clientName}</p>
-      <p className="text-xs text-gray-500">ID: {purchase.id} • Data: {purchase.date}</p>
-    </div>
-    <p className="text-sm font-bold text-[#25BE8C]">{purchase.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
-  </div>
-))}
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{purchase.clientName}</p>
+                    <p className="text-xs text-gray-500">
+                      ID: {purchase.id} â€¢ Data: {purchase.date}
+                    </p>
+                  </div>
+                  <p className="text-sm font-bold text-[#25BE8C]">
+                    {purchase.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      {/* ========== SEÇÃO: ANÁLISE DE PRODUTOS ========== */}
+      {/* ========== SEÃ‡ÃƒO: ANÃLISE DE PRODUTOS ========== */}
       <div className="bg-gradient-to-br from-purple-50 to-white rounded-2xl p-6 border-2 border-purple-100">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
             <Package className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-gray-900">Análise de Produtos</h3>
-            <p className="text-gray-600">Performance, mix de vendas e evolução de preços</p>
+            <h3 className="text-2xl font-bold text-gray-900">AnÃ¡lise de Produtos</h3>
+            <p className="text-gray-600">Performance, mix de vendas e evoluÃ§Ã£o de preÃ§os</p>
           </div>
         </div>
 
@@ -704,7 +852,7 @@ const DashboardVendas = ({ salesData, userData }) => {
             <p className="text-2xl font-bold text-gray-900">
               {productAnalytics.avgPrice.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </p>
-            <p className="text-sm text-gray-600">Preço Médio</p>
+            <p className="text-sm text-gray-600">PreÃ§o MÃ©dio</p>
           </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -720,7 +868,7 @@ const DashboardVendas = ({ salesData, userData }) => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Revenue by Product */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h4 className="text-lg font-bold text-gray-900 mb-4">Receita por Produto (Top 20)</h4>
+            
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={productAnalytics.revenueByProduct} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" />
@@ -734,7 +882,7 @@ const DashboardVendas = ({ salesData, userData }) => {
 
           {/* Product Mix */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h4 className="text-lg font-bold text-gray-900 mb-4">Mix de Vendas (Top 5)</h4>
+            
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -759,29 +907,50 @@ const DashboardVendas = ({ salesData, userData }) => {
 
         {/* Price Evolution */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <h4 className="text-lg font-bold text-gray-900 mb-4">Evolução do Preço Médio</h4>
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-lg font-bold text-gray-900">EvoluÃ§Ã£o do PreÃ§o MÃ©dio</h4>
+            <div className="flex items-center gap-2">
+              <label htmlFor="priceYear" className="text-sm text-gray-600">Ano:</label>
+              <select
+                id="priceYear"
+                value={priceYear}
+                onChange={(e) => setPriceYear(Number(e.target.value))}
+                className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                {priceYears.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
           <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={productAnalytics.priceEvolution}>
+            <LineChart data={priceEvolutionChartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="mes" />
               <YAxis />
               <Tooltip formatter={(value) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
               <Legend />
-              <Line type="monotone" dataKey="preco" stroke="#25BE8C" strokeWidth={2} name="Preço Médio" />
+              <Line type="monotone" dataKey="preco" stroke="#25BE8C" strokeWidth={2} name="Preço Médio"  hide={evolutionMode === 'produto'} />
+              {evolutionMode === 'produto' && (
+                selectedProducts.map((p, idx) => (
+                  <Line key={p} type="monotone" dataKey={p} stroke={COLORS[idx % COLORS.length]} strokeWidth={2} name={p} />
+                ))
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* ========== SEÇÃO: ANÁLISE DE REGIÕES ========== */}
+      {/* ========== SEÃ‡ÃƒO: ANÃLISE DE REGIÃ•ES ========== */}
       <div className="bg-gradient-to-br from-green-50 to-white rounded-2xl p-6 border-2 border-green-100">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 bg-[#25BE8C] rounded-xl flex items-center justify-center">
             <MapPin className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-gray-900">Análise de Regiões</h3>
-            <p className="text-gray-600">Faturamento geográfico e crescimento regional</p>
+            <h3 className="text-2xl font-bold text-gray-900">AnÃ¡lise de RegiÃµes</h3>
+            <p className="text-gray-600">Faturamento geogrÃ¡fico e crescimento regional</p>
           </div>
         </div>
 
@@ -789,7 +958,7 @@ const DashboardVendas = ({ salesData, userData }) => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Revenue by Region */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h4 className="text-lg font-bold text-gray-900 mb-4">Faturamento por Região</h4>
+            
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={regionAnalytics.revenueByRegion}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -803,7 +972,7 @@ const DashboardVendas = ({ salesData, userData }) => {
 
           {/* Clients by Region */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h4 className="text-lg font-bold text-gray-900 mb-4">Clientes por Região</h4>
+            
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={regionAnalytics.clientsByRegion}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -818,13 +987,13 @@ const DashboardVendas = ({ salesData, userData }) => {
 
         {/* Top Regions Table */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <h4 className="text-lg font-bold text-gray-900 mb-4">Ranking de Regiões</h4>
+          
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Posição</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Região</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">PosiÃ§Ã£o</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">RegiÃ£o</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Faturamento</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Crescimento</th>
                 </tr>
@@ -856,3 +1025,4 @@ const DashboardVendas = ({ salesData, userData }) => {
 }
 
 export default DashboardVendas
+
