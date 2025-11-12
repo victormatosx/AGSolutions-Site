@@ -295,13 +295,11 @@ const Vendas = () => {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">
-                {activeSection === DASHBOARD && "Visão Geral"}
                 {activeSection === NEW_SALE && "Nova Venda"}
                 {activeSection === SALES_LIST && "Lista de Vendas"}
                 {activeSection === REPORTS && "Relatórios"}
                 {activeSection === CLIENTS && "Clientes"}
               </h1>
-              <p className="text-gray-600">Bem-vindo, {userData?.name || user?.email?.split("@")[0]}!</p>
             </div>
 
             {activeSection !== DASHBOARD && (
@@ -317,10 +315,7 @@ const Vendas = () => {
             )}
           </div>
 
-          {/* Render the active section */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 mb-8">{renderSection()}</div>
-
-          {/* Quick Actions - Only show on dashboard */}
+          {/* Quick Actions - Only show on dashboard (moved to top) */}
           {activeSection === DASHBOARD && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <button
@@ -368,6 +363,9 @@ const Vendas = () => {
               </button>
             </div>
           )}
+
+          {/* Render the active section */}
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 mb-8">{renderSection()}</div>
         </div>
       </main>
     </div>
@@ -375,3 +373,5 @@ const Vendas = () => {
 }
 
 export default Vendas
+
+

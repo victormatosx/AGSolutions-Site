@@ -1,6 +1,6 @@
-Ôªø"use client"
+"use client"
 
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { Users, TrendingUp, Package, AlertCircle, Award, Calendar } from "lucide-react"
 import {
@@ -24,7 +24,7 @@ const DashboardVendas = ({ salesData, userData }) => {
   const navigate = useNavigate()
   const [totalClients, setTotalClients] = useState(0)
   const [clients, setClients] = useState([
-    { id: "c1", name: "Jo√£o Silva", city: "S√£o Paulo", state: "SP" },
+    { id: "c1", name: "Jo„o Silva", city: "S„o Paulo", state: "SP" },
     { id: "c2", name: "Maria Santos", city: "Rio de Janeiro", state: "RJ" },
     { id: "c3", name: "Pedro Costa", city: "Belo Horizonte", state: "MG" },
     { id: "c4", name: "Ana Paula", city: "Curitiba", state: "PR" },
@@ -32,23 +32,22 @@ const DashboardVendas = ({ salesData, userData }) => {
     { id: "c6", name: "Fernanda Lima", city: "Salvador", state: "BA" },
   ])
   const [period, setPeriod] = useState("all") // all, month, quarter, year, custom
-  // Per√≠odo personalizado
+  // PerÌodo personalizado
   const [customStart, setCustomStart] = useState("")
   const [customEnd, setCustomEnd] = useState("")
-  // M√©trica do gr√°fico ABC de clientes: 'receita' ou 'ticket'
+  // MÈtrica do gr·fico ABC de clientes: 'receita' ou 'ticket'
   const [abcMetric, setAbcMetric] = useState("receita")
-  // Ano selecionado para Evolu√ß√£o de Pre√ßo M√©dio
+  // Ano selecionado para EvoluÁ„o de PreÁo MÈdio
   const [priceYear, setPriceYear] = useState(new Date().getFullYear())
-  // Pagina√ß√£o para clientes inativos
+  // PaginaÁ„o para clientes inativos
   const [inactivePage, setInactivePage] = useState(1)
-  // Modo do gr√°fico de evolu√ß√£o de pre√ßo: 'geral' ou 'produto'
+  // Modo do gr·fico de evoluÁ„o de preÁo: 'geral' ou 'produto'
   const [evolutionMode, setEvolutionMode] = useState("geral")
   const [showGeral, setShowGeral] = useState(true)
   const [selectedProducts, setSelectedProducts] = useState([])
   const [showProductDropdown, setShowProductDropdown] = useState(false)
   const [productSearch, setProductSearch] = useState("")
-  const productSelectorRef = useRef(null)
-  // Modal de per√≠odo personalizado
+  // Modal de perÌodo personalizado
   const [showCustomModal, setShowCustomModal] = useState(false)
   const [tempStart, setTempStart] = useState("")
   const [tempEnd, setTempEnd] = useState("")
@@ -99,7 +98,7 @@ const DashboardVendas = ({ salesData, userData }) => {
     return Number.NaN
   }
 
-  // Aplica filtro de per√≠odo nas vendas (√∫ltimos 30/90/365 dias ou todo per√≠odo)
+  // Aplica filtro de perÌodo nas vendas (˙ltimos 30/90/365 dias ou todo perÌodo)
   const filteredSales = useMemo(() => {
     if (!salesData || salesData.length === 0) return []
     const valid = salesData.filter(
@@ -107,7 +106,7 @@ const DashboardVendas = ({ salesData, userData }) => {
     )
     if (period === "all") return valid
 
-    // Per√≠odo personalizado: filtra por data inicial e final (se informadas)
+    // PerÌodo personalizado: filtra por data inicial e final (se informadas)
     if (period === "custom") {
       const startMs = customStart ? Date.parse(`${customStart}T00:00:00`) : Number.NaN
       const endMs = customEnd ? Date.parse(`${customEnd}T23:59:59.999`) : Number.NaN
@@ -129,7 +128,7 @@ const DashboardVendas = ({ salesData, userData }) => {
     })
   }, [salesData, period, customStart, customEnd])
 
-  // Anos dispon√≠veis para o seletor do gr√°fico Evolu√ß√£o do Pre√ßo
+  // Anos disponÌveis para o seletor do gr·fico EvoluÁ„o do PreÁo
   const priceYears = useMemo(() => {
     if (!salesData || salesData.length === 0) return []
     const yrs = new Set()
@@ -186,7 +185,7 @@ const DashboardVendas = ({ salesData, userData }) => {
 
       if (!key) return
 
-      // nome de exibi√ß√£o: se ID, tenta achar no cadastro; sen√£o usa o pr√≥prio nome
+      // nome de exibiÁ„o: se ID, tenta achar no cadastro; sen„o usa o prÛprio nome
       if (!(key in nameByKey)) {
         if (clientId) {
           const found = clients?.find?.((c) => c.id === String(clientId))
@@ -207,7 +206,7 @@ const DashboardVendas = ({ salesData, userData }) => {
     })
 
     const activeClients = Object.keys(clientRevenue).length
-    // Ticket M√©dio por venda = Receita Total / N√∫mero de Vendas
+    // Ticket MÈdio por venda = Receita Total / N˙mero de Vendas
     const avgTicket = totalSales > 0 ? totalRevenue / totalSales : 0
 
     // Base agregada por cliente
@@ -218,7 +217,7 @@ const DashboardVendas = ({ salesData, userData }) => {
       return { key, name, revenue, purchases, ticketMedio }
     })
 
-    // Ordena√ß√µes e Top 10
+    // OrdenaÁıes e Top 10
     const sortedByRevenue = [...clientAggregates].sort((a, b) => b.revenue - a.revenue)
     const sortedByTicket = [...clientAggregates].sort((a, b) => b.ticketMedio - a.ticketMedio)
 
@@ -236,7 +235,7 @@ const DashboardVendas = ({ salesData, userData }) => {
       purchases: c.purchases,
     }))
 
-    // Mant√©m compatibilidade: abcCurve padr√£o por receita
+    // MantÈm compatibilidade: abcCurve padr„o por receita
     const abcCurve = abcCurveRevenue
 
     // Top 10 clients (por receita)
@@ -285,7 +284,7 @@ const DashboardVendas = ({ salesData, userData }) => {
       return isNaN(ms) ? Number.NaN : ms
     }
 
-    // Last purchases (5 √∫ltimas vendas), ordenadas por dataPedido
+    // Last purchases (5 ˙ltimas vendas), ordenadas por dataPedido
     const lastPurchases = validSales
       .map((sale) => {
         const ms = getSaleTimestampMs(sale)
@@ -348,7 +347,7 @@ const DashboardVendas = ({ salesData, userData }) => {
     const clientProductRevenue = {} // { [productName]: { [client]: revenue } }
     let totalRevenueFromSales = 0
     let totalQuantityAll = 0
-    // Para pre√ßo m√©dio por KG (unit√°rio): soma de (pre√ßo*quantidade) e soma de quantidades
+    // Para preÁo mÈdio por KG (unit·rio): soma de (preÁo*quantidade) e soma de quantidades
     let unitRevenueSum = 0
     let unitQuantitySum = 0
 
@@ -393,7 +392,7 @@ const DashboardVendas = ({ salesData, userData }) => {
         parsedItems.push({ productName, quantity, itemTotal })
         sumItemTotals += itemTotal
         sumItemQty += quantity
-        // acumuladores para pre√ßo m√©dio unit√°rio (R$/kg)
+        // acumuladores para preÁo mÈdio unit·rio (R$/kg)
         unitRevenueSum += price * quantity
         unitQuantitySum += quantity
       })
@@ -428,7 +427,7 @@ const DashboardVendas = ({ salesData, userData }) => {
 
     const totalProducts = Object.keys(productRevenue).length
     const totalRevenue = totalRevenueFromSales
-    // Pre√ßo m√©dio por KG (R$/kg) com base em pre√ßo unit√°rio dos itens (soma(pre√ßo*qty)/soma(qty))
+    // PreÁo mÈdio por KG (R$/kg) com base em preÁo unit·rio dos itens (soma(preÁo*qty)/soma(qty))
     const avgPrice = unitQuantitySum > 0 ? unitRevenueSum / unitQuantitySum : 0
     const avgQtyPerOrder = validSales.length > 0 ? totalQuantityAll / validSales.length : 0
 
@@ -468,7 +467,7 @@ const DashboardVendas = ({ salesData, userData }) => {
       return { product: p, clients: top3 }
     })
 
-    // Price evolution (m√©dia de pre√ßos por m√™s no ano selecionado)
+    // Price evolution (mÈdia de preÁos por mÍs no ano selecionado)
     const monthsLabels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     const priceHistoryAll = {}
     const priceHistoryByProduct = {}
@@ -515,7 +514,7 @@ const DashboardVendas = ({ salesData, userData }) => {
       return { mes: label, preco: avg }
     })
 
-    // Evolu√ß√£o por produto (m√©dia mensal do pre√ßo unit√°rio)
+    // EvoluÁ„o por produto (mÈdia mensal do preÁo unit·rio)
     const productNames = Object.keys(priceHistoryByProduct)
     const priceEvolutionByProduct = {}
     productNames.forEach((p) => {
@@ -560,7 +559,7 @@ const DashboardVendas = ({ salesData, userData }) => {
     validSales.forEach((sale) => {
       const clientId = sale.clientId || sale.clienteId
       const client = clients.find((c) => c.id === clientId)
-      const region = client?.state || "N√£o informado"
+      const region = client?.state || "N„o informado"
 
       const revenue = Number(sale.valorTotal) || Number(sale.total) || 0
       regionRevenue[region] = (regionRevenue[region] || 0) + revenue
@@ -604,7 +603,7 @@ const DashboardVendas = ({ salesData, userData }) => {
   }
 
   const clientAnalytics = calculateClientAnalytics()
-  // Ajusta p√°gina quando a lista muda
+  // Ajusta p·gina quando a lista muda
   useEffect(() => {
     const total = clientAnalytics?.inactiveClients?.length || 0
     const pages = Math.max(1, Math.ceil(total / 5))
@@ -624,32 +623,6 @@ const DashboardVendas = ({ salesData, userData }) => {
     "#f97316",
     "#6366f1",
   ]
-
-  // Paleta estendida e cor reservada para diferenciar s√©ries no gr√°fico de evolu√ß√£o
-  const GENERAL_COLOR = "#25BE8C"
-  const SERIES_COLORS = [
-    "#1b9e77", "#d95f02", "#7570b3", "#e7298a", "#66a61e",
-    "#e6ab02", "#a6761d", "#666666", "#8dd3c7", "#fb8072",
-    "#80b1d3", "#fdb462", "#b3de69", "#fccde5", "#bc80bd",
-    "#ccebc5", "#ffed6f", "#1f78b4", "#33a02c", "#e31a1c",
-  ]
-  const hashString = (s = "") => {
-    let h = 0
-    for (let i = 0; i < s.length; i++) {
-      h = ((h << 5) - h) + s.charCodeAt(i)
-      h |= 0
-    }
-    return Math.abs(h)
-  }
-  const getSeriesColor = (name) => {
-    if (name === "Geral") return GENERAL_COLOR
-    const idx = hashString(String(name)) % SERIES_COLORS.length
-    const candidate = SERIES_COLORS[idx]
-    if (candidate.toLowerCase() === GENERAL_COLOR.toLowerCase()) {
-      return SERIES_COLORS[(idx + 1) % SERIES_COLORS.length]
-    }
-    return candidate
-  }
   const RADIAN = Math.PI / 180
   const renderOuterLabel = ({ cx, cy, midAngle, outerRadius, percent }) => {
     if (percent < 0.05) return null
@@ -679,7 +652,7 @@ const DashboardVendas = ({ salesData, userData }) => {
     if (others > 0.0001) data.push({ name: "Outros", value: others })
     return data
   }, [productAnalytics.productMix, productAnalytics.totalRevenue])
-  // Dados do gr√°fico de evolu√ß√£o conforme modo/sele√ß√£o
+  // Dados do gr·fico de evoluÁ„o conforme modo/seleÁ„o
   const priceEvolutionChartData = useMemo(() => {
     const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     const data = months.map((mes, idx) => {
@@ -705,19 +678,6 @@ const DashboardVendas = ({ salesData, userData }) => {
     if (!term) return all
     return all.filter((n) => n?.toString()?.toLowerCase()?.includes(term))
   }, [productAnalytics.productNames, productSearch])
-  
-  // Fecha o dropdown ao clicar fora
-  useEffect(() => {
-    if (!showProductDropdown) return
-    const handleClickOutside = (e) => {
-      if (productSelectorRef.current && !productSelectorRef.current.contains(e.target)) {
-        setShowProductDropdown(false)
-        setProductSearch("")
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [showProductDropdown])
   const INACTIVE_PAGE_SIZE = 5
   const inactiveTotal = clientAnalytics?.inactiveClients?.length || 0
   const inactiveTotalPages = Math.max(1, Math.ceil(inactiveTotal / INACTIVE_PAGE_SIZE))
@@ -743,7 +703,7 @@ const DashboardVendas = ({ salesData, userData }) => {
     setSelectedProducts([])
   }
 
-  // Seleciona apenas os produtos vis√≠veis no dropdown (ap√≥s filtro de busca)
+  // Seleciona apenas os produtos visÌveis no dropdown (apÛs filtro de busca)
   const selectVisibleProducts = (visibleList) => {
     setSelectedProducts(visibleList)
   }
@@ -753,8 +713,8 @@ const DashboardVendas = ({ salesData, userData }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Anal√≠tico de Vendas</h2>
-          <p className="text-gray-600">An√°lise completa de clientes, produtos e regi√µes</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Dashboard AnalÌtico de Vendas</h2>
+          <p className="text-gray-600">An·lise completa de clientes, produtos e regiıes</p>
         </div>
 
         <div className="mt-4 md:mt-0 flex gap-2">
@@ -764,7 +724,7 @@ const DashboardVendas = ({ salesData, userData }) => {
               period === "month" ? "bg-[#25BE8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            M√™s
+            MÍs
           </button>
           <button
             onClick={() => setPeriod("quarter")}
@@ -800,7 +760,7 @@ const DashboardVendas = ({ salesData, userData }) => {
               period === "all" ? "bg-[#25BE8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            Todo Per√≠odo
+            Todo PerÌodo
           </button>
         </div>
       </div>
@@ -867,14 +827,14 @@ const DashboardVendas = ({ salesData, userData }) => {
         </div>
       )}
 
-      {/* ========== SE√á√ÉO: AN√ÅLISE DE CLIENTES ========== */}
+      {/* ========== SE«√O: AN¡LISE DE CLIENTES ========== */}
       <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-6 border-2 border-blue-100">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
             <Users className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-gray-900">An√°lise de Clientes</h3>
+            <h3 className="text-2xl font-bold text-gray-900">An·lise de Clientes</h3>
             <p className="text-gray-600">Curva ABC, ranking e comportamento de compra</p>
           </div>
         </div>
@@ -895,7 +855,7 @@ const DashboardVendas = ({ salesData, userData }) => {
               <Award className="w-5 h-5 text-orange-600" />
             </div>
             <p className="text-2xl font-bold text-gray-900">{clientAnalytics.totalSales}</p>
-            <p className="text-sm text-gray-600">N√∫mero de Vendas</p>
+            <p className="text-sm text-gray-600">N˙mero de Vendas</p>
           </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -906,7 +866,7 @@ const DashboardVendas = ({ salesData, userData }) => {
             <p className="text-2xl font-bold text-gray-900">
               {clientAnalytics.avgTicket.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </p>
-            <p className="text-sm text-gray-600">Ticket M√©dio</p>
+            <p className="text-sm text-gray-600">Ticket MÈdio</p>
           </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -929,7 +889,7 @@ const DashboardVendas = ({ salesData, userData }) => {
               <h4 className="text-lg font-bold text-gray-900">Curva ABC de Clientes (Top 10)</h4>
               <div className="flex items-center gap-2">
                 <label htmlFor="abcMetric" className="text-sm text-gray-600">
-                  M√©trica:
+                  MÈtrica:
                 </label>
                 <select
                   id="abcMetric"
@@ -938,7 +898,7 @@ const DashboardVendas = ({ salesData, userData }) => {
                   className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="receita">Receita Total</option>
-                  <option value="ticket">Ticket M√©dio por Compra</option>
+                  <option value="ticket">Ticket MÈdio por Compra</option>
                 </select>
               </div>
             </div>
@@ -991,7 +951,7 @@ const DashboardVendas = ({ salesData, userData }) => {
                   }}
                   contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb" }}
                 />
-                {/* Removido LabelList para evitar sobreposi√ß√£o de valores grandes; usar Tooltip */}
+                {/* Removido LabelList para evitar sobreposiÁ„o de valores grandes; usar Tooltip */}
                 <Bar
                   dataKey={abcMetric === "ticket" ? "ticketMedio" : "receita"}
                   fill="url(#abcGradient)"
@@ -1021,7 +981,7 @@ const DashboardVendas = ({ salesData, userData }) => {
                   >
                     <p className="text-sm font-medium text-gray-900">{client.name}</p>
                     <div className="text-right w-40">
-                      <p className="text-xs text-red-600 font-medium">√öltima Venda:</p>
+                      <p className="text-xs text-red-600 font-medium">⁄ltima Venda:</p>
                       <p className="text-xs text-red-700 font-semibold">{client.lastPurchase}</p>
                     </div>
                   </div>
@@ -1036,7 +996,7 @@ const DashboardVendas = ({ salesData, userData }) => {
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-4">
               <Calendar className="w-5 h-5 text-blue-600" />
-              <h4 className="text-lg font-bold text-gray-900">√öltimas Vendas</h4>
+              <h4 className="text-lg font-bold text-gray-900">⁄ltimas Vendas</h4>
             </div>
             <div className="space-y-2">
               {clientAnalytics.lastPurchases.map((purchase, index) => (
@@ -1044,7 +1004,7 @@ const DashboardVendas = ({ salesData, userData }) => {
                   <div>
                     <p className="text-sm font-medium text-gray-900">{purchase.clientName}</p>
                     <p className="text-xs text-gray-500">
-                      ID: {purchase.id} ‚Ä¢ Data: {purchase.date}
+                      ID: {purchase.id} ï Data: {purchase.date}
                     </p>
                   </div>
                   <p className="text-sm font-bold text-[#25BE8C]">
@@ -1057,15 +1017,15 @@ const DashboardVendas = ({ salesData, userData }) => {
         </div>
       </div>
 
-      {/* ========== SE√á√ÉO: AN√ÅLISE DE PRODUTOS ========== */}
+      {/* ========== SE«√O: AN¡LISE DE PRODUTOS ========== */}
       <div className="bg-gradient-to-br from-purple-50 to-white rounded-2xl p-6 border-2 border-purple-100">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
             <Package className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-gray-900">An√°lise de Produtos</h3>
-            <p className="text-gray-600">Performance, mix de vendas e evolu√ß√£o de pre√ßos</p>
+            <h3 className="text-2xl font-bold text-gray-900">An·lise de Produtos</h3>
+            <p className="text-gray-600">Performance, mix de vendas e evoluÁ„o de preÁos</p>
           </div>
         </div>
 
@@ -1091,7 +1051,7 @@ const DashboardVendas = ({ salesData, userData }) => {
                 maximumFractionDigits: 2,
               })}
             </p>
-            <p className="text-sm text-gray-600">Quantidade M√©dia por Pedido</p>
+            <p className="text-sm text-gray-600">Quantidade MÈdia por Pedido</p>
           </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -1102,7 +1062,7 @@ const DashboardVendas = ({ salesData, userData }) => {
             <p className="text-2xl font-bold text-gray-900">
               {productAnalytics.avgPrice.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </p>
-            <p className="text-sm text-gray-600">Pre√ßo M√©dio (R$/kg)</p>
+            <p className="text-sm text-gray-600">PreÁo MÈdio (R$/kg)</p>
           </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -1195,7 +1155,7 @@ const DashboardVendas = ({ salesData, userData }) => {
         {/* Price Evolution */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-            <h4 className="text-lg font-bold text-gray-900">Evolu√ß√£o do Pre√ßo M√©dio (R$/kg)</h4>
+            <h4 className="text-lg font-bold text-gray-900">EvoluÁ„o do PreÁo MÈdio (R$/kg)</h4>
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2">
                 <label htmlFor="priceYear" className="text-sm text-gray-600">
@@ -1217,7 +1177,7 @@ const DashboardVendas = ({ salesData, userData }) => {
 
               <div className="flex items-center gap-2">
                 <label className="text-sm text-gray-600">Produto:</label>
-                <div className="relative" ref={productSelectorRef}>
+                <div className="relative">
                   <button
                     onClick={() => {
                       const next = !showProductDropdown
@@ -1246,7 +1206,7 @@ const DashboardVendas = ({ salesData, userData }) => {
                           onClick={() => selectVisibleProducts(filteredProductNames)}
                           className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
                         >
-                          Selecionar vis√≠veis
+                          Selecionar visÌveis
                         </button>
                         <button
                           onClick={() => { clearProductSelection(); setShowGeral(false) }}
@@ -1307,21 +1267,9 @@ const DashboardVendas = ({ salesData, userData }) => {
             </div>
           </div>
 
-          {(showGeral || selectedProducts.length > 0) && (
+          {selectedProducts.length > 0 && (
             <div className="mb-4 -mt-2">
               <div className="flex flex-wrap gap-2">
-                {showGeral && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    Geral
-                    <button
-                      onClick={() => setShowGeral(false)}
-                      className="ml-1 rounded hover:bg-emerald-100 px-1 text-emerald-700"
-                      aria-label="Remover Geral"
-                    >
-                      x
-                    </button>
-                  </span>
-                )}
                 {selectedProducts.map((p) => (
                   <span key={p} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-emerald-50 text-emerald-700 border border-emerald-200">
                     {p}
@@ -1330,7 +1278,7 @@ const DashboardVendas = ({ salesData, userData }) => {
                       className="ml-1 rounded hover:bg-emerald-100 px-1 text-emerald-700"
                       aria-label={`Remover ${p}`}
                     >
-                      x
+                      ◊
                     </button>
                   </span>
                 ))}
@@ -1341,7 +1289,7 @@ const DashboardVendas = ({ salesData, userData }) => {
           {!showGeral && selectedProducts.length === 0 ? (
             <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
               <p className="text-gray-500 text-center">
-                Selecione "Geral" ou produtos para visualizar a evolu√ß√£o de pre√ßos
+                Selecione "Geral" ou produtos para visualizar a evoluÁ„o de preÁos
               </p>
             </div>
           ) : (
@@ -1358,19 +1306,19 @@ const DashboardVendas = ({ salesData, userData }) => {
                   <Line
                     type="monotone"
                     dataKey="Geral"
-                    stroke={GENERAL_COLOR}
-                    strokeWidth={2.5}
+                    stroke="#25BE8C"
+                    strokeWidth={2}
                     name="Geral"
                     dot={{ r: 3 }}
                     activeDot={{ r: 5 }}
                   />
                 )}
-                {selectedProducts.map((p) => (
+                {selectedProducts.map((p, i) => (
                   <Line
                     key={p}
                     type="monotone"
                     dataKey={p}
-                    stroke={getSeriesColor(p)}
+                    stroke={COLORS[(i + 1) % COLORS.length]}
                     strokeWidth={2}
                     name={p}
                     dot={{ r: 3 }}
@@ -1383,12 +1331,10 @@ const DashboardVendas = ({ salesData, userData }) => {
         </div>
       </div>
 
-      {/* Se√ß√£o de An√°lise de Regi√µes removida conforme solicita√ß√£o */}
+      {/* SeÁ„o de An·lise de Regiıes removida conforme solicitaÁ„o */}
     </div>
   )
 }
 
 export default DashboardVendas
-
-
 
