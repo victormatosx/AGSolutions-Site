@@ -48,6 +48,8 @@ const DashboardVendas = ({ salesData, userData }) => {
   const [showProductDropdown, setShowProductDropdown] = useState(false)
   const [productSearch, setProductSearch] = useState("")
   const productSelectorRef = useRef(null)
+  const [loadingPriceChart, setLoadingPriceChart] = useState(false)
+  const [loadingProductList, setLoadingProductList] = useState(false)
   // Modal de período personalizado
   const [showCustomModal, setShowCustomModal] = useState(false)
   const [tempStart, setTempStart] = useState("")
@@ -718,6 +720,21 @@ const DashboardVendas = ({ salesData, userData }) => {
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [showProductDropdown])
+
+  // Loading suave para o gráfico de evolução quando filtros mudam
+  useEffect(() => {
+    setLoadingPriceChart(true)
+    const t = setTimeout(() => setLoadingPriceChart(false), 300)
+    return () => clearTimeout(t)
+  }, [priceYear, showGeral, selectedProducts, filteredSales])
+
+  // Loading ao abrir dropdown e ao filtrar produtos
+  useEffect(() => {
+    if (!showProductDropdown) return
+    setLoadingProductList(true)
+    const t = setTimeout(() => setLoadingProductList(false), 250)
+    return () => clearTimeout(t)
+  }, [showProductDropdown, productSearch])
   const INACTIVE_PAGE_SIZE = 5
   const inactiveTotal = clientAnalytics?.inactiveClients?.length || 0
   const inactiveTotalPages = Math.max(1, Math.ceil(inactiveTotal / INACTIVE_PAGE_SIZE))
@@ -1282,22 +1299,35 @@ const DashboardVendas = ({ salesData, userData }) => {
                         />
                       </div>
                       <div className="p-2">
-                        {filteredProductNames.map((product) => (
-                          <label
-                            key={product}
-                            className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedProducts.includes(product)}
-                              onChange={() => toggleProductSelection(product)}
-                              className="w-4 h-4 text-emerald-600 rounded focus:ring-2 focus:ring-emerald-500"
-                            />
-                            <span className="text-sm text-gray-900">{product}</span>
-                          </label>
-                        ))}
-                        {filteredProductNames.length === 0 && (
-                          <p className="text-xs text-gray-500 px-2 py-1">Nenhum produto encontrado</p>
+                        {loadingProductList ? (
+                          <div className="space-y-2">
+                            {Array.from({ length: 6 }).map((_, i) => (
+                              <div key={i} className="flex items-center gap-2 p-2">
+                                <div className="w-4 h-4 rounded bg-gray-200 animate-pulse" />
+                                <div className="h-3 w-40 bg-gray-200 rounded animate-pulse" />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <>
+                            {filteredProductNames.map((product) => (
+                              <label
+                                key={product}
+                                className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedProducts.includes(product)}
+                                  onChange={() => toggleProductSelection(product)}
+                                  className="w-4 h-4 text-emerald-600 rounded focus:ring-2 focus:ring-emerald-500"
+                                />
+                                <span className="text-sm text-gray-900">{product}</span>
+                              </label>
+                            ))}
+                            {filteredProductNames.length === 0 && (
+                              <p className="text-xs text-gray-500 px-2 py-1">Nenhum produto encontrado</p>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -1345,40 +1375,48 @@ const DashboardVendas = ({ salesData, userData }) => {
               </p>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={priceEvolutionChartData} margin={{ top: 10, right: 20, bottom: 10, left: 12 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mes" />
-                <YAxis width={90}
-                  tickFormatter={(value) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                />
-                <Tooltip formatter={(value) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
-                <Legend />
-                {showGeral && (
-                  <Line
-                    type="monotone"
-                    dataKey="Geral"
-                    stroke={GENERAL_COLOR}
-                    strokeWidth={2.5}
-                    name="Geral"
-                    dot={{ r: 3 }}
-                    activeDot={{ r: 5 }}
+            <div className="relative">
+              {loadingPriceChart && (
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10">
+                  <div className="h-6 w-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="ml-2 text-sm text-gray-600">Carregando...</span>
+                </div>
+              )}
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={priceEvolutionChartData} margin={{ top: 10, right: 20, bottom: 10, left: 12 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="mes" />
+                  <YAxis width={90}
+                    tickFormatter={(value) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                   />
-                )}
-                {selectedProducts.map((p) => (
-                  <Line
-                    key={p}
-                    type="monotone"
-                    dataKey={p}
-                    stroke={getSeriesColor(p)}
-                    strokeWidth={2}
-                    name={p}
-                    dot={{ r: 3 }}
-                    activeDot={{ r: 5 }}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
+                  <Tooltip formatter={(value) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
+                  <Legend />
+                  {showGeral && (
+                    <Line
+                      type="monotone"
+                      dataKey="Geral"
+                      stroke={GENERAL_COLOR}
+                      strokeWidth={2.5}
+                      name="Geral"
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
+                    />
+                  )}
+                  {selectedProducts.map((p) => (
+                    <Line
+                      key={p}
+                      type="monotone"
+                      dataKey={p}
+                      stroke={getSeriesColor(p)}
+                      strokeWidth={2}
+                      name={p}
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           )}
         </div>
       </div>
