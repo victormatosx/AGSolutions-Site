@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { database } from "../firebase/firebase"
-import { ref, set, onValue, off, remove } from "firebase/database"
+import { ref, set, onValue, off, remove, update } from "firebase/database"
 import {
   Search,
   Plus,
@@ -17,6 +17,7 @@ import {
   UserPlus,
   Trash2,
   AlertTriangle,
+  Octagon,
   CheckCircle,
   XCircle,
 } from "lucide-react"
@@ -89,6 +90,23 @@ const Cadastro = () => {
   // Estados para notificações e confirmação
   const [notification, setNotification] = useState(null)
   const [deleteConfirmation, setDeleteConfirmation] = useState(null)
+  const [deactivateConfirmation, setDeactivateConfirmation] = useState(null)
+
+  const sortDirecionadores = (items) => {
+    return [...items].sort((a, b) => {
+      const aInactive = a.status === "desativado"
+      const bInactive = b.status === "desativado"
+      if (aInactive !== bInactive) {
+        return aInactive ? 1 : -1
+      }
+      const nameA = (a.direcionador || a.nome || "").toLowerCase()
+      const nameB = (b.direcionador || b.nome || "").toLowerCase()
+      if (nameA && nameB) {
+        return nameA.localeCompare(nameB)
+      }
+      return 0
+    })
+  }
 
   // Lista de culturas disponíveis
   const culturas = [
@@ -228,7 +246,9 @@ const Cadastro = () => {
           id: key,
           ...value,
         }))
-        setDirecionadores(direcionadoresList)
+        setDirecionadores(sortDirecionadores(direcionadoresList))
+      } else {
+        setDirecionadores([])
       }
     })
 
@@ -327,6 +347,7 @@ const Cadastro = () => {
         id: direcionadorData.id,
         direcionador: direcionadorData.direcionador,
         culturaAssociada: direcionadorData.culturaAssociada,
+        status: "ativo",
         dataCadastro: new Date().toISOString(),
       })
       setDirecionadorData({ id: "", direcionador: "", culturaAssociada: "" })
@@ -335,6 +356,23 @@ const Cadastro = () => {
     } catch (error) {
       console.error("Erro ao cadastrar direcionador:", error)
       showNotification("Erro ao cadastrar direcionador", "error")
+    }
+  }
+
+  const handleDeactivateDirecionador = async (direcionador) => {
+    if (!direcionador?.id) return
+    if (direcionador.status === "desativado") {
+      showNotification("Esse direcionador já está desativado.", "warning")
+      return
+    }
+
+    try {
+      const direcionadorRef = ref(database, `propriedades/Matrice/direcionadores/${direcionador.id}`)
+      await update(direcionadorRef, { status: "desativado" })
+      showNotification("Direcionador desativado com sucesso!", "success")
+    } catch (error) {
+      console.error("Erro ao desativar direcionador:", error)
+      showNotification("Erro ao desativar direcionador", "error")
     }
   }
 
@@ -412,6 +450,15 @@ const Cadastro = () => {
       item,
       title: `Excluir ${sections[section].title.slice(0, -1)}`,
       message: `Tem certeza que deseja excluir "${item.nome || item.direcionador || item.atividade || item.modelo}"?`,
+    })
+  }
+
+  const confirmDeactivateDirecionador = (item) => {
+    if (!item || item.status === "desativado") return
+    setDeactivateConfirmation({
+      item,
+      title: "Desativar Direcionador",
+      message: `Tem certeza que deseja desativar "${item.direcionador || item.nome}"?`,
     })
   }
 
@@ -574,19 +621,53 @@ const Cadastro = () => {
                       >
                         <Icon className="w-6 h-6 text-white" />
                       </div>
-                      <button
-                        onClick={() => confirmDelete(activeSection, item)}
-                        className="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
-                        title="Excluir item"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {activeSection === "direcionadores" && (
+                          <button
+                            type="button"
+                            onClick={() => confirmDeactivateDirecionador(item)}
+                            disabled={item.status === "desativado"}
+                            className={`w-9 h-9 rounded-lg flex items-center justify-center border opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 ${
+                              item.status === "desativado"
+                                ? "border-slate-100 text-slate-300 cursor-not-allowed"
+                                : "border-amber-200 text-amber-600 hover:bg-amber-50"
+                            }`}
+                            title={
+                              item.status === "desativado" ? "Direcionador já desativado" : "Desativar direcionador"
+                            }
+                          >
+                            <Octagon className="w-4 h-4" />
+                            <span className="sr-only">
+                              {item.status === "desativado" ? "Direcionador desativado" : "Desativar direcionador"}
+                            </span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => confirmDelete(activeSection, item)}
+                          className="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+                          title="Excluir item"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
                       <h3 className="font-semibold text-slate-800 group-hover:text-emerald-600 transition-colors duration-300">
                         {item.nome || item.direcionador || item.atividade || item.modelo || "Sem nome"}
                       </h3>
+
+                      {activeSection === "direcionadores" && (
+                        <span
+                          className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                            item.status === "desativado"
+                              ? "bg-red-50 text-red-600"
+                              : "bg-emerald-50 text-emerald-600"
+                          }`}
+                        >
+                          {item.status === "desativado" ? "Desativado" : "Ativo"}
+                        </span>
+                      )}
 
                       <div className="space-y-1 text-sm text-slate-600">
                         <p className="flex items-center gap-2">
@@ -1010,6 +1091,42 @@ const Cadastro = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+
+        {deactivateConfirmation && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Octagon className="w-8 h-8 text-amber-600" />
+                </div>
+
+                <h3 className="text-xl font-bold text-slate-800 mb-2">{deactivateConfirmation.title}</h3>
+                <p className="text-slate-600 mb-6 leading-relaxed">{deactivateConfirmation.message}</p>
+                <p className="text-sm text-amber-600 mb-6">Esta ação pode ser revertida editando o status diretamente no banco.</p>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setDeactivateConfirmation(null)}
+                    className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await handleDeactivateDirecionador(deactivateConfirmation.item)
+                      setDeactivateConfirmation(null)
+                    }}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl font-medium shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/30 transition-all duration-300"
+                  >
+                    Desativar
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
