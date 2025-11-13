@@ -584,7 +584,8 @@ const Dashboard = () => {
           const usersData = usersSnapshot.val()
           for (const userId in usersData) {
             const userData = usersData[userId]
-            if (userData.role === "user") {
+            const userStatus = (userData.status || "").toLowerCase()
+            if (userData.role === "user" && userStatus !== "desativado") {
               entities.push({
                 id: userId,
                 nome: userData.nome || "Sem nome",

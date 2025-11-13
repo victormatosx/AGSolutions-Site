@@ -108,6 +108,19 @@ const Cadastro = () => {
     })
   }
 
+  const sortUsuarios = (items) => {
+    return [...items].sort((a, b) => {
+      const aInactive = (a.status || "").toLowerCase() === "desativado"
+      const bInactive = (b.status || "").toLowerCase() === "desativado"
+      if (aInactive !== bInactive) {
+        return aInactive ? 1 : -1
+      }
+      const nameA = (a.nome || a.email || "").toLowerCase()
+      const nameB = (b.nome || b.email || "").toLowerCase()
+      return nameA.localeCompare(nameB)
+    })
+  }
+
   // Lista de culturas disponíveis
   const culturas = [
     "Cebola",
@@ -213,7 +226,7 @@ const Cadastro = () => {
           id: key,
           ...value,
         }))
-        setUsuarios(usersList)
+        setUsuarios(sortUsuarios(usersList))
       }
     })
 
@@ -609,18 +622,28 @@ const Cadastro = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filterItems(currentSection.data, searchTerm).map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="group bg-white rounded-2xl p-6 shadow-lg border border-slate-200/50 hover:shadow-xl hover:shadow-emerald-500/10 hover:border-emerald-200 hover:-translate-y-1 transition-all duration-300"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div
-                        className={`w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:scale-110 transition-transform duration-300`}
-                      >
-                        <Icon className="w-6 h-6 text-white" />
-                      </div>
+                {filterItems(currentSection.data, searchTerm).map((item, index) => {
+                  const isInactiveCard =
+                    ["usuarios", "direcionadores"].includes(activeSection) &&
+                    (item.status || "").toLowerCase() === "desativado"
+                  return (
+                    <div
+                      key={item.id}
+                      className={`group rounded-2xl p-6 shadow-lg border border-slate-200/50 hover:shadow-xl hover:shadow-emerald-500/10 hover:border-emerald-200 hover:-translate-y-1 transition-all duration-300 ${
+                        isInactiveCard ? "bg-slate-100 text-slate-600" : "bg-white"
+                      }`}
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div
+                          className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 ${
+                            isInactiveCard
+                              ? "bg-slate-200 text-slate-500"
+                              : "bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/25"
+                          }`}
+                        >
+                          <Icon className={`w-6 h-6 ${isInactiveCard ? "text-slate-500" : "text-white"}`} />
+                        </div>
                       <div className="flex items-center gap-2">
                         {activeSection === "direcionadores" && (
                           <button
@@ -642,18 +665,24 @@ const Cadastro = () => {
                             </span>
                           </button>
                         )}
-                        <button
-                          onClick={() => confirmDelete(activeSection, item)}
-                          className="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
-                          title="Excluir item"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {activeSection !== "usuarios" && (
+                          <button
+                            onClick={() => confirmDelete(activeSection, item)}
+                            className="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+                            title="Excluir item"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <h3 className="font-semibold text-slate-800 group-hover:text-emerald-600 transition-colors duration-300">
+                      <h3
+                        className={`font-semibold transition-colors duration-300 ${
+                          isInactiveCard ? "text-slate-600" : "text-slate-800 group-hover:text-emerald-600"
+                        }`}
+                      >
                         {item.nome || item.direcionador || item.atividade || item.modelo || "Sem nome"}
                       </h3>
 
@@ -668,11 +697,25 @@ const Cadastro = () => {
                           {item.status === "desativado" ? "Desativado" : "Ativo"}
                         </span>
                       )}
+                      {activeSection === "usuarios" && (
+                        <span
+                          className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                            (item.status || "").toLowerCase() === "desativado"
+                              ? "bg-red-50 text-red-600"
+                              : "bg-emerald-50 text-emerald-600"
+                          }`}
+                        >
+                          {(item.status || "").toLowerCase() === "desativado" ? "Desativado" : "Ativo"}
+                        </span>
+                      )}
 
                       <div className="space-y-1 text-sm text-slate-600">
                         <p className="flex items-center gap-2">
                           <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
-                          ID: {item.id}
+                          ID:{" "}
+                          <span className={activeSection === "usuarios" ? "break-all" : ""}>
+                            {item.id}
+                          </span>
                         </p>
 
                         {item.email && (
@@ -712,7 +755,7 @@ const Cadastro = () => {
                       </div>
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
             )}
           </div>
