@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useAuthState } from "react-firebase-hooks/auth"
 import { auth, database } from "../firebase/firebase"
-import { ref, onValue, set, push, remove } from "firebase/database"
+import { ref, onValue, set, push, remove, get } from "firebase/database"
 import {
   Settings,
   Clock,
@@ -23,6 +23,7 @@ const Horimetro = () => {
   const [maquinarios, setMaquinarios] = useState([])
   const [horimetros, setHorimetros] = useState({})
   const [isLoading, setIsLoading] = useState(true)
+  const [userPropriedade, setUserPropriedade] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [editValue, setEditValue] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
@@ -31,12 +32,68 @@ const Horimetro = () => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [newMaquinario, setNewMaquinario] = useState({ nome: "", horimetro: 0 })
 
+  const getUserPropriedade = async (currentUser) => {
+    if (!currentUser) return null
+
+    try {
+      const propriedadesRef = ref(database, "propriedades")
+      const snapshot = await get(propriedadesRef)
+
+      if (snapshot.exists()) {
+        const propriedades = snapshot.val()
+
+        for (const [propriedadeNome, propriedadeData] of Object.entries(propriedades)) {
+          const users = propriedadeData.users || {}
+
+          if (users[currentUser.uid]) {
+            return propriedadeNome
+          }
+
+          for (const [, userData] of Object.entries(users)) {
+            if (userData.email && userData.email === currentUser.email) {
+              return propriedadeNome
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao buscar propriedade do usuario:", err)
+    }
+
+    return null
+  }
+
+  useEffect(() => {
+    if (loading) return
+
+    if (!user) {
+      setIsLoading(false)
+      setUserPropriedade(null)
+      return
+    }
+
+    const resolvePropriedade = async () => {
+      setIsLoading(true)
+      const propriedade = await getUserPropriedade(user)
+      if (propriedade) {
+        setUserPropriedade(propriedade)
+      } else {
+        setIsLoading(false)
+        setNotification({ message: "Nao foi possivel identificar a propriedade do usuario.", type: "error" })
+      }
+    }
+
+    resolvePropriedade()
+  }, [user, loading])
+
   // Carregar dados do Firebase
   useEffect(() => {
-    if (!user) return
+    if (!user || !userPropriedade) return
 
-    const maquinariosRef = ref(database, "propriedades/Matrice/maquinarios")
-    const horimetrosRef = ref(database, "propriedades/Matrice/horimetros")
+    setIsLoading(true)
+
+    const maquinariosRef = ref(database, `propriedades/${userPropriedade}/maquinarios`)
+    const horimetrosRef = ref(database, `propriedades/${userPropriedade}/horimetros`)
 
     // Listener para maquinários
     const unsubscribeMaquinarios = onValue(maquinariosRef, (snapshot) => {
@@ -65,7 +122,7 @@ const Horimetro = () => {
       unsubscribeMaquinarios()
       unsubscribeHorimetros()
     }
-  }, [user])
+  }, [user, userPropriedade])
 
   // Função para mostrar notificação
   const showNotification = (message, type = "success") => {
@@ -93,6 +150,11 @@ const Horimetro = () => {
       return
     }
 
+    if (!userPropriedade) {
+      showNotification("Nao foi possivel identificar a propriedade do usuario.", "error")
+      return
+    }
+
     try {
       const numericValue = Number.parseFloat(editValue)
       if (isNaN(numericValue) || numericValue < 0) {
@@ -101,7 +163,7 @@ const Horimetro = () => {
       }
 
       // Salvando diretamente o valor do horímetro na estrutura simples
-      const horimetroRef = ref(database, `propriedades/Matrice/horimetros/${maquinarioId}`)
+      const horimetroRef = ref(database, `propriedades/${userPropriedade}/horimetros/${maquinarioId}`)
       await set(horimetroRef, numericValue.toString())
 
       setEditingId(null)
@@ -120,13 +182,18 @@ const Horimetro = () => {
       return
     }
 
+    if (!userPropriedade) {
+      showNotification("Nao foi possivel identificar a propriedade do usuario.", "error")
+      return
+    }
+
     if (!newMaquinario.nome.trim()) {
       showNotification("Por favor, insira o nome do maquinário.", "error")
       return
     }
 
     try {
-      const maquinariosRef = ref(database, "propriedades/Matrice/maquinarios")
+      const maquinariosRef = ref(database, `propriedades/${userPropriedade}/maquinarios`)
       const newMaquinarioRef = await push(maquinariosRef, {
         nome: newMaquinario.nome.trim(),
         criadoEm: Date.now(),
@@ -134,7 +201,7 @@ const Horimetro = () => {
       })
 
       // Criar horímetro inicial com estrutura simples
-      const horimetroRef = ref(database, `propriedades/Matrice/horimetros/${newMaquinarioRef.key}`)
+      const horimetroRef = ref(database, `propriedades/${userPropriedade}/horimetros/${newMaquinarioRef.key}`)
       const horimetroValue = Number.parseFloat(newMaquinario.horimetro) || 0
       await set(horimetroRef, horimetroValue.toString())
 
@@ -154,13 +221,18 @@ const Horimetro = () => {
       return
     }
 
+    if (!userPropriedade) {
+      showNotification("Nao foi possivel identificar a propriedade do usuario.", "error")
+      return
+    }
+
     if (!confirm(`Tem certeza que deseja remover o maquinário "${nome}"? Esta ação não pode ser desfeita.`)) {
       return
     }
 
     try {
-      const maquinarioRef = ref(database, `propriedades/Matrice/maquinarios/${maquinarioId}`)
-      const horimetroRef = ref(database, `propriedades/Matrice/horimetros/${maquinarioId}`)
+      const maquinarioRef = ref(database, `propriedades/${userPropriedade}/maquinarios/${maquinarioId}`)
+      const horimetroRef = ref(database, `propriedades/${userPropriedade}/horimetros/${maquinarioId}`)
 
       await remove(maquinarioRef)
       await remove(horimetroRef)

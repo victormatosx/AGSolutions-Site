@@ -1,8 +1,9 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
-import { database } from "../firebase/firebase"
-import { ref, set, onValue, off, remove, update } from "firebase/database"
+import { useAuthState } from "react-firebase-hooks/auth"
+import { auth, database } from "../firebase/firebase"
+import { ref, set, onValue, off, remove, update, get } from "firebase/database"
 import {
   Search,
   Plus,
@@ -23,6 +24,8 @@ import {
 } from "lucide-react"
 
 const Cadastro = () => {
+  const [user] = useAuthState(auth)
+  const [userPropriedade, setUserPropriedade] = useState(null)
   // Estados para controlar qual seção está ativa
   const [activeSection, setActiveSection] = useState("usuarios")
 
@@ -121,7 +124,7 @@ const Cadastro = () => {
     })
   }
 
-  // Lista de culturas disponíveis
+  // Lista de culturas disponí­veis
   const culturas = [
     "Cebola",
     "Cenoura",
@@ -155,7 +158,51 @@ const Cadastro = () => {
     "Eucalipto",
   ]
 
-  // Configuração das seções
+  const getUserPropriedade = async (currentUser) => {
+    if (!currentUser) return null
+
+    try {
+      const propriedadesRef = ref(database, "propriedades")
+      const snapshot = await get(propriedadesRef)
+
+      if (snapshot.exists()) {
+        const propriedades = snapshot.val()
+
+        for (const [propriedadeNome, propriedadeData] of Object.entries(propriedades)) {
+          const users = propriedadeData.users || {}
+
+          if (users[currentUser.uid]) {
+            return propriedadeNome
+          }
+
+          for (const [, userData] of Object.entries(users)) {
+            if (userData.email && userData.email === currentUser.email) {
+              return propriedadeNome
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao buscar propriedade do usuario:", error)
+    }
+
+    return null
+  }
+
+  useEffect(() => {
+    if (!user) {
+      setUserPropriedade(null)
+      return
+    }
+
+    const resolvePropriedade = async () => {
+      const propriedade = await getUserPropriedade(user)
+      setUserPropriedade(propriedade)
+    }
+
+    resolvePropriedade()
+  }, [user])
+// Configuração das seções
   const sections = {
     usuarios: {
       title: "Usuários",
@@ -186,11 +233,11 @@ const Cadastro = () => {
       searchPlaceholder: "Pesquisar direcionadores...",
     },
     veiculos: {
-      title: "Veículos",
+      title: "Veí­culos",
       icon: Car,
       color: "indigo",
       data: veiculos,
-      searchPlaceholder: "Pesquisar veículos...",
+      searchPlaceholder: "Pesquisar veí­culos...",
     },
     atividades: {
       title: "Atividades",
@@ -210,13 +257,15 @@ const Cadastro = () => {
 
   // Carregar dados do Firebase
   useEffect(() => {
-    const usersRef = ref(database, "propriedades/Matrice/users")
-    const machinesRef = ref(database, "propriedades/Matrice/maquinarios")
-    const implementsRef = ref(database, "propriedades/Matrice/implementos")
-    const direcionadoresRef = ref(database, "propriedades/Matrice/direcionadores")
-    const veiculosRef = ref(database, "propriedades/Matrice/veiculos")
-    const atividadesRef = ref(database, "propriedades/Matrice/atividades")
-    const tanquesRef = ref(database, "propriedades/Matrice/tanques")
+    if (!userPropriedade) return
+
+    const usersRef = ref(database, `propriedades/${userPropriedade}/users`)
+    const machinesRef = ref(database, `propriedades/${userPropriedade}/maquinarios`)
+    const implementsRef = ref(database, `propriedades/${userPropriedade}/implementos`)
+    const direcionadoresRef = ref(database, `propriedades/${userPropriedade}/direcionadores`)
+    const veiculosRef = ref(database, `propriedades/${userPropriedade}/veiculos`)
+    const atividadesRef = ref(database, `propriedades/${userPropriedade}/atividades`)
+    const tanquesRef = ref(database, `propriedades/${userPropriedade}/tanques`)
 
     // Listeners
     onValue(usersRef, (snapshot) => {
@@ -308,18 +357,23 @@ const Cadastro = () => {
       off(atividadesRef)
       off(tanquesRef)
     }
-  }, [])
+  }, [userPropriedade])
 
-  // Funções para adicionar dados
+
   const handleAddUser = async (e) => {
     e.preventDefault()
-    // Removido o código de adição de usuário para exibir o alerta
+
   }
 
   const handleAddMachine = async (e) => {
     e.preventDefault()
     try {
-      const machinesRef = ref(database, `propriedades/Matrice/maquinarios/${machineData.id}`)
+      if (!userPropriedade) {
+        showNotification("Nao foi possivel identificar a propriedade do usuario.", "error")
+        return
+      }
+
+      const machinesRef = ref(database, `propriedades/${userPropriedade}/maquinarios/${machineData.id}`)
       await set(machinesRef, {
         id: machineData.id,
         nome: machineData.nome,
@@ -337,7 +391,12 @@ const Cadastro = () => {
   const handleAddImplement = async (e) => {
     e.preventDefault()
     try {
-      const implementsRef = ref(database, `propriedades/Matrice/implementos/${implementData.id}`)
+      if (!userPropriedade) {
+        showNotification("Nao foi possivel identificar a propriedade do usuario.", "error")
+        return
+      }
+
+      const implementsRef = ref(database, `propriedades/${userPropriedade}/implementos/${implementData.id}`)
       await set(implementsRef, {
         id: implementData.id,
         nome: implementData.nome,
@@ -355,7 +414,15 @@ const Cadastro = () => {
   const handleAddDirecionador = async (e) => {
     e.preventDefault()
     try {
-      const direcionadoresRef = ref(database, `propriedades/Matrice/direcionadores/${direcionadorData.id}`)
+      if (!userPropriedade) {
+        showNotification("Nao foi possivel identificar a propriedade do usuario.", "error")
+        return
+      }
+
+      const direcionadoresRef = ref(
+        database,
+        `propriedades/${userPropriedade}/direcionadores/${direcionadorData.id}`,
+      )
       await set(direcionadoresRef, {
         id: direcionadorData.id,
         direcionador: direcionadorData.direcionador,
@@ -380,7 +447,15 @@ const Cadastro = () => {
     }
 
     try {
-      const direcionadorRef = ref(database, `propriedades/Matrice/direcionadores/${direcionador.id}`)
+      if (!userPropriedade) {
+        showNotification("Nao foi possivel identificar a propriedade do usuario.", "error")
+        return
+      }
+
+      const direcionadorRef = ref(
+        database,
+        `propriedades/${userPropriedade}/direcionadores/${direcionador.id}`,
+      )
       await update(direcionadorRef, { status: "desativado" })
       showNotification("Direcionador desativado com sucesso!", "success")
     } catch (error) {
@@ -392,7 +467,12 @@ const Cadastro = () => {
   const handleAddVeiculo = async (e) => {
     e.preventDefault()
     try {
-      const veiculosRef = ref(database, `propriedades/Matrice/veiculos/${veiculoData.id}`)
+      if (!userPropriedade) {
+        showNotification("Nao foi possivel identificar a propriedade do usuario.", "error")
+        return
+      }
+
+      const veiculosRef = ref(database, `propriedades/${userPropriedade}/veiculos/${veiculoData.id}`)
       await set(veiculosRef, {
         id: veiculoData.id,
         placa: veiculoData.placa,
@@ -401,17 +481,22 @@ const Cadastro = () => {
       })
       setVeiculoData({ id: "", placa: "", modelo: "" })
       setShowVeiculoForm(false)
-      showNotification("Veículo cadastrado com sucesso!", "success")
+      showNotification("Veí­culo cadastrado com sucesso!", "success")
     } catch (error) {
-      console.error("Erro ao cadastrar veículo:", error)
-      showNotification("Erro ao cadastrar veículo", "error")
+      console.error("Erro ao cadastrar veí­culo:", error)
+      showNotification("Erro ao cadastrar veí­culo", "error")
     }
   }
 
   const handleAddAtividade = async (e) => {
     e.preventDefault()
     try {
-      const atividadesRef = ref(database, `propriedades/Matrice/atividades/${atividadeData.id}`)
+      if (!userPropriedade) {
+        showNotification("Nao foi possivel identificar a propriedade do usuario.", "error")
+        return
+      }
+
+      const atividadesRef = ref(database, `propriedades/${userPropriedade}/atividades/${atividadeData.id}`)
       await set(atividadesRef, {
         id: atividadeData.id,
         atividade: atividadeData.atividade,
@@ -429,7 +514,12 @@ const Cadastro = () => {
   const handleAddTanque = async (e) => {
     e.preventDefault()
     try {
-      const tanquesRef = ref(database, `propriedades/Matrice/tanques/${tanqueData.id}`)
+      if (!userPropriedade) {
+        showNotification("Nao foi possivel identificar a propriedade do usuario.", "error")
+        return
+      }
+
+      const tanquesRef = ref(database, `propriedades/${userPropriedade}/tanques/${tanqueData.id}`)
       await set(tanquesRef, {
         id: tanqueData.id,
         nome: tanqueData.nome,
@@ -444,13 +534,18 @@ const Cadastro = () => {
     }
   }
 
-  // Funções para excluir dados
-  const handleDeleteItem = async (section, itemId) => {
+
+const handleDeleteItem = async (section, itemId) => {
     try {
-      const itemRef = ref(database, `propriedades/Matrice/${section}/${itemId}`)
+      if (!userPropriedade) {
+        showNotification("Nao foi possivel identificar a propriedade do usuario.", "error")
+        return
+      }
+
+      const itemRef = ref(database, `propriedades/${userPropriedade}/${section}/${itemId}`)
       await remove(itemRef)
       setDeleteConfirmation(null)
-      showNotification("Item excluído com sucesso!", "success")
+      showNotification("Item excluí­do com sucesso!", "success")
     } catch (error) {
       console.error("Erro ao excluir item:", error)
       showNotification("Erro ao excluir item", "error")
@@ -475,13 +570,13 @@ const Cadastro = () => {
     })
   }
 
-  // Sistema de notificações
+
   const showNotification = (message, type = "success") => {
     setNotification({ message, type })
     setTimeout(() => setNotification(null), 4000)
   }
 
-  // Função para filtrar itens baseado na busca
+
   const filterItems = (items, searchTerm) => {
     if (!searchTerm) return items
     return items.filter(
@@ -958,7 +1053,7 @@ const Cadastro = () => {
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-slate-200">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-slate-800">Cadastrar Novo Veículo</h3>
+                  <h3 className="text-xl font-bold text-slate-800">Cadastrar Novo Veí­culo</h3>
                   <button
                     onClick={() => setShowVeiculoForm(false)}
                     className="w-10 h-10 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center justify-center transition-colors duration-200"
@@ -970,7 +1065,7 @@ const Cadastro = () => {
 
               <form onSubmit={handleAddVeiculo} className="p-6 space-y-6">
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700">ID do Veículo</label>
+                  <label className="block text-sm font-medium text-slate-700">ID do Veí­culo</label>
                   <input
                     type="text"
                     value={veiculoData.id}
@@ -981,7 +1076,7 @@ const Cadastro = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700">Placa do Veículo</label>
+                  <label className="block text-sm font-medium text-slate-700">Placa do Veí­culo</label>
                   <input
                     type="text"
                     value={veiculoData.placa}
@@ -992,7 +1087,7 @@ const Cadastro = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700">Modelo do Veículo</label>
+                  <label className="block text-sm font-medium text-slate-700">Modelo do Veí­culo</label>
                   <input
                     type="text"
                     value={veiculoData.modelo}
@@ -1241,3 +1336,5 @@ const Cadastro = () => {
 }
 
 export default Cadastro
+
+

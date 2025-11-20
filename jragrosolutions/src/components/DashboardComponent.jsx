@@ -74,27 +74,11 @@ const Dashboard = () => {
     loadData()
   }, [user, loading, currentViewMode])
 
-  useEffect(() => {
-    if (user) {
-      // Add a small delay to prevent rapid successive calls
-      const timeoutId = setTimeout(() => {
-        checkHourAlerts()
-      }, 500)
-
-      return () => {
-        clearTimeout(timeoutId)
-        // Clean up Firebase listeners on unmount
-        const apontamentosRef = ref(database, "propriedades/Matrice/apontamentos")
-        off(apontamentosRef)
-      }
-    }
-  }, [user])
-
   const checkHourAlerts = useCallback(() => {
-    if (!user) return
+    if (!user || !currentPropriedadeNome) return
 
     try {
-      const apontamentosRef = ref(database, "propriedades/Matrice/apontamentos")
+      const apontamentosRef = ref(database, `propriedades/${currentPropriedadeNome}/apontamentos`)
 
       // Use off() to remove any existing listeners before adding a new one
       off(apontamentosRef)
@@ -141,7 +125,7 @@ const Dashboard = () => {
 
                 // Mark as waiting to prevent duplicate processing
                 if (!apontamento.alertaEnviado) {
-                  const apontamentoRef = ref(database, `propriedades/Matrice/apontamentos/${key}`)
+                  const apontamentoRef = ref(database, `propriedades/${currentPropriedadeNome}/apontamentos/${key}`)
                   update(apontamentoRef, { alertaEnviado: "waiting" })
                 }
               }
@@ -163,7 +147,23 @@ const Dashboard = () => {
     } catch (error) {
       console.error("Erro ao verificar alertas de horas:", error)
     }
-  }, [user, alertas]) // Enhanced useCallback with dependencies to prevent unnecessary re-executions
+  }, [user, alertas, currentPropriedadeNome]) // Enhanced useCallback with dependencies to prevent unnecessary re-executions
+
+  useEffect(() => {
+    if (user && currentPropriedadeNome) {
+      // Add a small delay to prevent rapid successive calls
+      const timeoutId = setTimeout(() => {
+        checkHourAlerts()
+      }, 500)
+
+      return () => {
+        clearTimeout(timeoutId)
+        // Clean up Firebase listeners on unmount
+        const apontamentosRef = ref(database, `propriedades/${currentPropriedadeNome}/apontamentos`)
+        off(apontamentosRef)
+      }
+    }
+  }, [user, currentPropriedadeNome, checkHourAlerts])
 
   // Função para gerar PDF com layout profissional
   const generatePDF = async () => {
@@ -889,8 +889,13 @@ const Dashboard = () => {
       const updatedAlerts = prev.filter((alert) => {
         if (alert.id === alertId) {
           // Update the alert status in Firebase when dismissed
-          const apontamentoRef = ref(database, `propriedades/Matrice/apontamentos/${alert.apontamentoId}`)
-          update(apontamentoRef, { alertaEnviado: true })
+          if (currentPropriedadeNome) {
+            const apontamentoRef = ref(
+              database,
+              `propriedades/${currentPropriedadeNome}/apontamentos/${alert.apontamentoId}`,
+            )
+            update(apontamentoRef, { alertaEnviado: true })
+          }
           return false
         }
         return true
@@ -901,10 +906,15 @@ const Dashboard = () => {
 
   const clearAllAlerts = () => {
     // Update all alerts in Firebase when clearing all
-    alertas.forEach((alert) => {
-      const apontamentoRef = ref(database, `propriedades/Matrice/apontamentos/${alert.apontamentoId}`)
-      update(apontamentoRef, { alertaEnviado: true })
-    })
+    if (currentPropriedadeNome) {
+      alertas.forEach((alert) => {
+        const apontamentoRef = ref(
+          database,
+          `propriedades/${currentPropriedadeNome}/apontamentos/${alert.apontamentoId}`,
+        )
+        update(apontamentoRef, { alertaEnviado: true })
+      })
+    }
     setAlertas([])
   }
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useAuthState } from "react-firebase-hooks/auth"
 import { auth, database } from "../firebase/firebase"
-import { ref, onValue, update, remove } from "firebase/database"
+import { ref, onValue, update, remove, get } from "firebase/database"
 import ProtectedRoute from "./ProtectedRoute"
 import {
   Settings,
@@ -56,6 +56,7 @@ const Apontamentos = () => {
     abastecimentoVeiculos: [],
   })
   const [isLoading, setIsLoading] = useState(true)
+  const [userPropriedade, setUserPropriedade] = useState(null)
 
   // Adicionar após os outros estados
   const [usuarios, setUsuarios] = useState({})
@@ -228,20 +229,67 @@ const Apontamentos = () => {
     return 0
   }
 
+  const getUserPropriedade = async (currentUser) => {
+    if (!currentUser) return null
+
+    try {
+      const propriedadesRef = ref(database, "propriedades")
+      const snapshot = await get(propriedadesRef)
+
+      if (snapshot.exists()) {
+        const propriedades = snapshot.val()
+
+        for (const [propriedadeNome, propriedadeData] of Object.entries(propriedades)) {
+          const users = propriedadeData.users || {}
+
+          if (users[currentUser.uid]) {
+            return propriedadeNome
+          }
+
+          for (const [, userData] of Object.entries(users)) {
+            if (userData.email && userData.email === currentUser.email) {
+              return propriedadeNome
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao buscar propriedade do usuario:", error)
+    }
+
+    return null
+  }
+
   // Verificar se usuário está autenticado antes de carregar dados
   useEffect(() => {
     if (loading) return // Ainda carregando estado de auth
 
     if (!user) {
       setIsLoading(false)
+      setUserPropriedade(null)
       return // ProtectedRoute vai lidar com o redirecionamento
     }
 
-    if (user) {
-      loadData()
-      // checkHourAlerts()
+    const resolvePropriedade = async () => {
+      setIsLoading(true)
+      const propriedade = await getUserPropriedade(user)
+
+      if (propriedade) {
+        setUserPropriedade(propriedade)
+      } else {
+        setIsLoading(false)
+        showNotification("Nao foi possivel identificar a propriedade do usuario.", "error")
+      }
     }
+
+    resolvePropriedade()
   }, [user, loading])
+
+  useEffect(() => {
+    if (!user || !userPropriedade) return
+    loadData(userPropriedade)
+    // checkHourAlerts()
+  }, [user, userPropriedade])
 
   // const checkHourAlerts = () => {
   //   if (!user) return
@@ -312,12 +360,17 @@ const Apontamentos = () => {
   // }
 
   // Usuário autenticado, carregar dados
-  const loadData = async () => {
+  const loadData = async (propriedadeNome) => {
+    if (!propriedadeNome) {
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
 
     try {
       // Carregar usuários
-      const usersRef = ref(database, "propriedades/Matrice/users")
+      const usersRef = ref(database, `propriedades/${propriedadeNome}/users`)
       onValue(usersRef, (snapshot) => {
         const usersData = snapshot.val()
         if (usersData) {
@@ -326,7 +379,7 @@ const Apontamentos = () => {
       })
 
       // Carregar maquinários da estrutura correta
-      const maquinariosRef = ref(database, "propriedades/Matrice/maquinarios")
+      const maquinariosRef = ref(database, `propriedades/${propriedadeNome}/maquinarios`)
       onValue(maquinariosRef, (snapshot) => {
         const maquinariosData = snapshot.val()
         if (maquinariosData) {
@@ -339,7 +392,7 @@ const Apontamentos = () => {
       })
 
       // Carregar apontamentos
-      const apontamentosRef = ref(database, "propriedades/Matrice/apontamentos")
+      const apontamentosRef = ref(database, `propriedades/${propriedadeNome}/apontamentos`)
       onValue(apontamentosRef, (snapshot) => {
         const apontamentosData = snapshot.val()
         const apontamentosList = apontamentosData
@@ -352,7 +405,7 @@ const Apontamentos = () => {
       })
 
       // Carregar abastecimentos
-      const abastecimentosRef = ref(database, "propriedades/Matrice/abastecimentos")
+      const abastecimentosRef = ref(database, `propriedades/${propriedadeNome}/abastecimentos`)
       onValue(abastecimentosRef, (snapshot) => {
         const abastecimentosData = snapshot.val()
         const abastecimentosList = abastecimentosData
@@ -365,7 +418,7 @@ const Apontamentos = () => {
       })
 
       // Carregar percursos
-      const percursosRef = ref(database, "propriedades/Matrice/percursos")
+      const percursosRef = ref(database, `propriedades/${propriedadeNome}/percursos`)
       onValue(percursosRef, (snapshot) => {
         const percursosData = snapshot.val()
         const percursosList = percursosData
@@ -378,7 +431,7 @@ const Apontamentos = () => {
       })
 
       // Carregar abastecimento de veículos
-      const abastecimentoVeiculosRef = ref(database, "propriedades/Matrice/abastecimentoVeiculos")
+      const abastecimentoVeiculosRef = ref(database, `propriedades/${propriedadeNome}/abastecimentoVeiculos`)
       onValue(abastecimentoVeiculosRef, (snapshot) => {
         const abastecimentoVeiculosData = snapshot.val()
         const abastecimentoVeiculosList = abastecimentoVeiculosData
@@ -410,20 +463,25 @@ const Apontamentos = () => {
       return
     }
 
+    if (!userPropriedade) {
+      showNotification("Nao foi possivel identificar a propriedade do usuario.", "error")
+      return
+    }
+
     try {
       let path = ""
       switch (tipo) {
         case "apontamentos":
-          path = `propriedades/Matrice/apontamentos/${itemId}`
+          path = `propriedades/${userPropriedade}/apontamentos/${itemId}`
           break
         case "abastecimentos":
-          path = `propriedades/Matrice/abastecimentos/${itemId}`
+          path = `propriedades/${userPropriedade}/abastecimentos/${itemId}`
           break
         case "percursos":
-          path = `propriedades/Matrice/percursos/${itemId}`
+          path = `propriedades/${userPropriedade}/percursos/${itemId}`
           break
         case "abastecimentoVeiculos":
-          path = `propriedades/Matrice/abastecimentoVeiculos/${itemId}`
+          path = `propriedades/${userPropriedade}/abastecimentoVeiculos/${itemId}`
           break
         default:
           throw new Error("Tipo inválido")
@@ -445,20 +503,25 @@ const Apontamentos = () => {
       return
     }
 
+    if (!userPropriedade) {
+      showNotification("Nao foi possivel identificar a propriedade do usuario.", "error")
+      return
+    }
+
     try {
       let path = ""
       switch (tipo) {
         case "apontamentos":
-          path = `propriedades/Matrice/apontamentos/${itemId}`
+          path = `propriedades/${userPropriedade}/apontamentos/${itemId}`
           break
         case "abastecimentos":
-          path = `propriedades/Matrice/abastecimentos/${itemId}`
+          path = `propriedades/${userPropriedade}/abastecimentos/${itemId}`
           break
         case "percursos":
-          path = `propriedades/Matrice/percursos/${itemId}`
+          path = `propriedades/${userPropriedade}/percursos/${itemId}`
           break
         case "abastecimentoVeiculos":
-          path = `propriedades/Matrice/abastecimentoVeiculos/${itemId}`
+          path = `propriedades/${userPropriedade}/abastecimentoVeiculos/${itemId}`
           break
         default:
           throw new Error("Tipo inválido")
@@ -688,22 +751,27 @@ const Apontamentos = () => {
       return
     }
 
+    if (!userPropriedade) {
+      showNotification("Nao foi possivel identificar a propriedade do usuario.", "error")
+      return
+    }
+
     try {
       const { id, type, ...dataToSave } = editedItem
 
       let path = ""
       switch (type) {
         case "apontamentos":
-          path = `propriedades/Matrice/apontamentos/${id}`
+          path = `propriedades/${userPropriedade}/apontamentos/${id}`
           break
         case "abastecimentos":
-          path = `propriedades/Matrice/abastecimentos/${id}`
+          path = `propriedades/${userPropriedade}/abastecimentos/${id}`
           break
         case "percursos":
-          path = `propriedades/Matrice/percursos/${id}`
+          path = `propriedades/${userPropriedade}/percursos/${id}`
           break
         case "abastecimentoVeiculos":
-          path = `propriedades/Matrice/abastecimentoVeiculos/${id}`
+          path = `propriedades/${userPropriedade}/abastecimentoVeiculos/${id}`
           break
         default:
           throw new Error("Tipo inválido")
@@ -1252,6 +1320,18 @@ const Apontamentos = () => {
                       format: (v) => (v ? `${v}h` : "N/A"),
                     },
                     {
+                      key: "horimetroBombaInicial",
+                      label: "Horímetro Bomba Inicial",
+                      icon: <Clock className="w-4 h-4" />,
+                      format: (v) => (v ? `${v}h` : "N/A"),
+                    },
+                    {
+                      key: "horimetroBombaFinal",
+                      label: "Horímetro Bomba Final",
+                      icon: <Clock className="w-4 h-4" />,
+                      format: (v) => (v ? `${v}h` : "N/A"),
+                    },
+                    {
                       key: "data",
                       label: "Data",
                       icon: <Calendar className="w-4 h-4" />,
@@ -1325,6 +1405,18 @@ const Apontamentos = () => {
                       label: "Hodômetro",
                       icon: <Clock className="w-4 h-4" />,
                       format: (v) => (v ? `${v} km` : "N/A"),
+                    },
+                    {
+                      key: "horimetroBombaInicial",
+                      label: "Horímetro Bomba Inicial",
+                      icon: <Clock className="w-4 h-4" />,
+                      format: (v) => (v ? `${v}h` : "N/A"),
+                    },
+                    {
+                      key: "horimetroBombaFinal",
+                      label: "Horímetro Bomba Final",
+                      icon: <Clock className="w-4 h-4" />,
+                      format: (v) => (v ? `${v}h` : "N/A"),
                     },
                     {
                       key: "tanqueDiesel",
