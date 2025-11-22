@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from "react"
+"use client"
+
+import { useState, useEffect } from "react"
 import { useAuthState } from "react-firebase-hooks/auth"
-import { auth, database } from "../firebase/firebase"
+import { auth, database, storage } from "../firebase/firebase"
 import { ref, get, update, onValue } from "firebase/database"
+import { getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage"
 import HeaderMecanico from "./HeaderMecanico"
 import {
   Wrench,
@@ -9,7 +12,6 @@ import {
   CheckCircle,
   Calendar,
   User,
-  FileText,
   Settings,
   Loader2,
   X,
@@ -18,12 +20,12 @@ import {
   BarChart3,
   TrendingUp,
   Activity,
-  Filter,
-  Eye,
   Building,
   AlertCircle,
   Zap,
-  ChevronRight
+  ChevronRight,
+  ChevronLeft,
+  ImageIcon,
 } from "lucide-react"
 
 const MecanicoComponent = () => {
@@ -41,6 +43,11 @@ const MecanicoComponent = () => {
   const [sortOrder, setSortOrder] = useState("recentes")
   const [usersCache, setUsersCache] = useState({})
 
+  const [imageViewerVisible, setImageViewerVisible] = useState(false)
+  const [selectedImages, setSelectedImages] = useState([])
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [fotosConclusao, setFotosConclusao] = useState([])
+
   // Função para buscar o nome do usuário pelo ID
   const fetchUserName = async (userId, propriedadeId) => {
     if (!userId || !propriedadeId) return "Operador Desconhecido"
@@ -55,9 +62,9 @@ const MecanicoComponent = () => {
       if (userSnapshot.exists()) {
         const userName = userSnapshot.val()
         // Atualiza o cache
-        setUsersCache(prev => ({
+        setUsersCache((prev) => ({
           ...prev,
-          [userId]: userName
+          [userId]: userName,
         }))
         return userName
       }
@@ -65,6 +72,28 @@ const MecanicoComponent = () => {
     } catch (error) {
       console.error("Erro ao buscar nome do usuário:", error)
       return "Operador Desconhecido"
+    }
+  }
+
+  const handleViewImages = (images) => {
+    if (!images || images.length === 0) {
+      alert("Não há imagens anexadas nesta ordem de serviço.")
+      return
+    }
+    setSelectedImages(images)
+    setCurrentImageIndex(0)
+    setImageViewerVisible(true)
+  }
+
+  const handleNextImage = () => {
+    if (currentImageIndex < selectedImages.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1)
+    }
+  }
+
+  const handlePreviousImage = () => {
+    if (currentImageIndex > 0) {
+      setCurrentImageIndex(currentImageIndex - 1)
     }
   }
 
@@ -94,7 +123,7 @@ const MecanicoComponent = () => {
               foundUserData = {
                 ...propriedadeData.users[user.uid],
                 propriedade: nomePropriedade,
-                idPropriedade: propriedadeName
+                idPropriedade: propriedadeName,
               }
               propriedadeAtual = propriedadeName
               break
@@ -122,7 +151,7 @@ const MecanicoComponent = () => {
                     ...ordem,
                     operador: operadorNome,
                     propriedade: foundUserData.propriedade,
-                    idPropriedade: propriedadeAtual
+                    idPropriedade: propriedadeAtual,
                   }
                 })
 
@@ -162,16 +191,18 @@ const MecanicoComponent = () => {
     const updateOperators = async () => {
       if (ordensServico.length === 0) return
 
-      const updatedOrdens = await Promise.all(ordensServico.map(async (ordem) => {
-        if (ordem.userId && !usersCache[ordem.userId]) {
-          const userName = await fetchUserName(ordem.userId, ordem.idPropriedade || userData?.idPropriedade)
-          return {
-            ...ordem,
-            operador: userName
+      const updatedOrdens = await Promise.all(
+        ordensServico.map(async (ordem) => {
+          if (ordem.userId && !usersCache[ordem.userId]) {
+            const userName = await fetchUserName(ordem.userId, ordem.idPropriedade || userData?.idPropriedade)
+            return {
+              ...ordem,
+              operador: userName,
+            }
           }
-        }
-        return ordem
-      }))
+          return ordem
+        }),
+      )
 
       // Atualiza o estado apenas se houver mudanças
       if (JSON.stringify(updatedOrdens) !== JSON.stringify(ordensServico)) {
@@ -184,7 +215,7 @@ const MecanicoComponent = () => {
 
   // Filtrar e ordenar ordens
   const filteredOrdens = ordensServico
-    .filter(ordem => {
+    .filter((ordem) => {
       const matchesTab = ordem.status === activeTab
       const matchesSearch =
         ordem.equipamento?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -197,36 +228,36 @@ const MecanicoComponent = () => {
     .sort((a, b) => {
       // Função auxiliar para converter a data para um objeto Date
       const parseDate = (dateStr) => {
-        if (!dateStr) return new Date(0);
+        if (!dateStr) return new Date(0)
 
         // Tenta converter de DD/MM/YYYY para Date
-        if (typeof dateStr === 'string' && dateStr.includes('/')) {
-          const [day, month, year] = dateStr.split('/').map(Number);
-          return new Date(year, month - 1, day);
+        if (typeof dateStr === "string" && dateStr.includes("/")) {
+          const [day, month, year] = dateStr.split("/").map(Number)
+          return new Date(year, month - 1, day)
         }
 
         // Tenta converter de YYYY-MM-DD para Date
-        if (typeof dateStr === 'string' && dateStr.includes('-')) {
-          const [year, month, day] = dateStr.split('-').map(Number);
-          return new Date(year, month - 1, day);
+        if (typeof dateStr === "string" && dateStr.includes("-")) {
+          const [year, month, day] = dateStr.split("-").map(Number)
+          return new Date(year, month - 1, day)
         }
 
         // Tenta converter diretamente
-        const date = new Date(dateStr);
-        return isNaN(date.getTime()) ? new Date(0) : date;
-      };
+        const date = new Date(dateStr)
+        return isNaN(date.getTime()) ? new Date(0) : date
+      }
 
-      const dateA = parseDate(a.data);
-      const dateB = parseDate(b.data);
+      const dateA = parseDate(a.data)
+      const dateB = parseDate(b.data)
 
       // Ordenar por data
-      return sortOrder === 'recentes'
-        ? dateB - dateA  // Mais recentes primeiro
-        : dateA - dateB; // Mais antigas primeiro
+      return sortOrder === "recentes"
+        ? dateB - dateA // Mais recentes primeiro
+        : dateA - dateB // Mais antigas primeiro
     })
 
-  const ordensAbertas = ordensServico.filter(ordem => ordem.status === "aberto")
-  const ordensFechadas = ordensServico.filter(ordem => ordem.status === "fechado")
+  const ordensAbertas = ordensServico.filter((ordem) => ordem.status === "aberto")
+  const ordensFechadas = ordensServico.filter((ordem) => ordem.status === "fechado")
 
   // Função para concluir ordem de serviço
   const handleConcluirOS = async () => {
@@ -235,8 +266,11 @@ const MecanicoComponent = () => {
     setIsSubmitting(true)
     try {
       // Usa o ID da propriedade em vez do nome para garantir a referência correta
-      const osRef = ref(database, `propriedades/${selectedOS.idPropriedade || userData.idPropriedade}/ordemServico/${selectedOS.id}`)
-      
+      const osRef = ref(
+        database,
+        `propriedades/${selectedOS.idPropriedade || userData.idPropriedade}/ordemServico/${selectedOS.id}`,
+      )
+
       const currentDate = new Date()
       const userName = userData.name || user.email?.split("@")[0] || "Mecânico"
 
@@ -244,7 +278,7 @@ const MecanicoComponent = () => {
         dataFechamento: currentDate.toISOString(),
         descricaoServico: descricaoResolucao.trim(),
         fechadoPor: userName,
-        userIdFechamento: user.uid
+        userIdFechamento: user.uid,
       }
 
       const updateData = {
@@ -252,23 +286,18 @@ const MecanicoComponent = () => {
         conclusao: conclusaoData,
         data: selectedOS.data || "",
         equipamento: selectedOS.equipamento || "",
-        descricaoProblema: selectedOS.descricaoProblema || ""
+        descricaoProblema: selectedOS.descricaoProblema || "",
       }
 
       await update(osRef, updateData)
 
-      setOrdensServico(prev =>
-        prev.map(ordem =>
-          ordem.id === selectedOS.id
-            ? { ...ordem, ...updateData }
-            : ordem
-        )
+      setOrdensServico((prev) =>
+        prev.map((ordem) => (ordem.id === selectedOS.id ? { ...ordem, ...updateData } : ordem)),
       )
 
       setShowConcluirModal(false)
       setSelectedOS(null)
       setDescricaoResolucao("")
-
     } catch (error) {
       console.error("Erro ao concluir OS:", error)
       alert("Erro ao concluir ordem de serviço. Tente novamente.")
@@ -281,54 +310,58 @@ const MecanicoComponent = () => {
     if (!dateString) return "Não informado"
 
     // Se a data já está no formato brasileiro, retorna como está
-    if (typeof dateString === 'string' && dateString.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+    if (typeof dateString === "string" && dateString.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
       return dateString
     }
 
     // Handle Firebase timestamp format
-    if (dateString && typeof dateString === 'object' && dateString.seconds) {
-      return new Date(dateString.seconds * 1000).toLocaleDateString('pt-BR')
+    if (dateString && typeof dateString === "object" && dateString.seconds) {
+      return new Date(dateString.seconds * 1000).toLocaleDateString("pt-BR")
     }
 
     // Handle ISO string format (YYYY-MM-DDTHH:MM:SS...)
-    if (typeof dateString === 'string' && dateString.includes('T')) {
+    if (typeof dateString === "string" && dateString.includes("T")) {
       const date = new Date(dateString)
-      return isNaN(date.getTime()) ? 'Data inválida' : date.toLocaleDateString('pt-BR')
+      return isNaN(date.getTime()) ? "Data inválida" : date.toLocaleDateString("pt-BR")
     }
 
     // Handle date string in format YYYY-MM-DD
-    if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      const [year, month, day] = dateString.split('-')
+    if (typeof dateString === "string" && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = dateString.split("-")
       const date = new Date(year, month - 1, day)
-      return date.toLocaleDateString('pt-BR')
+      return date.toLocaleDateString("pt-BR")
     }
 
     // Tenta converter qualquer outro formato
     try {
-      if (typeof dateString === 'number') {
-        return new Date(dateString).toLocaleDateString('pt-BR')
+      if (typeof dateString === "number") {
+        return new Date(dateString).toLocaleDateString("pt-BR")
       }
 
       const date = new Date(dateString)
       if (isNaN(date.getTime())) {
-        return 'Data inválida'
+        return "Data inválida"
       }
-      return date.toLocaleDateString('pt-BR')
+      return date.toLocaleDateString("pt-BR")
     } catch (e) {
-      return 'Data inválida'
+      return "Data inválida"
     }
   }
 
   // Componente de estatísticas melhorado
   const StatsCard = ({ title, value, icon: Icon, gradient, textColor = "text-white" }) => (
-    <div className={`${gradient} rounded-xl p-6 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300`}>
-      <div className="flex items-center justify-between">
+    <div
+      className={`relative overflow-hidden rounded-2xl ${gradient} text-white shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300`}
+    >
+      <div className="absolute inset-0 bg-white/10 blur-3xl opacity-50 pointer-events-none" />
+      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full translate-x-10 -translate-y-10 pointer-events-none" />
+      <div className="relative flex items-center justify-between p-5 sm:p-6">
         <div>
-          <p className="text-white/80 text-sm font-medium mb-1">{title}</p>
-          <p className={`text-3xl font-bold ${textColor}`}>{value}</p>
+          <p className="text-white/80 text-xs sm:text-sm font-medium mb-1 uppercase tracking-wide">{title}</p>
+          <p className={`text-3xl sm:text-4xl font-extrabold ${textColor}`}>{value}</p>
         </div>
-        <div className="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
-          <Icon className="w-7 h-7 text-white" />
+        <div className="p-3 sm:p-4 bg-white/15 rounded-xl backdrop-blur-sm shadow-inner">
+          <Icon className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
         </div>
       </div>
     </div>
@@ -337,14 +370,18 @@ const MecanicoComponent = () => {
   // Card compacto da ordem de serviço
   const OrdemServicoCardCompact = ({ ordem }) => {
     const isAberta = ordem.status === "aberto"
-    const prioridade = ordem.prioridade || 'media'
+    const prioridade = ordem.prioridade || "media"
 
     const getPrioridadeColor = (prioridade) => {
       switch (prioridade) {
-        case 'alta': return 'bg-red-100 text-red-700 border-red-200'
-        case 'media': return 'bg-yellow-100 text-yellow-700 border-yellow-200'
-        case 'baixa': return 'bg-green-100 text-green-700 border-green-200'
-        default: return 'bg-gray-100 text-gray-700 border-gray-200'
+        case "alta":
+          return "bg-red-100 text-red-700 border-red-200"
+        case "media":
+          return "bg-yellow-100 text-yellow-700 border-yellow-200"
+        case "baixa":
+          return "bg-green-100 text-green-700 border-green-200"
+        default:
+          return "bg-gray-100 text-gray-700 border-gray-200"
       }
     }
 
@@ -357,8 +394,10 @@ const MecanicoComponent = () => {
         }}
       >
         {/* Accent bar */}
-        <div className={`absolute left-0 top-0 w-1 h-full ${isAberta ? 'bg-gradient-to-b from-green-400 to-green-600' : 'bg-gradient-to-b from-red-400 to-red-600'}`} />
-        
+        <div
+          className={`absolute left-0 top-0 w-1 h-full ${isAberta ? "bg-green-600" : "bg-red-600"}`}
+        />
+
         {/* Ícone de seta indicativo */}
         <div className="absolute top-1/2 right-4 transform -translate-y-1/2 text-gray-300 group-hover:text-gray-400 transition-colors">
           <ChevronRight className="w-6 h-6" />
@@ -367,7 +406,7 @@ const MecanicoComponent = () => {
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center space-x-3">
-            <div className={`p-2.5 rounded-lg ${isAberta ? 'bg-green-50' : 'bg-red-50'}`}>
+            <div className={`p-2.5 rounded-lg ${isAberta ? "bg-green-50" : "bg-red-50"}`}>
               {isAberta ? (
                 <Clock className="w-5 h-5 text-green-600" />
               ) : (
@@ -376,11 +415,12 @@ const MecanicoComponent = () => {
             </div>
             <div>
               <h3 className="font-bold text-gray-900 text-lg">OS #{ordem.id.slice(-6)}</h3>
-              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${isAberta
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-red-100 text-red-700'
-                }`}>
-                {isAberta ? 'Em Andamento' : 'Concluída'}
+              <span
+                className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                  isAberta ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                }`}
+              >
+                {isAberta ? "Em Andamento" : "Concluída"}
               </span>
             </div>
           </div>
@@ -392,7 +432,7 @@ const MecanicoComponent = () => {
         <div className="space-y-3">
           <div className="flex items-center text-sm text-gray-600">
             <Settings className="w-4 h-4 mr-3 text-gray-400" />
-            <span className="font-medium text-gray-900">{ordem.equipamento || 'Equipamento não informado'}</span>
+            <span className="font-medium text-gray-900">{ordem.equipamento || "Equipamento não informado"}</span>
           </div>
 
           <div className="flex items-center text-sm text-gray-600">
@@ -402,7 +442,7 @@ const MecanicoComponent = () => {
 
           <div className="flex items-center text-sm text-gray-600">
             <User className="w-4 h-4 mr-3 text-gray-400" />
-            <span>{ordem.operador || 'Não informado'}</span>
+            <span>{ordem.operador || "Não informado"}</span>
           </div>
         </div>
 
@@ -425,7 +465,7 @@ const MecanicoComponent = () => {
   }
 
   // Estado para armazenar o nome do usuário que fechou a OS
-  const [fechadoPorNome, setFechadoPorNome] = useState('')
+  const [fechadoPorNome, setFechadoPorNome] = useState("")
 
   // Efeito para buscar o nome quando o modal é aberto
   useEffect(() => {
@@ -436,7 +476,7 @@ const MecanicoComponent = () => {
       } else if (selectedOS?.conclusao?.userIdFechamento) {
         setFechadoPorNome(`ID: ${selectedOS.conclusao.userIdFechamento}`)
       } else {
-        setFechadoPorNome('Usuário não identificado')
+        setFechadoPorNome("Usuário não identificado")
       }
     }
 
@@ -454,19 +494,15 @@ const MecanicoComponent = () => {
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
           {/* Header */}
-          <div className={`${isAberta ? 'bg-gradient-to-r from-green-500 to-green-600' : 'bg-gradient-to-r from-red-500 to-red-600'} text-white p-6`}>
+          <div className={`${isAberta ? "bg-green-600" : "bg-red-600"} text-white p-6`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-white/20 rounded-lg">
-                  {isAberta ? (
-                    <Clock className="w-6 h-6" />
-                  ) : (
-                    <CheckCircle className="w-6 h-6" />
-                  )}
+                  {isAberta ? <Clock className="w-6 h-6" /> : <CheckCircle className="w-6 h-6" />}
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold">OS #{selectedOS.id.slice(-6)}</h2>
-                  <p className="text-white/90">{isAberta ? 'Em Andamento' : 'Concluída'}</p>
+                  <p className="text-white/90">{isAberta ? "Em Andamento" : "Concluída"}</p>
                 </div>
               </div>
               <button
@@ -499,7 +535,7 @@ const MecanicoComponent = () => {
                     <Settings className="w-4 h-4 text-gray-500" />
                     <span className="text-sm font-medium text-gray-700">Equipamento</span>
                   </div>
-                  <p className="font-semibold text-gray-900">{selectedOS.equipamento || 'Não informado'}</p>
+                  <p className="font-semibold text-gray-900">{selectedOS.equipamento || "Não informado"}</p>
                 </div>
               </div>
 
@@ -509,7 +545,7 @@ const MecanicoComponent = () => {
                     <User className="w-4 h-4 text-gray-500" />
                     <span className="text-sm font-medium text-gray-700">Operador</span>
                   </div>
-                  <p className="font-semibold text-gray-900">{selectedOS.operador || 'Não informado'}</p>
+                  <p className="font-semibold text-gray-900">{selectedOS.operador || "Não informado"}</p>
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
@@ -517,10 +553,44 @@ const MecanicoComponent = () => {
                     <Building className="w-4 h-4 text-gray-500" />
                     <span className="text-sm font-medium text-gray-700">Propriedade</span>
                   </div>
-                  <p className="font-semibold text-gray-900">{selectedOS.propriedade || 'Não informado'}</p>
+                  <p className="font-semibold text-gray-900">{selectedOS.propriedade || "Não informado"}</p>
                 </div>
               </div>
             </div>
+
+            {(selectedOS.tipoServico || selectedOS.sistema || selectedOS.subcomponente) && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {selectedOS.tipoServico && (
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Wrench className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-700">Tipo de Serviço</span>
+                    </div>
+                    <p className="font-semibold text-blue-900">{selectedOS.tipoServico}</p>
+                  </div>
+                )}
+
+                {selectedOS.sistema && (
+                  <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Settings className="w-4 h-4 text-purple-600" />
+                      <span className="text-sm font-medium text-purple-700">Sistema</span>
+                    </div>
+                    <p className="font-semibold text-purple-900">{selectedOS.sistema}</p>
+                  </div>
+                )}
+
+                {selectedOS.subcomponente && (
+                  <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Activity className="w-4 h-4 text-indigo-600" />
+                      <span className="text-sm font-medium text-indigo-700">Subcomponente</span>
+                    </div>
+                    <p className="font-semibold text-indigo-900">{selectedOS.subcomponente}</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Descrição do problema */}
             <div className="mb-6">
@@ -529,24 +599,70 @@ const MecanicoComponent = () => {
                   <AlertCircle className="w-5 h-5 text-red-600" />
                   <h3 className="font-semibold text-red-900">Descrição do Problema</h3>
                 </div>
-                <p className="text-red-800">{selectedOS.descricaoProblema || 'Não informado'}</p>
+                <p className="text-red-800">{selectedOS.descricaoProblema || "Não informado"}</p>
               </div>
             </div>
 
-            {/* Resolução (apenas para ordens fechadas) */}
-            {!isAberta && selectedOS.conclusao && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Zap className="w-5 h-5 text-green-600" />
-                  <h3 className="font-semibold text-green-900">Resolução</h3>
-                </div>
-                <p className="text-green-800 mb-3 whitespace-pre-line">
-                  {selectedOS.conclusao.descricaoServico || selectedOS.conclusao.descricaoResolucao || 'Nenhuma descrição fornecida'}
-                </p>
-                <div className="text-xs text-green-600 bg-green-100 px-3 py-1 rounded-full inline-block">
-                  Concluído em {formatDate(selectedOS.conclusao.dataFechamento)} por {fechadoPorNome}
+            {selectedOS.imagens && selectedOS.imagens.length > 0 && (
+              <div className="mb-6">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-2">
+                      <ImageIcon className="w-5 h-5 text-gray-600" />
+                      <h3 className="font-semibold text-gray-900">Imagens Anexadas na Criação</h3>
+                    </div>
+                    <span className="text-sm text-gray-600">({selectedOS.imagens.length} imagens)</span>
+                  </div>
+                  <button
+                    onClick={() => handleViewImages(selectedOS.imagens)}
+                    className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center space-x-2"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                    <span>Ver imagens anexadas</span>
+                  </button>
                 </div>
               </div>
+            )}
+
+            {/* Resolução (apenas para ordens fechadas) */}
+            {!isAberta && selectedOS.conclusao && (
+              <>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Zap className="w-5 h-5 text-green-600" />
+                    <h3 className="font-semibold text-green-900">Resolução</h3>
+                  </div>
+                  <p className="text-green-800 mb-3 whitespace-pre-line">
+                    {selectedOS.conclusao.descricaoServico ||
+                      selectedOS.conclusao.descricaoResolucao ||
+                      "Nenhuma descrição fornecida"}
+                  </p>
+                  <div className="text-xs text-green-600 bg-green-100 px-3 py-1 rounded-full inline-block">
+                    Concluído em {formatDate(selectedOS.conclusao.dataFechamento)} por {fechadoPorNome}
+                  </div>
+                </div>
+
+                {selectedOS.conclusao.fotos && selectedOS.conclusao.fotos.length > 0 && (
+                  <div className="mb-6">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-2">
+                          <ImageIcon className="w-5 h-5 text-green-600" />
+                          <h3 className="font-semibold text-green-900">Imagens Anexadas na Conclusão</h3>
+                        </div>
+                        <span className="text-sm text-green-600">({selectedOS.conclusao.fotos.length} imagens)</span>
+                      </div>
+                      <button
+                        onClick={() => handleViewImages(selectedOS.conclusao.fotos)}
+                        className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                        <span>Ver imagens anexadas</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -572,74 +688,92 @@ const MecanicoComponent = () => {
 
   if (loading || isLoadingData) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center bg-white p-8 rounded-lg shadow">
-          <div className="w-16 h-16 bg-green-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <Wrench className="w-8 h-8 text-white animate-pulse" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/25">
+            <Loader2 className="w-8 h-8 text-white animate-spin" />
           </div>
-          <div className="flex items-center space-x-2">
-            <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-            <p className="text-gray-600 font-medium">Carregando dados...</p>
-          </div>
+          <h3 className="text-lg font-medium text-slate-700 mb-2">Carregando Ordens</h3>
+          <p className="text-slate-500">Aguarde enquanto preparamos sua área do mecânico...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <HeaderMecanico activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <main className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-28 sm:pt-32 pb-12">
+      <main className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-28 sm:pt-32 pb-14">
         {/* Header */}
-        <div className="mb-8 text-left">
-          <h1 className="text-4xl font-bold text-green-700 mb-3 pt-4">
-            Ordens de Serviço
-          </h1>
-          <p className="text-gray-600 text-lg">
-            Olá, <span className="font-semibold text-green-700">
-              {userData?.nome || userData?.name || user?.email?.split("@")[0]}
-            </span>! Gerencie suas ordens de serviço
-          </p>
+        <div className="mb-10">
+          <div className="relative overflow-hidden rounded-3xl bg-emerald-600 text-white shadow-2xl">
+            <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_top_left,#ffffff,transparent_45%)]" />
+            <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6 sm:p-8">
+              <div>
+                <p className="text-sm uppercase tracking-[0.2em] text-white/80 mb-2">Area do Mecanico</p>
+                <h1 className="text-3xl sm:text-4xl font-bold mb-2">Ordens de Servico</h1>
+                <p className="text-white/90 text-base sm:text-lg">
+                  Ola,{" "}
+                  <span className="font-semibold">
+                    {userData?.nome || userData?.name || user?.email?.split("@")[0]}
+                  </span>
+                  . Acompanhe e conclua as OS da sua propriedade com rapidez.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 bg-white/15 border border-white/20 rounded-2xl px-4 py-3 backdrop-blur">
+                <div className="p-3 rounded-xl bg-white/20">
+                  <Activity className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-white/80">Proximas acoes</p>
+                  <p className="text-lg font-semibold">{ordensAbertas.length} OS em aberto</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        {/* Estatisticas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           <StatsCard
             title="Ordens Abertas"
             value={ordensAbertas.length}
             icon={Clock}
-            gradient="bg-green-500"
+            gradient="bg-emerald-600"
           />
           <StatsCard
-            title="Ordens Concluídas"
+            title="Ordens Concluidas"
             value={ordensFechadas.length}
             icon={CheckCircle}
-            gradient="bg-red-500"
+            gradient="bg-red-600"
           />
           <StatsCard
             title="Total de Ordens"
             value={ordensServico.length}
             icon={BarChart3}
-            gradient="bg-orange-400"
+            gradient="bg-amber-500"
           />
           <StatsCard
-            title="Taxa de Conclusão"
-            value={ordensServico.length > 0 ? `${Math.round((ordensFechadas.length / ordensServico.length) * 100)}%` : "0%"}
+            title="Taxa de Conclusao"
+            value={
+              ordensServico.length > 0 ? `${Math.round((ordensFechadas.length / ordensServico.length) * 100)}%` : "0%"
+            }
             icon={TrendingUp}
-            gradient="bg-purple-500"
+            gradient="bg-indigo-600"
           />
         </div>
 
-        {/* Filtros - Em Aberto/Concluídas */}
-        <div className="w-full mb-6">
-          <div className="flex w-full bg-gray-100 rounded-full p-1">
+        {/* Filtros - Em Aberto/Concluidas */}
+        <div className="w-full mb-8">
+          <div className="flex w-full bg-white/70 backdrop-blur border border-emerald-100 shadow-sm rounded-full p-1">
             <button
               onClick={() => setActiveTab("aberto")}
-              className={`flex-1 flex items-center justify-center space-x-2 py-3 text-sm font-bold rounded-full transition-all ${activeTab === "aberto"
-                  ? "bg-green-500 text-white shadow-md"
-                  : "text-gray-500 hover:text-gray-700"
-                }`}
+              className={`flex-1 flex items-center justify-center space-x-2 py-3 text-sm font-bold rounded-full transition-all ${
+                activeTab === "aberto"
+                  ? "bg-emerald-600 text-white shadow-lg"
+                  : "text-gray-600 hover:text-gray-800"
+              }`}
             >
               <Clock className="w-4 h-4" />
               <span>Em Aberto ({ordensAbertas.length})</span>
@@ -647,50 +781,57 @@ const MecanicoComponent = () => {
 
             <button
               onClick={() => setActiveTab("fechado")}
-              className={`flex-1 flex items-center justify-center space-x-2 py-3 text-sm font-bold rounded-full transition-all ${activeTab === "fechado"
-                  ? "bg-red-500 text-white shadow-md"
-                  : "text-gray-500 hover:text-gray-700"
-                }`}
+              className={`flex-1 flex items-center justify-center space-x-2 py-3 text-sm font-bold rounded-full transition-all ${
+                activeTab === "fechado"
+                  ? "bg-red-600 text-white shadow-lg"
+                  : "text-gray-600 hover:text-gray-800"
+              }`}
             >
               <CheckCircle className="w-4 h-4" />
-              <span>Concluídas ({ordensFechadas.length})</span>
+              <span>Concluidas ({ordensFechadas.length})</span>
             </button>
           </div>
         </div>
 
-        {/* Barra de busca e ordenação lado a lado */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8 px-4">
+        {/* Barra de busca e ordenacao lado a lado */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-10 px-4">
           {/* Barra de busca */}
           <div className="relative w-full md:w-3/4 lg:w-4/5">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-emerald-500" />
             <input
               type="text"
               placeholder="Buscar por equipamento, problema ou operador..."
-              className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+              className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-emerald-100 shadow-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors placeholder:text-gray-400"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          {/* Ordenação */}
+          {/* Ordenacao */}
           <div className="w-full md:w-auto flex items-center justify-end space-x-2">
             <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Ordenar:</span>
-            <div className="inline-flex rounded-xl overflow-hidden border border-gray-200">
+            <div className="inline-flex rounded-xl overflow-hidden border border-emerald-100 bg-white/80 shadow-sm">
               <button
-                onClick={() => setSortOrder('recentes')}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${sortOrder === 'recentes'
-                    ? activeTab === 'fechado' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                  }`}
+                onClick={() => setSortOrder("recentes")}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  sortOrder === "recentes"
+                    ? activeTab === "fechado"
+                      ? "bg-rose-500 text-white"
+                      : "bg-emerald-500 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                }`}
               >
                 Recentes
               </button>
               <button
-                onClick={() => setSortOrder('antigas')}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${sortOrder === 'antigas'
-                    ? activeTab === 'fechado' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                  }`}
+                onClick={() => setSortOrder("antigas")}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  sortOrder === "antigas"
+                    ? activeTab === "fechado"
+                      ? "bg-rose-500 text-white"
+                      : "bg-emerald-500 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                }`}
               >
                 Antigas
               </button>
@@ -745,12 +886,83 @@ const MecanicoComponent = () => {
       {/* Modal de detalhes */}
       {showDetalhesModal && <DetalhesModal />}
 
+      {imageViewerVisible && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="relative w-full h-full flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 bg-black/50">
+              <h3 className="text-white text-xl font-semibold">
+                Imagem {currentImageIndex + 1} de {selectedImages.length}
+              </h3>
+              <button
+                onClick={() => setImageViewerVisible(false)}
+                className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+              >
+                <X className="w-8 h-8" />
+              </button>
+            </div>
+
+            {/* Imagem */}
+            <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
+              {selectedImages.length > 0 && selectedImages[currentImageIndex] && (
+                <img
+                  src={selectedImages[currentImageIndex].url || "/placeholder.svg"}
+                  alt={`Imagem ${currentImageIndex + 1}`}
+                  className="w-auto h-auto max-w-[90%] max-h-[90%] object-contain"
+                  style={{ objectFit: "contain" }}
+                />
+              )}
+            </div>
+
+            {/* Controles de navegação */}
+            {selectedImages.length > 1 && (
+              <div className="flex items-center justify-center gap-4 p-6 bg-black/50">
+                <button
+                  onClick={handlePreviousImage}
+                  disabled={currentImageIndex === 0}
+                  className={`p-3 rounded-lg transition-colors ${
+                    currentImageIndex === 0
+                      ? "bg-gray-700 text-gray-500 cursor-not-allowed"
+                      : "bg-white/20 text-white hover:bg-white/30"
+                  }`}
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {selectedImages.map((_, index) => (
+                    <div
+                      key={index}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        index === currentImageIndex ? "bg-white w-6" : "bg-white/40"
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                <button
+                  onClick={handleNextImage}
+                  disabled={currentImageIndex === selectedImages.length - 1}
+                  className={`p-3 rounded-lg transition-colors ${
+                    currentImageIndex === selectedImages.length - 1
+                      ? "bg-gray-700 text-gray-500 cursor-not-allowed"
+                      : "bg-white/20 text-white hover:bg-white/30"
+                  }`}
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Modal para concluir OS */}
       {showConcluirModal && selectedOS && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
             {/* Header */}
-            <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-t-2xl">
+            <div className="bg-green-600 text-white p-6 rounded-t-2xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-white/20 rounded-lg">
