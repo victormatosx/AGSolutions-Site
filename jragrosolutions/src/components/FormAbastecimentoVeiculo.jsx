@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Car, Droplets, Gauge, FileText } from "lucide-react"
+import { Car, Droplets, Gauge, FileText, UploadCloud } from "lucide-react"
 import { useAuthState } from "react-firebase-hooks/auth"
-import { database, auth } from "../firebase/firebase"
+import { database, auth, storage } from "../firebase/firebase"
 import { ref, get, push } from "firebase/database"
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage"
 
 const FormAbastecimentoVeiculo = ({ onSubmit, onCancel, isLoading }) => {
   const [user, loading, error] = useAuthState(auth)
@@ -15,6 +16,9 @@ const FormAbastecimentoVeiculo = ({ onSubmit, onCancel, isLoading }) => {
     veiculo: "",
     quantidade: "",
     hodometro: "",
+    valorUnitario: "",
+    valorTotal: "",
+    formaPagamento: "",
     observacao: "",
   })
 
@@ -23,36 +27,65 @@ const FormAbastecimentoVeiculo = ({ onSubmit, onCancel, isLoading }) => {
   const [veiculos, setVeiculos] = useState([])
   const [loadingVeiculos, setLoadingVeiculos] = useState(true)
   const [loadingTanques, setLoadingTanques] = useState(true)
+  const [files, setFiles] = useState({ hodometro: null, comprovante: null })
+  const [uploading, setUploading] = useState(false)
+  const [userPropriedade, setUserPropriedade] = useState(null)
 
   useEffect(() => {
+    const resolvePropriedade = async () => {
+      if (!user) {
+        setUserPropriedade(null)
+        return
+      }
+      try {
+        const propriedadesRef = ref(database, "propriedades")
+        const snapshot = await get(propriedadesRef)
+        if (snapshot.exists()) {
+          const propriedadesData = snapshot.val()
+          for (const [propName, propData] of Object.entries(propriedadesData)) {
+            const users = propData.users || {}
+            if (users[user.uid]) {
+              setUserPropriedade(propName)
+              return
+            }
+            for (const [, userData] of Object.entries(users)) {
+              if (userData.email && userData.email === user.email) {
+                setUserPropriedade(propName)
+                return
+              }
+            }
+          }
+        }
+        setUserPropriedade(null)
+      } catch (err) {
+        console.error("Erro ao identificar propriedade do usuário:", err)
+        setUserPropriedade(null)
+      }
+    }
+
+    resolvePropriedade()
+  }, [user])
+
+  useEffect(() => {
+    if (!userPropriedade) return
+
     const fetchTanques = async () => {
       try {
         setLoadingTanques(true)
-        const propriedadesRef = ref(database, "propriedades")
-        const snapshot = await get(propriedadesRef)
+        const tanquesRef = ref(database, `propriedades/${userPropriedade}/tanques`)
+        const snapshot = await get(tanquesRef)
 
         if (snapshot.exists()) {
-          const propriedadesData = snapshot.val()
-          const tanquesList = []
-
-          Object.entries(propriedadesData).forEach(([propriedadeKey, propriedadeData]) => {
-            if (propriedadeData.tanques) {
-              Object.entries(propriedadeData.tanques).forEach(([tanqueKey, tanqueData]) => {
-                if (tanqueData.nome) {
-                  tanquesList.push({
-                    id: tanqueKey,
-                    nome: tanqueData.nome,
-                    propriedade: propriedadeKey,
-                  })
-                }
-              })
-            }
-          })
-
+          const tanquesData = snapshot.val()
+          const tanquesList = Object.entries(tanquesData).map(([tanqueKey, tanqueData]) => ({
+            id: tanqueKey,
+            nome: tanqueData.nome,
+            propriedade: userPropriedade,
+          }))
           setTanques(tanquesList)
           console.log("Tanques carregados:", tanquesList)
         } else {
-          console.log("Nenhuma propriedade encontrada no banco de dados")
+          console.log("Nenhum tanque encontrado no banco de dados")
           setTanques([])
         }
       } catch (error) {
@@ -66,33 +99,23 @@ const FormAbastecimentoVeiculo = ({ onSubmit, onCancel, isLoading }) => {
     const fetchVeiculos = async () => {
       try {
         setLoadingVeiculos(true)
-        const propriedadesRef = ref(database, "propriedades")
-        const snapshot = await get(propriedadesRef)
+        const veiculosRef = ref(database, `propriedades/${userPropriedade}/veiculos`)
+        const snapshot = await get(veiculosRef)
 
         if (snapshot.exists()) {
-          const propriedadesData = snapshot.val()
-          const veiculosList = []
-
-          Object.entries(propriedadesData).forEach(([propriedadeKey, propriedadeData]) => {
-            if (propriedadeData.veiculos) {
-              Object.entries(propriedadeData.veiculos).forEach(([veiculoKey, veiculoData]) => {
-                if (veiculoData.modelo && veiculoData.placa) {
-                  veiculosList.push({
-                    id: veiculoKey,
-                    nome: `${veiculoData.modelo} (${veiculoData.placa})`,
-                    modelo: veiculoData.modelo,
-                    placa: veiculoData.placa,
-                    propriedade: propriedadeKey,
-                  })
-                }
-              })
-            }
-          })
+          const veiculosData = snapshot.val()
+          const veiculosList = Object.entries(veiculosData).map(([veiculoKey, veiculoData]) => ({
+            id: veiculoKey,
+            nome: `${veiculoData?.modelo || "Veículo"} (${veiculoData?.placa || "Sem placa"})`,
+            modelo: veiculoData?.modelo,
+            placa: veiculoData?.placa,
+            propriedade: userPropriedade,
+          }))
 
           setVeiculos(veiculosList)
           console.log("Veículos carregados:", veiculosList)
         } else {
-          console.log("Nenhuma propriedade encontrada no banco de dados")
+          console.log("Nenhuma veículo encontrado no banco de dados")
           setVeiculos([])
         }
       } catch (error) {
@@ -105,7 +128,7 @@ const FormAbastecimentoVeiculo = ({ onSubmit, onCancel, isLoading }) => {
 
     fetchTanques()
     fetchVeiculos()
-  }, [])
+  }, [userPropriedade])
 
   const validateForm = () => {
     const newErrors = {}
@@ -115,6 +138,13 @@ const FormAbastecimentoVeiculo = ({ onSubmit, onCancel, isLoading }) => {
     if (!formData.veiculo) newErrors.veiculo = "Veículo é obrigatório"
     if (!formData.quantidade) newErrors.quantidade = "Quantidade é obrigatória"
     if (!formData.hodometro) newErrors.hodometro = "Hodômetro é obrigatório"
+    const tanqueSelecionado = tanques.find((t) => t.id === formData.tanque)
+    const isPostoExterno = tanqueSelecionado?.nome?.toLowerCase() === "posto externo"
+    if (isPostoExterno) {
+      if (!formData.valorUnitario) newErrors.valorUnitario = "Valor unitário é obrigatório para posto externo"
+      if (!formData.valorTotal) newErrors.valorTotal = "Valor total é obrigatório para posto externo"
+      if (!formData.formaPagamento) newErrors.formaPagamento = "Forma de pagamento é obrigatória para posto externo"
+    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -137,6 +167,30 @@ const FormAbastecimentoVeiculo = ({ onSubmit, onCancel, isLoading }) => {
           return
         }
 
+        setUploading(true)
+
+        const uploadAttachment = async (file, path) => {
+          const fileRef = storageRef(storage, path)
+          await uploadBytes(fileRef, file)
+          const url = await getDownloadURL(fileRef)
+          return { path, url }
+        }
+
+        const hodometroUpload =
+          files.hodometro && tanqueSelecionado && veiculoSelecionado
+            ? await uploadAttachment(
+                files.hodometro,
+                `${veiculoSelecionado.propriedade}/abastecimentos/hodometro/${Date.now()}_${files.hodometro.name}`,
+              )
+            : {}
+        const comprovanteUpload =
+          files.comprovante && tanqueSelecionado && veiculoSelecionado
+            ? await uploadAttachment(
+                files.comprovante,
+                `${veiculoSelecionado.propriedade}/abastecimentos/comprovantes/${Date.now()}_${files.comprovante.name}`,
+              )
+            : {}
+
         const abastecimentoData = {
           horimetro: formData.hodometro,
           localId: Date.now().toString(),
@@ -145,6 +199,13 @@ const FormAbastecimentoVeiculo = ({ onSubmit, onCancel, isLoading }) => {
           produto: formData.combustivel,
           propriedade: veiculoSelecionado.propriedade,
           quantidade: formData.quantidade,
+          valorUnitario: formData.valorUnitario || "",
+          valorTotal: formData.valorTotal || "",
+          formaPagamento: formData.formaPagamento || "",
+          hodometroPhotoPath: hodometroUpload.path || "",
+          hodometroPhotoUrl: hodometroUpload.url || "",
+          comprovantePhotoPath: comprovanteUpload.path || "",
+          comprovantePhotoUrl: comprovanteUpload.url || "",
           status: "pending",
           tanqueDiesel: tanqueSelecionado.nome,
           timestamp: Date.now(),
@@ -173,19 +234,35 @@ const FormAbastecimentoVeiculo = ({ onSubmit, onCancel, isLoading }) => {
           veiculo: "",
           quantidade: "",
           hodometro: "",
+          valorUnitario: "",
+          valorTotal: "",
+          formaPagamento: "",
           observacao: "",
         })
+        setFiles({ hodometro: null, comprovante: null })
 
         alert("Abastecimento registrado com sucesso!")
       } catch (error) {
         console.error("Erro ao salvar abastecimento:", error)
         alert("Erro ao salvar abastecimento. Tente novamente.")
+      } finally {
+        setUploading(false)
       }
     }
   }
 
   const handleChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    if (field === "quantidade" || field === "valorUnitario") {
+      const numericQuantidade = field === "quantidade" ? value : formData.quantidade
+      const numericUnitario = field === "valorUnitario" ? value : formData.valorUnitario
+      const total =
+        numericQuantidade && numericUnitario
+          ? (Number.parseFloat(numericQuantidade) * Number.parseFloat(numericUnitario)).toFixed(2)
+          : ""
+      setFormData((prev) => ({ ...prev, [field]: value, valorTotal: total }))
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }))
+    }
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }))
     }
@@ -215,6 +292,9 @@ const FormAbastecimentoVeiculo = ({ onSubmit, onCancel, isLoading }) => {
       </div>
     )
   }
+
+  const tanqueSelecionado = tanques.find((t) => t.id === formData.tanque)
+  const isPostoExterno = tanqueSelecionado?.nome?.toLowerCase() === "posto externo"
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50 p-4">
@@ -365,13 +445,129 @@ const FormAbastecimentoVeiculo = ({ onSubmit, onCancel, isLoading }) => {
                   }`}
                 />
                 {errors.hodometro && (
-                  <p className="text-red-500 text-sm flex items-center gap-1 mt-1">
-                    <div className="w-1 h-1 bg-red-500 rounded-full"></div>
-                    {errors.hodometro}
-                  </p>
-                )}
+          <p className="text-red-500 text-sm flex items-center gap-1 mt-1">
+            <div className="w-1 h-1 bg-red-500 rounded-full"></div>
+            {errors.hodometro}
+          </p>
+        )}
+      </div>
+    </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <UploadCloud className="w-4 h-4 text-green-500" />
+                  Foto do Hodômetro
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setFiles((prev) => ({ ...prev, hodometro: e.target.files?.[0] || null }))}
+                  className="w-full px-4 py-3 bg-white/70 border-2 border-gray-200 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-green-500/20 focus:border-green-500 hover:border-green-300"
+                />
+                {files.hodometro && <p className="text-xs text-green-700">{files.hodometro.name}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <UploadCloud className="w-4 h-4 text-green-500" />
+                  Foto do Comprovante
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setFiles((prev) => ({ ...prev, comprovante: e.target.files?.[0] || null }))}
+                  className="w-full px-4 py-3 bg-white/70 border-2 border-gray-200 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-green-500/20 focus:border-green-500 hover:border-green-300"
+                />
+                {files.comprovante && <p className="text-xs text-green-700">{files.comprovante.name}</p>}
               </div>
             </div>
+
+            {isPostoExterno && (
+              <div className="bg-green-50/60 border border-green-100 rounded-2xl p-4 space-y-4">
+                <h3 className="text-sm font-semibold text-green-800 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  Informações do posto externo
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                      Valor Unitário (R$) *
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.valorUnitario}
+                      onChange={(e) => handleChange("valorUnitario", e.target.value)}
+                      className={`w-full px-4 py-3 bg-white border-2 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-green-500/20 ${
+                        errors.valorUnitario
+                          ? "border-red-300 focus:border-red-500"
+                          : "border-gray-200 focus:border-green-500 hover:border-green-300"
+                      }`}
+                      placeholder="0,00"
+                    />
+                    {errors.valorUnitario && (
+                      <p className="text-red-500 text-sm flex items-center gap-1 mt-1">
+                        <div className="w-1 h-1 bg-red-500 rounded-full"></div>
+                        {errors.valorUnitario}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                      Valor Total (R$) *
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.valorTotal}
+                      onChange={(e) => handleChange("valorTotal", e.target.value)}
+                      className={`w-full px-4 py-3 bg-white border-2 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-green-500/20 ${
+                        errors.valorTotal
+                          ? "border-red-300 focus:border-red-500"
+                          : "border-gray-200 focus:border-green-500 hover:border-green-300"
+                      }`}
+                      placeholder="0,00"
+                    />
+                    {errors.valorTotal && (
+                      <p className="text-red-500 text-sm flex items-center gap-1 mt-1">
+                        <div className="w-1 h-1 bg-red-500 rounded-full"></div>
+                        {errors.valorTotal}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                      Forma de Pagamento *
+                    </label>
+                    <select
+                      value={formData.formaPagamento}
+                      onChange={(e) => handleChange("formaPagamento", e.target.value)}
+                      className={`w-full px-4 py-3 bg-white border-2 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-green-500/20 ${
+                        errors.formaPagamento
+                          ? "border-red-300 focus:border-red-500"
+                          : "border-gray-200 focus:border-green-500 hover:border-green-300"
+                      }`}
+                    >
+                      <option value="">Selecione</option>
+                      <option value="dinheiro">Dinheiro</option>
+                      <option value="cartao">Cartão</option>
+                      <option value="pix">Pix</option>
+                    </select>
+                    {errors.formaPagamento && (
+                      <p className="text-red-500 text-sm flex items-center gap-1 mt-1">
+                        <div className="w-1 h-1 bg-red-500 rounded-full"></div>
+                        {errors.formaPagamento}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
@@ -387,22 +583,22 @@ const FormAbastecimentoVeiculo = ({ onSubmit, onCancel, isLoading }) => {
               />
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 pt-6">
-              <button
-                type="button"
-                onClick={onCancel}
-                className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-all duration-300 hover:shadow-lg"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? "Enviando..." : "Enviar Abastecimento"}
-              </button>
-            </div>
+      <div className="flex flex-col sm:flex-row gap-4 pt-6">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-all duration-300 hover:shadow-lg"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          disabled={isLoading || uploading}
+          className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading || uploading ? "Enviando..." : "Enviar Abastecimento"}
+        </button>
+      </div>
           </form>
         </div>
       </div>

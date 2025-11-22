@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useAuthState } from "react-firebase-hooks/auth"
-import { auth, database, storage } from "../firebase/firebase"
+import { auth, database } from "../firebase/firebase"
 import { ref, get, update, onValue } from "firebase/database"
-import { getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage"
 import HeaderMecanico from "./HeaderMecanico"
 import {
   Wrench,
@@ -46,7 +45,6 @@ const MecanicoComponent = () => {
   const [imageViewerVisible, setImageViewerVisible] = useState(false)
   const [selectedImages, setSelectedImages] = useState([])
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [fotosConclusao, setFotosConclusao] = useState([])
 
   // Função para buscar o nome do usuário pelo ID
   const fetchUserName = async (userId, propriedadeId) => {

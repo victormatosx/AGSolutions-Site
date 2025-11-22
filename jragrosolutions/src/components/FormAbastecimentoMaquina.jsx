@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useAuthState } from "react-firebase-hooks/auth"
 import { Fuel, Droplets, Truck, Gauge, FileText } from "lucide-react"
 import { auth, database } from "../firebase/firebase"
-import { ref, onValue, push, set } from "firebase/database"
+import { ref, onValue, push, set, get } from "firebase/database"
 
 const FormAbastecimentoMaquina = ({ onSubmit, onCancel, isLoading }) => {
   const [user, loading, error] = useAuthState(auth)
@@ -22,82 +22,99 @@ const FormAbastecimentoMaquina = ({ onSubmit, onCancel, isLoading }) => {
   const [tanques, setTanques] = useState([])
   const [maquinas, setMaquinas] = useState([])
   const [loadingData, setLoadingData] = useState(true)
+  const [userPropriedade, setUserPropriedade] = useState(null)
 
   useEffect(() => {
-    const fetchData = async () => {
+    const resolvePropriedade = async () => {
+      if (!user) {
+        setUserPropriedade(null)
+        return
+      }
       try {
-        const tanquesRef = ref(database, "propriedades/Matrice/tanques")
-        onValue(
-          tanquesRef,
-          (snapshot) => {
-            const data = snapshot.val()
-            console.log("Dados dos tanques:", data) // Debug
-            if (data) {
-              const tanquesList = Object.keys(data).map((key) => ({
-                id: key,
-                nome: data[key].nome,
-                dataCadastro: data[key].dataCadastro,
-              }))
-              console.log("Lista de tanques processada:", tanquesList) // Debug
-              setTanques(tanquesList)
-            } else {
-              console.log("Nenhum tanque encontrado no banco")
-              setTanques([])
+        const propriedadesRef = ref(database, "propriedades")
+        const snapshot = await get(propriedadesRef)
+        if (snapshot.exists()) {
+          const propriedades = snapshot.val()
+          for (const [propName, propData] of Object.entries(propriedades)) {
+            const users = propData.users || {}
+            if (users[user.uid]) {
+              setUserPropriedade(propName)
+              return
             }
-          },
-          (error) => {
-            console.error("Erro ao buscar tanques:", error)
-            setTanques([
-              { id: "1", nome: "Posto Externo" },
-              { id: "3", nome: "Tanque Diesel Sede" },
-              { id: "12", nome: "Tanque Gasolina" },
-              { id: "17", nome: "Tanque Álcool" },
-              { id: "19", nome: "Tanque Reserva" },
-            ])
-          },
-        )
-
-        const maquinasRef = ref(database, "propriedades/Matrice/maquinarios")
-        onValue(
-          maquinasRef,
-          (snapshot) => {
-            const data = snapshot.val()
-            if (data) {
-              const maquinasList = Object.keys(data).map((key) => ({
-                id: key,
-                nome: data[key].nome || `${data[key].codigo} - ${data[key].modelo}`,
-                codigo: data[key].codigo,
-                modelo: data[key].modelo,
-              }))
-              setMaquinas(maquinasList)
-            } else {
-              // Fallback com dados simulados se não houver máquinas no BD
-              setMaquinas([
-                { id: "367_t14_trator_jd_7230_j", nome: "367 - T14 - Trator Jd 7230 J" },
-                { id: "368_t15_trator_jd_6110", nome: "368 - T15 - Trator Jd 6110" },
-                { id: "369_c01_colheitadeira_case", nome: "369 - C01 - Colheitadeira Case 2388" },
-                { id: "370_p01_pulverizador_jacto", nome: "370 - P01 - Pulverizador Jacto" },
-              ])
+            for (const [, userData] of Object.entries(users)) {
+              if (userData.email && userData.email === user.email) {
+                setUserPropriedade(propName)
+                return
+              }
             }
-            setLoadingData(false)
-          },
-          (error) => {
-            console.error("Erro ao buscar máquinas:", error)
-            setMaquinas([
-              { id: "367_t14_trator_jd_7230_j", nome: "367 - T14 - Trator Jd 7230 J" },
-              { id: "368_t15_trator_jd_6110", nome: "368 - T15 - Trator Jd 6110" },
-            ])
-            setLoadingData(false)
-          },
-        )
-      } catch (error) {
-        console.error("Erro geral ao buscar dados do Firebase:", error)
-        setLoadingData(false)
+          }
+        }
+        setUserPropriedade(null)
+      } catch (err) {
+        console.error("Erro ao identificar propriedade do usuário:", err)
+        setUserPropriedade(null)
       }
     }
+    resolvePropriedade()
+  }, [user])
 
-    fetchData()
-  }, [])
+  useEffect(() => {
+    if (!userPropriedade) return
+
+    setLoadingData(true)
+
+    const tanquesRef = ref(database, `propriedades/${userPropriedade}/tanques`)
+    const unsubscribeTanques = onValue(
+      tanquesRef,
+      (snapshot) => {
+        const data = snapshot.val()
+        if (data) {
+          const tanquesList = Object.keys(data).map((key) => ({
+            id: key,
+            nome: data[key].nome,
+            dataCadastro: data[key].dataCadastro,
+          }))
+          setTanques(tanquesList)
+        } else {
+          setTanques([])
+        }
+      },
+      (error) => {
+        console.error("Erro ao buscar tanques:", error)
+        setTanques([])
+      },
+    )
+
+    const maquinasRef = ref(database, `propriedades/${userPropriedade}/maquinarios`)
+    const unsubscribeMaquinas = onValue(
+      maquinasRef,
+      (snapshot) => {
+        const data = snapshot.val()
+        if (data) {
+          const maquinasList = Object.keys(data).map((key) => ({
+            id: key,
+            nome: data[key].nome || `${data[key].codigo ?? ""} ${data[key].modelo ?? ""}`.trim(),
+            codigo: data[key].codigo,
+            modelo: data[key].modelo,
+          }))
+          setMaquinas(maquinasList)
+        } else {
+          setMaquinas([])
+        }
+        setLoadingData(false)
+      },
+      (error) => {
+        console.error("Erro ao buscar máquinas:", error)
+        setMaquinas([])
+        setLoadingData(false)
+      },
+    )
+
+    return () => {
+      unsubscribeTanques()
+      unsubscribeMaquinas()
+    }
+  }, [userPropriedade])
 
   const validateForm = () => {
     const newErrors = {}
@@ -122,12 +139,16 @@ const FormAbastecimentoMaquina = ({ onSubmit, onCancel, isLoading }) => {
           status: "pending", // Alterado de "validated" para "pending"
           timestamp: Date.now(),
           localId: Date.now().toString(),
-          propriedade: "Matrice",
+          propriedade: userPropriedade || "N/A",
           userId: user?.uid || "anonymous", // Usando o userId do usuário logado
         }
 
         // Salvar na estrutura: propriedades/Matrice/abastecimentos
-        const abastecimentosRef = ref(database, "propriedades/Matrice/abastecimentos")
+        if (!userPropriedade) {
+          alert("Não foi possível identificar a propriedade do usuário.")
+          return
+        }
+        const abastecimentosRef = ref(database, `propriedades/${userPropriedade}/abastecimentos`)
         const newAbastecimentoRef = push(abastecimentosRef)
 
         await set(newAbastecimentoRef, submissionData)

@@ -64,6 +64,7 @@ const Apontamentos = () => {
   const [isEditing, setIsEditing] = useState(false)
   const [editedItem, setEditedItem] = useState(null)
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
+  const [attachmentPreview, setAttachmentPreview] = useState({ hodometro: false, comprovante: false })
 
   // Estados para notificações e confirmação
   const [notification, setNotification] = useState(null)
@@ -728,6 +729,7 @@ const Apontamentos = () => {
   // Abrir modal com detalhes
   const openModal = (item) => {
     setSelectedItem({ ...item, type: selectedType })
+    setAttachmentPreview({ hodometro: false, comprovante: false })
     setShowModal(true)
   }
 
@@ -1419,6 +1421,84 @@ const Apontamentos = () => {
                       format: (v) => (v ? `${v}h` : "N/A"),
                     },
                     {
+                      key: "hodometroPhotoUrl",
+                      label: "Foto do Hodômetro",
+                      icon: <FileText className="w-4 h-4" />,
+                      fullWidth: true,
+                      editable: false,
+                      value: currentItem.hodometroPhotoUrl || currentItem.hodometroPhotoPath || null,
+                      format: () => (
+                        (() => {
+                          const hasUrl = !!currentItem.hodometroPhotoUrl
+                          const hasPath = !!currentItem.hodometroPhotoPath
+
+                          if (!hasUrl && !hasPath) {
+                            return <span className="text-slate-500">Nenhuma imagem anexada</span>
+                          }
+
+                          return (
+                            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 rounded-lg bg-green-50 text-green-700 border border-green-100 flex items-center justify-center">
+                                    <Eye className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-800">Imagem do hodômetro</p>
+                                    <p className="text-xs text-slate-500">
+                                      {hasUrl ? "Pronta para visualizar" : "Aguardando URL, somente caminho salvo"}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {hasUrl && (
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setAttachmentPreview((prev) => ({
+                                          ...prev,
+                                          hodometro: !prev.hodometro,
+                                        }))
+                                      }
+                                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-green-500/90 to-emerald-600 text-white shadow-sm hover:shadow-md transition-all"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                      {attachmentPreview.hodometro ? "Ocultar" : "Ver aqui"}
+                                    </button>
+                                    <a
+                                      href={currentItem.hodometroPhotoUrl}
+                                      target="_blank"
+                                      rel="noreferrer noopener"
+                                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+                                    >
+                                      Abrir em nova aba
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+
+                              {hasPath && (
+                                <div className="text-xs text-slate-500 break-all bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                                  {currentItem.hodometroPhotoPath}
+                                </div>
+                              )}
+
+                              {attachmentPreview.hodometro && hasUrl && (
+                                <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
+                                  <img
+                                    src={currentItem.hodometroPhotoUrl}
+                                    alt="Foto do hodômetro"
+                                    className="max-h-72 w-full object-contain bg-white"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })()
+                      ),
+                    },
+                    {
                       key: "tanqueDiesel",
                       label: "Posto",
                       icon: <Fuel className="w-4 h-4" />,
@@ -1458,6 +1538,84 @@ const Apontamentos = () => {
                       format: (v) => (v ? `R$ ${Number.parseFloat(v).toFixed(2).replace(".", ",")}` : "N/A"),
                     },
                     {
+                      key: "comprovantePhotoUrl",
+                      label: "Comprovante",
+                      icon: <FileText className="w-4 h-4" />,
+                      fullWidth: true,
+                      editable: false,
+                      value: currentItem.comprovantePhotoUrl || currentItem.comprovantePhotoPath || null,
+                      format: () => (
+                        (() => {
+                          const hasUrl = !!currentItem.comprovantePhotoUrl
+                          const hasPath = !!currentItem.comprovantePhotoPath
+
+                          if (!hasUrl && !hasPath) {
+                            return <span className="text-slate-500">Nenhum comprovante anexado</span>
+                          }
+
+                          return (
+                            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 rounded-lg bg-green-50 text-green-700 border border-green-100 flex items-center justify-center">
+                                    <Eye className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-800">Imagem do comprovante</p>
+                                    <p className="text-xs text-slate-500">
+                                      {hasUrl ? "Pronta para visualizar" : "Aguardando URL, somente caminho salvo"}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {hasUrl && (
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setAttachmentPreview((prev) => ({
+                                          ...prev,
+                                          comprovante: !prev.comprovante,
+                                        }))
+                                      }
+                                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-green-500/90 to-emerald-600 text-white shadow-sm hover:shadow-md transition-all"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                      {attachmentPreview.comprovante ? "Ocultar" : "Ver aqui"}
+                                    </button>
+                                    <a
+                                      href={currentItem.comprovantePhotoUrl}
+                                      target="_blank"
+                                      rel="noreferrer noopener"
+                                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+                                    >
+                                      Abrir em nova aba
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+
+                              {hasPath && (
+                                <div className="text-xs text-slate-500 break-all bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                                  {currentItem.comprovantePhotoPath}
+                                </div>
+                              )}
+
+                              {attachmentPreview.comprovante && hasUrl && (
+                                <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
+                                  <img
+                                    src={currentItem.comprovantePhotoUrl}
+                                    alt="Foto do comprovante"
+                                    className="max-h-72 w-full object-contain bg-white"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })()
+                      ),
+                    },
+                    {
                       key: "formaPagamento",
                       label: "Forma de Pagamento",
                       icon: <CreditCard className="w-4 h-4" />,
@@ -1488,8 +1646,8 @@ const Apontamentos = () => {
                         </span>
                       ),
                     },
-                  ].map(({ key, label, icon, format, fullWidth }) => {
-                    const value = currentItem[key]
+                  ].map(({ key, label, icon, format, fullWidth, value: customValue, editable = true }) => {
+                    const value = customValue !== undefined ? customValue : currentItem[key]
                     if (value === undefined || value === null) return null
 
                     const displayValue = format ? format(value) : value
@@ -1501,7 +1659,7 @@ const Apontamentos = () => {
                           {IconComponent}
                           {label}:
                         </div>
-                        {isEditing && key !== "status" ? (
+                        {isEditing && key !== "status" && editable ? (
                           <input
                             type={key.toLowerCase().includes("data") ? "datetime-local" : "text"}
                             value={value || ""}

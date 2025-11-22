@@ -94,6 +94,8 @@ const Cadastro = () => {
   const [notification, setNotification] = useState(null)
   const [deleteConfirmation, setDeleteConfirmation] = useState(null)
   const [deactivateConfirmation, setDeactivateConfirmation] = useState(null)
+  const [userStatusFilter, setUserStatusFilter] = useState("ativos") // ativos | desativados
+  const [direcionadorStatusFilter, setDirecionadorStatusFilter] = useState("ativos") // ativos | desativados
 
   const sortDirecionadores = (items) => {
     return [...items].sort((a, b) => {
@@ -591,6 +593,25 @@ const handleDeleteItem = async (section, itemId) => {
     )
   }
 
+  const getFilteredSectionItems = () => {
+    let items = currentSection.data
+    if (activeSection === "usuarios") {
+      if (userStatusFilter === "ativos") {
+        items = items.filter((item) => (item.status || "ativo").toLowerCase() !== "desativado")
+      } else if (userStatusFilter === "desativados") {
+        items = items.filter((item) => (item.status || "").toLowerCase() === "desativado")
+      }
+    }
+    if (activeSection === "direcionadores") {
+      if (direcionadorStatusFilter === "ativos") {
+        items = items.filter((item) => (item.status || "ativo").toLowerCase() !== "desativado")
+      } else if (direcionadorStatusFilter === "desativados") {
+        items = items.filter((item) => (item.status || "").toLowerCase() === "desativado")
+      }
+    }
+    return filterItems(items, searchTerm)
+  }
+
   const handleShowUserForm = () => {
     showNotification(
       "Você não tem permissão para criar novos usuários. Entre em contato pelo WhatsApp (34) 9 9653-2577 ou pelo E-mail victor@jragrosolutions.com.br para cadastrar novos usuários.",
@@ -600,6 +621,26 @@ const handleDeleteItem = async (section, itemId) => {
 
   const currentSection = sections[activeSection]
   const Icon = currentSection.icon
+  const statusFilterConfig =
+    activeSection === "usuarios"
+      ? {
+          value: userStatusFilter,
+          setter: setUserStatusFilter,
+          options: [
+            { value: "ativos", label: "Ativos" },
+            { value: "desativados", label: "Desativados" },
+          ],
+        }
+      : activeSection === "direcionadores"
+        ? {
+            value: direcionadorStatusFilter,
+            setter: setDirecionadorStatusFilter,
+            options: [
+              { value: "ativos", label: "Ativos" },
+              { value: "desativados", label: "Desativados" },
+            ],
+          }
+        : null
 
   return (
     <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50">
@@ -683,9 +724,9 @@ const handleDeleteItem = async (section, itemId) => {
             </div>
           </div>
 
-          {/* Search */}
-          <div className="p-8 pb-4">
-            <div className="relative max-w-md">
+          {/* Search & Filters */}
+          <div className="p-8 pb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative max-w-md w-full">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
                 type="text"
@@ -695,11 +736,32 @@ const handleDeleteItem = async (section, itemId) => {
                 className="w-full pl-12 pr-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300"
               />
             </div>
+            {statusFilterConfig && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-slate-600 font-medium">Status:</span>
+                <div className="flex rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm">
+                  {statusFilterConfig.options.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => statusFilterConfig.setter(opt.value)}
+                      className={`px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                        statusFilterConfig.value === opt.value
+                          ? "bg-emerald-500 text-white shadow-inner shadow-emerald-600/20"
+                          : "text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Items Grid */}
           <div className="p-8 pt-4">
-            {filterItems(currentSection.data, searchTerm).length === 0 ? (
+            {getFilteredSectionItems().length === 0 ? (
               <div className="text-center py-16">
                 <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Icon className="w-12 h-12 text-slate-400" />
@@ -717,7 +779,7 @@ const handleDeleteItem = async (section, itemId) => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filterItems(currentSection.data, searchTerm).map((item, index) => {
+                {getFilteredSectionItems().map((item, index) => {
                   const isInactiveCard =
                     ["usuarios", "direcionadores"].includes(activeSection) &&
                     (item.status || "").toLowerCase() === "desativado"

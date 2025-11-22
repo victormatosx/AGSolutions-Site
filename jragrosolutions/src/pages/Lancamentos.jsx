@@ -71,6 +71,10 @@ const Lancamento = () => {
       // Convert the date from YYYY-MM-DD to DD/MM/YYYY
       const [year, month, day] = formData.data.split('-');
       const formattedDate = `${day}/${month}/${year}`;
+      const sistemaSelecionado = formData.sistemas?.[0] || '';
+      const subcomponenteSelecionado = formData.subcomponentes?.[0] === 'Outro'
+        ? (formData.outroSubcomponente?.trim() || 'Outro')
+        : (formData.subcomponentes?.[0] || '');
       
       // Prepare the service order data
       const ordemData = {
@@ -81,7 +85,11 @@ const Lancamento = () => {
         horimetroEntrada: formData.horimetro,
         status: "aberto",
         tipoEquipamento: formData.maquinario.tipo,
-        userId: user.uid
+        userId: user.uid,
+        tipoServico: formData.servicoTipo,
+        sistema: sistemaSelecionado,
+        subcomponente: subcomponenteSelecionado,
+        imagens: formData.fotos || []
       }
       
       // Save the data to Firebase with a single auto-generated ID
