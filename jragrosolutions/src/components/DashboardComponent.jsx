@@ -1257,6 +1257,11 @@ const Dashboard = () => {
             </button>
           </div>
 
+          <div className="calendar-mobile-hint">
+            <span className="hint-icon">↔</span>
+            <span>Arraste para ver todos os dias da semana</span>
+          </div>
+
           {/* Calendário */}
           <div className="calendar-container">{renderCalendar()}</div>
         </div>

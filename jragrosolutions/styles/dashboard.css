@@ -73,6 +73,24 @@
   box-sizing: border-box;
 }
 
+/* Estrutura da página de dashboard (Dashboard.jsx) */
+.dashboard-layout {
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--color-gray-50) 0%, var(--color-gray-100) 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-main > * {
+  width: 100%;
+}
+
 /* Container principal do dashboard */
 .dashboard-container {
   font-family: var(--font-primary);
@@ -623,11 +641,28 @@
   background: var(--color-gray-400);
 }
 
+.calendar-mobile-hint {
+  display: none;
+}
+
+.calendar-mobile-hint .hint-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--color-gray-100);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gray-600);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
 .calendar-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  min-width: 800px;
+  min-width: 760px;
   background: var(--color-white);
 }
 
@@ -815,8 +850,8 @@
 
 /* Indicadores de atividade */
 .activity-indicator {
-  width: 60px;
-  height: 60px;
+  width: 56px;
+  height: 56px;
   border-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
@@ -1329,6 +1364,10 @@
     padding: 100px 16px 32px;
   }
 
+  .dashboard-main {
+    padding: 0;
+  }
+
   .header-content {
     flex-direction: column;
     align-items: flex-start;
@@ -1338,6 +1377,8 @@
   .header-actions {
     width: 100%;
     justify-content: space-between;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
   }
 
   .legend-items {
@@ -1358,11 +1399,19 @@
     min-width: 300px;
     max-width: 400px;
   }
+
+  .calendar-table {
+    min-width: 680px;
+  }
 }
 
 @media (max-width: 768px) {
   .dashboard-container {
     padding: 80px 12px 24px;
+  }
+
+  .dashboard-main {
+    padding: 0;
   }
 
   .title-text h1 {
@@ -1384,6 +1433,17 @@
     gap: var(--spacing-md);
   }
 
+  .stats-summary {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    width: 100%;
+    justify-content: center;
+  }
+
   .legend-items {
     flex-direction: column;
     align-items: flex-start;
@@ -1394,12 +1454,18 @@
     flex-direction: column;
   }
 
+  .view-mode-tab {
+    width: 100%;
+  }
+
   .calendar-navigation {
     padding: var(--spacing-md);
+    gap: var(--spacing-sm);
   }
 
   .nav-button span {
-    display: none;
+    display: inline;
+    font-size: 0.875rem;
   }
 
   .entity-column,
@@ -1443,11 +1509,32 @@
     min-width: 250px;
     max-width: 350px;
   }
+
+  .calendar-table {
+    min-width: 620px;
+  }
+
+  .calendar-mobile-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--color-gray-600);
+    padding: var(--spacing-md);
+    background: var(--color-white);
+    border: 1px dashed var(--color-gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
 }
 
 @media (max-width: 480px) {
   .dashboard-container {
     padding: 70px 8px 20px;
+  }
+
+  .dashboard-main {
+    padding: 0;
   }
 
   .header-title {
@@ -1499,6 +1586,19 @@
 
   .day-date {
     font-size: 0.75rem;
+  }
+
+  .nav-button span {
+    display: none;
+  }
+
+  .calendar-table {
+    min-width: 540px;
+  }
+
+  .calendar-mobile-hint {
+    font-size: 0.85rem;
+    padding: var(--spacing-sm) var(--spacing-md);
   }
 
   .notification {
