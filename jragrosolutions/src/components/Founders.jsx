@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Linkedin, Mail, X, GraduationCap, Briefcase, Award } from "lucide-react"
 import renato from "../assets/renato.jpg"
-import jeovane from "../assets/jeovane.png"
+import jeovane from "../assets/jeovane.jpeg"
 import victor from "../assets/victor.png"
 
 const Founders = () => {
