@@ -8,6 +8,7 @@ import Solutions from "../components/Solutions"
 import Contact from "../components/Contact"
 import Footer from "../components/Footer"
 import WhatsAppFloat from "../components/WhatsAppFloat"
+import Clients from "../components/Clients"
 
 const Home = () => {
   return (
@@ -15,6 +16,7 @@ const Home = () => {
       <Header />
       <Hero />
       <About />
+      <Clients />
       <Challenges />
       <HowWeWork />
       <Founders />
