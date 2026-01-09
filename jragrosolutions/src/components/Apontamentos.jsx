@@ -47,7 +47,6 @@ const Apontamentos = () => {
     machineFilter: "", // Filtro para máquinas
     sortOrder: "newest", // "newest" ou "oldest"
   })
-
   // Estados para os dados
   const [data, setData] = useState({
     apontamentos: [],
@@ -328,6 +327,22 @@ const Apontamentos = () => {
     },
   ]
 
+  const abastecimentosReportColumns = [
+    { key: "id", label: "ID", value: (item) => item?.id || "" },
+    { key: "data", label: "Data", value: (item) => formatDate(item) },
+    { key: "status", label: "Status", value: (item) => item?.status || "" },
+    { key: "bem", label: "Bem", value: (item) => item?.bem || "" },
+    { key: "tanqueDiesel", label: "Tanque", value: (item) => item?.tanqueDiesel || "" },
+    { key: "produto", label: "Combustivel", value: (item) => item?.produto || "" },
+    { key: "quantidade", label: "Quantidade", value: (item) => item?.quantidade || "" },
+    { key: "horimetro", label: "Horimetro", value: (item) => item?.horimetro || "" },
+    { key: "horimetroBombaInicial", label: "Horimetro Bomba Inicial", value: (item) => item?.horimetroBombaInicial || "" },
+    { key: "horimetroBombaFinal", label: "Horimetro Bomba Final", value: (item) => item?.horimetroBombaFinal || "" },
+    { key: "observacao", label: "Observacao", value: (item) => item?.observacao || "" },
+    { key: "userId", label: "userID", value: (item) => item?.userId || "" },
+    { key: "userNome", label: "Nome", value: (item) => getResponsavelName(item?.userId) },
+  ]
+
   const generateApontamentosExcel = () => {
     const apontamentos = data.apontamentos || []
     if (!apontamentos.length) {
@@ -378,6 +393,63 @@ const Apontamentos = () => {
     const dateStamp = new Date().toISOString().slice(0, 10)
     link.href = url
     link.download = `apontamentos_${dateStamp}.xls`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    showNotification("Relatorio gerado com sucesso!", "success")
+  }
+
+  const generateAbastecimentosExcel = () => {
+    const abastecimentos = data.abastecimentos || []
+    if (!abastecimentos.length) {
+      showNotification("Nenhum abastecimento para exportar.", "warning")
+      return
+    }
+
+    const rows = abastecimentos.map((item) => {
+      const row = {}
+      abastecimentosReportColumns.forEach((column) => {
+        row[column.key] = column.value(item)
+      })
+      return row
+    })
+
+    const headerHtml = abastecimentosReportColumns
+      .map((column) => `<th>${escapeHtml(column.label)}</th>`)
+      .join("")
+    const bodyHtml = rows
+      .map((row) => {
+        const cells = abastecimentosReportColumns
+          .map((column) => `<td>${escapeHtml(formatCellValue(row[column.key]))}</td>`)
+          .join("")
+        return `<tr>${cells}</tr>`
+      })
+      .join("")
+
+    const html = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="UTF-8" />
+</head>
+<body>
+  <table border="1">
+    <thead>
+      <tr>${headerHtml}</tr>
+    </thead>
+    <tbody>
+      ${bodyHtml}
+    </tbody>
+  </table>
+</body>
+</html>`
+
+    const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    const dateStamp = new Date().toISOString().slice(0, 10)
+    link.href = url
+    link.download = `abastecimentos_${dateStamp}.xls`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -1276,6 +1348,16 @@ const Apontamentos = () => {
               </button>
             )}
 
+            {selectedType === "abastecimentos" && (
+              <button
+                onClick={generateAbastecimentosExcel}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all duration-300"
+              >
+                <FileText className="w-5 h-5" />
+                <span>Relatorio Excel</span>
+              </button>
+            )}
+
             {/* Filtros */}
             <div className="relative">
               <button
@@ -1342,6 +1424,7 @@ const Apontamentos = () => {
                 </div>
               )}
             </div>
+
           </div>
         </div>
 
