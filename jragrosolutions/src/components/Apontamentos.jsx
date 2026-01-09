@@ -230,6 +230,161 @@ const Apontamentos = () => {
     return 0
   }
 
+  const escapeHtml = (value) => {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+  }
+
+  const formatCellValue = (value) => {
+    if (value === null || value === undefined) return ""
+    if (Array.isArray(value)) return JSON.stringify(value)
+    if (typeof value === "object") return JSON.stringify(value)
+    return String(value)
+  }
+
+  const formatDirecionadores = (item) => {
+    const direcionadores = item?.direcionadores || item?.direcionador
+    if (!direcionadores) return ""
+
+    const normalize = (direcionador) => {
+      if (!direcionador) return ""
+      if (typeof direcionador === "string") return direcionador
+      const name = direcionador.name || direcionador.nome || ""
+      const cultura = direcionador.culturaAssociada || ""
+      if (name && cultura) return `${name} (${cultura})`
+      if (name) return name
+      return JSON.stringify(direcionador)
+    }
+
+    if (Array.isArray(direcionadores)) {
+      return direcionadores.map((item) => normalize(item)).filter(Boolean).join(" | ")
+    }
+
+    return normalize(direcionadores)
+  }
+
+  const getOperacoesMecanizadasValues = (item, field) => {
+    const operacoes = item?.operacoesMecanizadas
+    if (!Array.isArray(operacoes) || operacoes.length === 0) return ""
+
+    const values = operacoes
+      .map((operacao) => {
+        if (!operacao) return ""
+        if (field === "implementos") {
+          const implementos = operacao.implementos
+          if (Array.isArray(implementos)) {
+            return implementos
+              .map((impl) => (typeof impl === "object" ? impl.name || impl.nome || impl.id : impl))
+              .filter(Boolean)
+              .join(", ")
+          }
+          return implementos || ""
+        }
+        return operacao[field] || ""
+      })
+      .filter(Boolean)
+
+    return values.join(" | ")
+  }
+
+  const apontamentosReportColumns = [
+    { key: "id", label: "ID", value: (item) => item?.id || "" },
+    { key: "data", label: "Data", value: (item) => formatDate(item) },
+    { key: "status", label: "Status", value: (item) => item?.status || "" },
+    { key: "cultura", label: "Cultura", value: (item) => item?.cultura || "" },
+    { key: "propriedade", label: "Propriedade", value: (item) => item?.propriedade || "" },
+    { key: "fichaControle", label: "Ficha de Controle", value: (item) => item?.fichaControle || "" },
+    { key: "observacao", label: "Observação", value: (item) => item?.observacao || "" },
+    { key: "userId", label: "userID", value: (item) => item?.userId || "" },
+    { key: "userNome", label: "Nome", value: (item) => getResponsavelName(item?.userId) },
+    { key: "direcionador", label: "Direcionador", value: (item) => formatDirecionadores(item) },
+    {
+      key: "bem",
+      label: "Bem",
+      value: (item) => getOperacoesMecanizadasValues(item, "bem"),
+    },
+    {
+      key: "implemento",
+      label: "Implemento",
+      value: (item) => getOperacoesMecanizadasValues(item, "implementos"),
+    },
+    {
+      key: "horaInicial",
+      label: "Hora Inicial",
+      value: (item) => getOperacoesMecanizadasValues(item, "horaInicial"),
+    },
+    {
+      key: "horaFinal",
+      label: "Hora Final",
+      value: (item) => getOperacoesMecanizadasValues(item, "horaFinal"),
+    },
+    {
+      key: "totalHoras",
+      label: "Total de Horas trabalhadas",
+      value: (item) => getOperacoesMecanizadasValues(item, "totalHoras"),
+    },
+  ]
+
+  const generateApontamentosExcel = () => {
+    const apontamentos = data.apontamentos || []
+    if (!apontamentos.length) {
+      showNotification("Nenhum apontamento para exportar.", "warning")
+      return
+    }
+
+    const rows = apontamentos.map((item) => {
+      const row = {}
+      apontamentosReportColumns.forEach((column) => {
+        row[column.key] = column.value(item)
+      })
+      return row
+    })
+
+    const headerHtml = apontamentosReportColumns
+      .map((column) => `<th>${escapeHtml(column.label)}</th>`)
+      .join("")
+    const bodyHtml = rows
+      .map((row) => {
+        const cells = apontamentosReportColumns
+          .map((column) => `<td>${escapeHtml(formatCellValue(row[column.key]))}</td>`)
+          .join("")
+        return `<tr>${cells}</tr>`
+      })
+      .join("")
+
+    const html = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="UTF-8" />
+</head>
+<body>
+  <table border="1">
+    <thead>
+      <tr>${headerHtml}</tr>
+    </thead>
+    <tbody>
+      ${bodyHtml}
+    </tbody>
+  </table>
+</body>
+</html>`
+
+    const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    const dateStamp = new Date().toISOString().slice(0, 10)
+    link.href = url
+    link.download = `apontamentos_${dateStamp}.xls`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    showNotification("Relatorio gerado com sucesso!", "success")
+  }
+
   const getUserPropriedade = async (currentUser) => {
     if (!currentUser) return null
 
@@ -1110,6 +1265,16 @@ const Apontamentos = () => {
               </select>
               <ArrowUpDown className="w-4 h-4 absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
+
+            {selectedType === "apontamentos" && (
+              <button
+                onClick={generateApontamentosExcel}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all duration-300"
+              >
+                <FileText className="w-5 h-5" />
+                <span>Relatorio Excel</span>
+              </button>
+            )}
 
             {/* Filtros */}
             <div className="relative">
