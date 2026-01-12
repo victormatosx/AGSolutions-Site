@@ -40,6 +40,7 @@ const Apontamentos = () => {
   const [selectedStatus, setSelectedStatus] = useState("pending")
   const [selectedItem, setSelectedItem] = useState(null)
   const [showModal, setShowModal] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(false)
 
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({
@@ -47,6 +48,7 @@ const Apontamentos = () => {
     machineFilter: "", // Filtro para máquinas
     sortOrder: "newest", // "newest" ou "oldest"
   })
+  const [reportMachineSelection, setReportMachineSelection] = useState([])
   // Estados para os dados
   const [data, setData] = useState({
     apontamentos: [],
@@ -289,6 +291,26 @@ const Apontamentos = () => {
     return values.join(" | ")
   }
 
+  const normalizeMachineName = (value) => {
+    return (value || "").toString().trim().toLowerCase()
+  }
+
+  const isMachineSelectedForReport = (item) => {
+    if (!reportMachineSelection.length) return true
+    const itemMachine = normalizeMachineName(item?.bem)
+    if (!itemMachine) return false
+    return reportMachineSelection.some((selected) => itemMachine.includes(normalizeMachineName(selected)))
+  }
+
+  const toggleReportMachineSelection = (machineName) => {
+    setReportMachineSelection((prev) => {
+      if (prev.includes(machineName)) {
+        return prev.filter((name) => name !== machineName)
+      }
+      return [...prev, machineName]
+    })
+  }
+
   const apontamentosReportColumns = [
     { key: "id", label: "ID", value: (item) => item?.id || "" },
     { key: "data", label: "Data", value: (item) => formatDate(item) },
@@ -402,12 +424,13 @@ const Apontamentos = () => {
 
   const generateAbastecimentosExcel = () => {
     const abastecimentos = data.abastecimentos || []
-    if (!abastecimentos.length) {
+    const filteredAbastecimentos = abastecimentos.filter((item) => isMachineSelectedForReport(item))
+    if (!filteredAbastecimentos.length) {
       showNotification("Nenhum abastecimento para exportar.", "warning")
       return
     }
 
-    const rows = [...abastecimentos]
+    const rows = [...filteredAbastecimentos]
       .sort((a, b) => {
         const machineA = (a?.bem || "").toString().toLowerCase()
         const machineB = (b?.bem || "").toString().toLowerCase()
@@ -1367,7 +1390,7 @@ const Apontamentos = () => {
 
             {selectedType === "abastecimentos" && (
               <button
-                onClick={generateAbastecimentosExcel}
+                onClick={() => setShowReportModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all duration-300"
               >
                 <FileText className="w-5 h-5" />
@@ -1425,7 +1448,10 @@ const Apontamentos = () => {
 
                     <div className="flex gap-2 pt-2">
                       <button
-                        onClick={() => setFilters({ searchTerm: "", machineFilter: "", sortOrder: "newest" })}
+                        onClick={() => {
+                          setFilters({ searchTerm: "", machineFilter: "", sortOrder: "newest" })
+                          setReportMachineSelection([])
+                        }}
                         className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
                       >
                         Limpar
@@ -1444,6 +1470,100 @@ const Apontamentos = () => {
 
           </div>
         </div>
+
+        {showReportModal && selectedType === "abastecimentos" && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-800">Selecionar Maquinas</h3>
+                  <p className="text-sm text-slate-500">Escolha quais maquinas entram no relatorio de abastecimentos.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowReportModal(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="px-6 py-5">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <span className="text-sm font-medium text-slate-700">Selecao rapida</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setReportMachineSelection(
+                          maquinarios
+                            .map((maquinario) => maquinario.nome || `Maquina ${maquinario.id}`)
+                            .filter(Boolean),
+                        )
+                      }
+                      className="inline-flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-sm font-semibold text-green-700 hover:bg-green-100"
+                    >
+                      Todas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReportMachineSelection([])}
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+                    >
+                      Limpar
+                    </button>
+                  </div>
+                </div>
+
+                <div className="max-h-64 overflow-auto rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                  {maquinarios.length === 0 ? (
+                    <p className="text-sm text-slate-500">Sem maquinas cadastradas.</p>
+                  ) : (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {maquinarios.map((maquinario) => {
+                        const machineName = maquinario.nome || `Maquina ${maquinario.id}`
+                        return (
+                          <label
+                            key={maquinario.id}
+                            className="flex items-center gap-2 rounded-lg border border-transparent bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition-colors hover:border-green-200"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={reportMachineSelection.includes(machineName)}
+                              onChange={() => toggleReportMachineSelection(machineName)}
+                              className="h-4 w-4 rounded border-slate-300 text-green-600 focus:ring-green-500"
+                            />
+                            <span>{machineName}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2 border-t border-slate-100 px-6 py-4">
+                <button
+                  type="button"
+                  onClick={() => setShowReportModal(false)}
+                  className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    generateAbastecimentosExcel()
+                    setShowReportModal(false)
+                  }}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/30 transition-all duration-300"
+                >
+                  Gerar Relatorio
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-4">
           {filteredData.length === 0 ? (
