@@ -407,7 +407,16 @@ const Apontamentos = () => {
       return
     }
 
-    const rows = abastecimentos.map((item) => {
+    const rows = [...abastecimentos]
+      .sort((a, b) => {
+        const machineA = (a?.bem || "").toString().toLowerCase()
+        const machineB = (b?.bem || "").toString().toLowerCase()
+        if (machineA !== machineB) {
+          return machineA.localeCompare(machineB, "pt-BR")
+        }
+        return getDateTimestamp(a) - getDateTimestamp(b)
+      })
+      .map((item) => {
       const row = {}
       abastecimentosReportColumns.forEach((column) => {
         row[column.key] = column.value(item)
@@ -926,6 +935,14 @@ const Apontamentos = () => {
 
     // Ordenar por data usando timestamps
     currentData.sort((a, b) => {
+      if (selectedType === "abastecimentos") {
+        const machineA = (a?.bem || "").toString().toLowerCase()
+        const machineB = (b?.bem || "").toString().toLowerCase()
+        if (machineA !== machineB) {
+          return machineA.localeCompare(machineB)
+        }
+      }
+
       const timestampA = getDateTimestamp(a)
       const timestampB = getDateTimestamp(b)
 
