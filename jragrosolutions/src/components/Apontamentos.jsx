@@ -292,7 +292,41 @@ const Apontamentos = () => {
   }
 
   const normalizeMachineName = (value) => {
-    return (value || "").toString().trim().toLowerCase()
+    return (value || "")
+      .toString()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]+/g, " ")
+      .trim()
+      .toLowerCase()
+  }
+
+  const parseNumberBR = (value) => {
+    if (value === null || value === undefined || value === "") return null
+    const raw = String(value).trim()
+    if (!raw) return null
+    const cleaned = raw.replace(/\s+/g, "")
+    const lastComma = cleaned.lastIndexOf(",")
+    const lastDot = cleaned.lastIndexOf(".")
+    const decimalIndex = Math.max(lastComma, lastDot)
+    let integerPart = cleaned
+    let decimalPart = ""
+
+    if (decimalIndex !== -1) {
+      integerPart = cleaned.slice(0, decimalIndex)
+      decimalPart = cleaned.slice(decimalIndex + 1)
+    }
+
+    integerPart = integerPart.replace(/\D/g, "")
+    decimalPart = decimalPart.replace(/\D/g, "")
+    const normalized = decimalIndex !== -1 && decimalPart !== "" ? `${integerPart}.${decimalPart}` : integerPart
+    const parsed = Number.parseFloat(normalized)
+    return Number.isNaN(parsed) ? null : parsed
+  }
+
+  const formatNumberBR1 = (value) => {
+    if (value === null || value === undefined || Number.isNaN(value)) return ""
+    return value.toFixed(1).replace(".", ",")
   }
 
   const isMachineSelectedForReport = (item) => {
@@ -350,18 +384,27 @@ const Apontamentos = () => {
   ]
 
   const abastecimentosReportColumns = [
-    { key: "id", label: "ID", value: (item) => item?.id || "" },
     { key: "data", label: "Data", value: (item) => formatDate(item) },
     { key: "status", label: "Status", value: (item) => item?.status || "" },
     { key: "bem", label: "Bem", value: (item) => item?.bem || "" },
     { key: "tanqueDiesel", label: "Tanque", value: (item) => item?.tanqueDiesel || "" },
     { key: "produto", label: "Combustivel", value: (item) => item?.produto || "" },
-    { key: "quantidade", label: "Quantidade", value: (item) => item?.quantidade || "" },
+    { key: "quantidade", label: "Quantidade (L)", value: (item) => item?.quantidade || "" },
     { key: "horimetro", label: "Horimetro", value: (item) => item?.horimetro || "" },
+    { key: "horimetroAnterior", label: "Horimetro Anterior", value: (item) => item?.horimetroAnterior || "" },
+    {
+      key: "horasEntreAbastecimentos",
+      label: "Horas Entre Abastecimentos",
+      value: (item) => item?.horasEntreAbastecimentos ?? "",
+    },
+    {
+      key: "consumoLitrosHora",
+      label: "Consumo (Litros/Hora)",
+      value: (item) => item?.consumoLitrosHora ?? "",
+    },
     { key: "horimetroBombaInicial", label: "Horimetro Bomba Inicial", value: (item) => item?.horimetroBombaInicial || "" },
     { key: "horimetroBombaFinal", label: "Horimetro Bomba Final", value: (item) => item?.horimetroBombaFinal || "" },
     { key: "observacao", label: "Observacao", value: (item) => item?.observacao || "" },
-    { key: "userId", label: "userID", value: (item) => item?.userId || "" },
     { key: "userNome", label: "Nome", value: (item) => getResponsavelName(item?.userId) },
   ]
 
@@ -430,6 +473,8 @@ const Apontamentos = () => {
       return
     }
 
+    const lastByMachine = {}
+    let lastMachineKeyInOrder = ""
     const rows = [...filteredAbastecimentos]
       .sort((a, b) => {
         const machineA = (a?.bem || "").toString().toLowerCase()
@@ -440,12 +485,46 @@ const Apontamentos = () => {
         return getDateTimestamp(a) - getDateTimestamp(b)
       })
       .map((item) => {
-      const row = {}
-      abastecimentosReportColumns.forEach((column) => {
-        row[column.key] = column.value(item)
+        let machineKey = normalizeMachineName(item?.bem)
+        if (!machineKey) {
+          machineKey = lastMachineKeyInOrder
+        } else {
+          lastMachineKeyInOrder = machineKey
+        }
+        const lastEntry = lastByMachine[machineKey]
+        const currentHorimetroNum = parseNumberBR(item?.horimetro)
+        const previousHorimetroRaw = lastEntry?.raw ?? ""
+        const previousHorimetroNum = lastEntry?.num ?? null
+        const horasEntreBase =
+          currentHorimetroNum !== null && previousHorimetroNum !== null
+            ? currentHorimetroNum - previousHorimetroNum
+            : null
+        const horasEntre = horasEntreBase !== null && horasEntreBase >= 0 ? horasEntreBase : null
+        const quantidadeNum = parseNumberBR(item?.quantidade)
+        const consumo =
+          horasEntre !== null && horasEntre > 0 && quantidadeNum !== null
+            ? quantidadeNum / horasEntre
+            : null
+
+        if (currentHorimetroNum !== null) {
+          lastByMachine[machineKey] = {
+            raw: item?.horimetro || "",
+            num: currentHorimetroNum,
+          }
+        }
+
+        const itemWithComputed = {
+          ...item,
+          horimetroAnterior: previousHorimetroRaw,
+          horasEntreAbastecimentos: horasEntre !== null ? formatNumberBR1(horasEntre) : "",
+          consumoLitrosHora: consumo !== null ? formatNumberBR1(consumo) : "",
+        }
+        const row = {}
+        abastecimentosReportColumns.forEach((column) => {
+          row[column.key] = column.value(itemWithComputed)
+        })
+        return row
       })
-      return row
-    })
 
     const headerHtml = abastecimentosReportColumns
       .map((column) => `<th>${escapeHtml(column.label)}</th>`)
@@ -605,11 +684,39 @@ const Apontamentos = () => {
   // }
 
   const getResponsavelName = (userId) => {
-    if (!userId || !usuarios[userId]) {
-      return "Usuário não identificado"
+    if (!userId) {
+      return "Usu??rio n??o identificado"
     }
-    return usuarios[userId].nome || "Nome não disponível"
+    const directUser = usuarios[userId]
+    if (directUser) {
+      return directUser.nome || directUser.name || directUser.displayName || "Nome n??o dispon??vel"
+    }
+
+    const userValues = Object.values(usuarios || {})
+    const fallbackUser = userValues.find((user) => {
+      if (!user) return false
+      return (
+        user.uid === userId ||
+        user.id === userId ||
+        user.email === userId ||
+        String(user.uid || "") === String(userId) ||
+        String(user.id || "") === String(userId)
+      )
+    })
+
+    if (fallbackUser) {
+      return (
+        fallbackUser.nome ||
+        fallbackUser.name ||
+        fallbackUser.displayName ||
+        fallbackUser.email ||
+        "Nome n??o dispon??vel"
+      )
+    }
+
+    return "Usu??rio n??o identificado"
   }
+
 
   // const clearAlert = (alertId) => {
   //   setAlertas((prev) => prev.filter((alert) => alert.id !== alertId))
@@ -1585,13 +1692,6 @@ const Apontamentos = () => {
   // Renderizar modal
   const renderModal = () => {
     if (!selectedItem || !showModal) return null
-
-    const getResponsavelName = (userId) => {
-      if (!userId || !usuarios[userId]) {
-        return "Usuário não identificado"
-      }
-      return usuarios[userId].nome || "Nome não disponível"
-    }
 
     const currentItem = isEditing ? editedItem : selectedItem
     const mainInfo = {}
