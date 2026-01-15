@@ -560,7 +560,12 @@ const Apontamentos = () => {
     const link = document.createElement("a")
     const dateStamp = new Date().toISOString().slice(0, 10)
     link.href = url
-    link.download = `abastecimentos_${dateStamp}.xls`
+    if (reportMachineSelection.length === 1) {
+      const machineName = reportMachineSelection[0].replace(/[\\/:*?"<>|]+/g, " ").trim()
+      link.download = `${machineName}_Abastecimentos.xls`
+    } else {
+      link.download = `abastecimentos_${dateStamp}.xls`
+    }
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
