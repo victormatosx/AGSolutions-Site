@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import * as XLSX from "xlsx"
 import { useAuthState } from "react-firebase-hooks/auth"
 import { auth, database } from "../firebase/firebase"
 import { ref, onValue, update, remove, get } from "firebase/database"
@@ -46,6 +47,8 @@ const Apontamentos = () => {
   const [filters, setFilters] = useState({
     searchTerm: "",
     machineFilter: "", // Filtro para máquinas
+    dateFrom: "",
+    dateTo: "",
     sortOrder: "newest", // "newest" ou "oldest"
   })
   const [reportMachineSelection, setReportMachineSelection] = useState([])
@@ -292,7 +295,9 @@ const Apontamentos = () => {
   }
 
   const normalizeMachineName = (value) => {
-    return (value || "")
+    const raw = (value || "").toString().trim()
+    const withoutLeadingId = raw.replace(/^\s*\d+\s*[-–—]\s*/g, "")
+    return withoutLeadingId
       .toString()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -327,6 +332,18 @@ const Apontamentos = () => {
   const formatNumberBR1 = (value) => {
     if (value === null || value === undefined || Number.isNaN(value)) return ""
     return value.toFixed(1).replace(".", ",")
+  }
+
+  const sanitizeSheetName = (name, fallback) => {
+    const baseName = (name || fallback || "Planilha").toString()
+    let safe = baseName.replace(/[\\/?*[\]:]/g, " ").replace(/\s+/g, " ").trim()
+    if (!safe) {
+      safe = (fallback || "Planilha").toString().trim()
+    }
+    if (safe.length > 31) {
+      safe = safe.slice(0, 31).trim()
+    }
+    return safe || "Planilha"
   }
 
   const isMachineSelectedForReport = (item) => {
@@ -473,98 +490,173 @@ const Apontamentos = () => {
       return
     }
 
-    const lastByMachine = {}
-    let lastMachineKeyInOrder = ""
-    const rows = [...filteredAbastecimentos]
-      .sort((a, b) => {
-        const machineA = (a?.bem || "").toString().toLowerCase()
-        const machineB = (b?.bem || "").toString().toLowerCase()
-        if (machineA !== machineB) {
-          return machineA.localeCompare(machineB, "pt-BR")
-        }
-        return getDateTimestamp(a) - getDateTimestamp(b)
-      })
-      .map((item) => {
-        let machineKey = normalizeMachineName(item?.bem)
-        if (!machineKey) {
-          machineKey = lastMachineKeyInOrder
-        } else {
-          lastMachineKeyInOrder = machineKey
-        }
-        const lastEntry = lastByMachine[machineKey]
-        const currentHorimetroNum = parseNumberBR(item?.horimetro)
-        const previousHorimetroRaw = lastEntry?.raw ?? ""
-        const previousHorimetroNum = lastEntry?.num ?? null
-        const horasEntreBase =
-          currentHorimetroNum !== null && previousHorimetroNum !== null
-            ? currentHorimetroNum - previousHorimetroNum
-            : null
-        const horasEntre = horasEntreBase !== null && horasEntreBase >= 0 ? horasEntreBase : null
-        const quantidadeNum = parseNumberBR(item?.quantidade)
-        const consumo =
-          horasEntre !== null && horasEntre > 0 && quantidadeNum !== null
-            ? quantidadeNum / horasEntre
-            : null
+    const buildRowsForItems = (items) => {
+      const rows = []
+      let lastHorimetroNum = null
+      let lastHorimetroRaw = ""
 
-        if (currentHorimetroNum !== null) {
-          lastByMachine[machineKey] = {
-            raw: item?.horimetro || "",
-            num: currentHorimetroNum,
+      ;[...items]
+        .sort((a, b) => getDateTimestamp(a) - getDateTimestamp(b))
+        .forEach((item) => {
+          const currentHorimetroNum = parseNumberBR(item?.horimetro)
+          const previousHorimetroRaw = lastHorimetroRaw
+          const previousHorimetroNum = lastHorimetroNum
+          const horasEntreBase =
+            currentHorimetroNum !== null && previousHorimetroNum !== null
+              ? currentHorimetroNum - previousHorimetroNum
+              : null
+          const horasEntre = horasEntreBase !== null && horasEntreBase >= 0 ? horasEntreBase : null
+          const quantidadeNum = parseNumberBR(item?.quantidade)
+          const consumo =
+            horasEntre !== null && horasEntre > 0 && quantidadeNum !== null
+              ? quantidadeNum / horasEntre
+              : null
+
+          if (currentHorimetroNum !== null) {
+            lastHorimetroNum = currentHorimetroNum
+            lastHorimetroRaw = item?.horimetro || ""
           }
-        }
 
-        const itemWithComputed = {
-          ...item,
-          horimetroAnterior: previousHorimetroRaw,
-          horasEntreAbastecimentos: horasEntre !== null ? formatNumberBR1(horasEntre) : "",
-          consumoLitrosHora: consumo !== null ? formatNumberBR1(consumo) : "",
-        }
-        const row = {}
-        abastecimentosReportColumns.forEach((column) => {
-          row[column.key] = column.value(itemWithComputed)
+          const itemWithComputed = {
+            ...item,
+            horimetroAnterior: previousHorimetroRaw,
+            horasEntreAbastecimentos: horasEntre !== null ? formatNumberBR1(horasEntre) : "",
+            consumoLitrosHora: consumo !== null ? formatNumberBR1(consumo) : "",
+          }
+          const row = {}
+          abastecimentosReportColumns.forEach((column) => {
+            row[column.key] = column.value(itemWithComputed)
+          })
+          rows.push(row)
         })
-        return row
-      })
 
-    const headerHtml = abastecimentosReportColumns
-      .map((column) => `<th>${escapeHtml(column.label)}</th>`)
-      .join("")
-    const bodyHtml = rows
-      .map((row) => {
-        const cells = abastecimentosReportColumns
-          .map((column) => `<td>${escapeHtml(formatCellValue(row[column.key]))}</td>`)
-          .join("")
-        return `<tr>${cells}</tr>`
-      })
-      .join("")
+      return rows
+    }
 
-    const html = `<!DOCTYPE html>
-<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-<head>
-  <meta charset="UTF-8" />
-</head>
-<body>
-  <table border="1">
-    <thead>
-      <tr>${headerHtml}</tr>
-    </thead>
-    <tbody>
-      ${bodyHtml}
-    </tbody>
-  </table>
-</body>
-</html>`
+    const sortedAbastecimentos = [...filteredAbastecimentos].sort((a, b) => {
+      const machineA = normalizeMachineName(a?.bem)
+      const machineB = normalizeMachineName(b?.bem)
+      if (machineA !== machineB) {
+        return machineA.localeCompare(machineB, "pt-BR")
+      }
+      return getDateTimestamp(a) - getDateTimestamp(b)
+    })
 
-    const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8;" })
+    const grouped = new Map()
+    const groupOrder = []
+    let lastMachineKeyInOrder = ""
+    let lastMachineNameInOrder = ""
+
+    sortedAbastecimentos.forEach((item) => {
+      const rawName = item?.bem ? item.bem.toString().trim() : ""
+      let machineKey = normalizeMachineName(rawName)
+      let machineName = rawName
+
+      if (!machineKey) {
+        machineKey = lastMachineKeyInOrder
+        machineName = lastMachineNameInOrder
+      }
+
+      if (!machineKey) {
+        return
+      }
+
+      lastMachineKeyInOrder = machineKey
+      if (machineName) {
+        lastMachineNameInOrder = machineName
+      }
+
+      if (!grouped.has(machineKey)) {
+        grouped.set(machineKey, { name: machineName || "Sem maquina", items: [] })
+        groupOrder.push(machineKey)
+      }
+
+      const group = grouped.get(machineKey)
+      if (!group.name && machineName) {
+        group.name = machineName
+      }
+      group.items.push(item)
+    })
+
+    if (!grouped.size) {
+      showNotification("Nenhum abastecimento com maquina identificada.", "warning")
+      return
+    }
+
+    const selectionOrder = reportMachineSelection.length
+      ? new Map(reportMachineSelection.map((name, idx) => [normalizeMachineName(name), idx]))
+      : null
+    const cadastroOrder = maquinarios.length
+      ? new Map(
+          maquinarios.map((maquinario, idx) => [normalizeMachineName(maquinario?.nome || ""), idx]),
+        )
+      : null
+
+    const groupEntries = groupOrder.map((key) => ({ key, ...grouped.get(key) }))
+    groupEntries.sort((a, b) => {
+      if (selectionOrder) {
+        const aIdx = selectionOrder.get(a.key)
+        const bIdx = selectionOrder.get(b.key)
+        if (aIdx !== undefined || bIdx !== undefined) {
+          if (aIdx === undefined) return 1
+          if (bIdx === undefined) return -1
+          return aIdx - bIdx
+        }
+      }
+
+      if (cadastroOrder) {
+        const aIdx = cadastroOrder.get(a.key)
+        const bIdx = cadastroOrder.get(b.key)
+        if (aIdx !== undefined || bIdx !== undefined) {
+          if (aIdx === undefined) return 1
+          if (bIdx === undefined) return -1
+          return aIdx - bIdx
+        }
+      }
+
+      return (a.name || "").localeCompare(b.name || "", "pt-BR")
+    })
+
+    const workbook = XLSX.utils.book_new()
+    const usedSheetNames = new Set()
+
+    groupEntries.forEach((group, index) => {
+      let sheetName = sanitizeSheetName(group.name || `Maquina ${index + 1}`, `Maquina ${index + 1}`)
+      if (usedSheetNames.has(sheetName)) {
+        let counter = 2
+        let candidate = sheetName
+        while (usedSheetNames.has(candidate)) {
+          const suffix = ` ${counter}`
+          const base = sheetName.slice(0, 31 - suffix.length).trim()
+          candidate = `${base}${suffix}`.trim()
+          counter += 1
+        }
+        sheetName = candidate
+      }
+      usedSheetNames.add(sheetName)
+
+      const rows = buildRowsForItems(group.items)
+      const header = abastecimentosReportColumns.map((column) => column.label)
+      const dataRows = rows.map((row) =>
+        abastecimentosReportColumns.map((column) => formatCellValue(row[column.key])),
+      )
+      const worksheet = XLSX.utils.aoa_to_sheet([header, ...dataRows])
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
+    })
+
+    const wbout = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
+    const blob = new Blob([wbout], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     const dateStamp = new Date().toISOString().slice(0, 10)
     link.href = url
     if (reportMachineSelection.length === 1) {
-      const machineName = reportMachineSelection[0].replace(/[\\/:*?"<>|]+/g, " ").trim()
-      link.download = `${machineName}_Abastecimentos.xls`
+      const machineName = reportMachineSelection[0].replace(/[\/:*?"<>|]+/g, " ").trim()
+      link.download = `${machineName}_Abastecimentos.xlsx`
     } else {
-      link.download = `abastecimentos_${dateStamp}.xls`
+      link.download = `abastecimentos_${dateStamp}.xlsx`
     }
     document.body.appendChild(link)
     link.click()
@@ -572,6 +664,7 @@ const Apontamentos = () => {
     URL.revokeObjectURL(url)
     showNotification("Relatorio gerado com sucesso!", "success")
   }
+
 
   const getUserPropriedade = async (currentUser) => {
     if (!currentUser) return null
@@ -1068,6 +1161,22 @@ const Apontamentos = () => {
       currentData = currentData.filter((item) => itemContainsMachine(item, filters.machineFilter))
     }
 
+    if (selectedType === "abastecimentos" && (filters.dateFrom || filters.dateTo)) {
+      const startTimestamp = filters.dateFrom ? new Date(`${filters.dateFrom}T00:00:00`).getTime() : null
+      const endTimestamp = filters.dateTo ? new Date(`${filters.dateTo}T23:59:59.999`).getTime() : null
+      const safeStart =
+        startTimestamp !== null && endTimestamp !== null && startTimestamp > endTimestamp ? endTimestamp : startTimestamp
+      const safeEnd =
+        startTimestamp !== null && endTimestamp !== null && startTimestamp > endTimestamp ? startTimestamp : endTimestamp
+
+      currentData = currentData.filter((item) => {
+        const timestamp = getDateTimestamp(item)
+        if (safeStart !== null && timestamp < safeStart) return false
+        if (safeEnd !== null && timestamp > safeEnd) return false
+        return true
+      })
+    }
+
     // Ordenar por data usando timestamps
     currentData.sort((a, b) => {
       if (selectedType === "abastecimentos") {
@@ -1558,10 +1667,30 @@ const Apontamentos = () => {
                       </div>
                     )}
 
+                    {selectedType === "abastecimentos" && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Filtrar por Data</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <input
+                            type="date"
+                            value={filters.dateFrom}
+                            onChange={(e) => setFilters((prev) => ({ ...prev, dateFrom: e.target.value }))}
+                            className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                          />
+                          <input
+                            type="date"
+                            value={filters.dateTo}
+                            onChange={(e) => setFilters((prev) => ({ ...prev, dateTo: e.target.value }))}
+                            className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex gap-2 pt-2">
                       <button
                         onClick={() => {
-                          setFilters({ searchTerm: "", machineFilter: "", sortOrder: "newest" })
+                          setFilters({ searchTerm: "", machineFilter: "", dateFrom: "", dateTo: "", sortOrder: "newest" })
                           setReportMachineSelection([])
                         }}
                         className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors duration-200"
